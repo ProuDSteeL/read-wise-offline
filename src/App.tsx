@@ -10,6 +10,7 @@ import SearchPage from "./pages/SearchPage";
 import ShelvesPage from "./pages/ShelvesPage";
 import ProfilePage from "./pages/ProfilePage";
 import BookPage from "./pages/BookPage";
+import AdminBookForm from "./pages/AdminBookForm";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
             <Route path="/book/:id" element={<BookPage />} />
+            <Route path="/admin/book/new" element={<AdminBookForm />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
