@@ -52,7 +52,7 @@ const ShelvesPage = () => {
   });
 
   const removeFromShelf = useMutation({
-    mutationFn: async ({ joinId, table }: { joinId: string; table: string }) => {
+    mutationFn: async ({ joinId, table }: { joinId: string; table: "user_downloads" | "user_shelves" }) => {
       const { error } = await supabase.from(table).delete().eq("id", joinId);
       if (error) throw error;
     },
