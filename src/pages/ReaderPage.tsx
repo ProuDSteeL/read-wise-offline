@@ -275,8 +275,8 @@ const ReaderPage = () => {
   const createHighlight = useMutation({
     mutationFn: async ({ text, note, color }: { text: string; note?: string; color: string }) => {
       const { error } = await supabase.from("user_highlights").insert({
-        user_id: user!.id, book_id: id!, text, note: note || null,
-      });
+        user_id: user!.id, book_id: id!, text, note: note || null, color,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
