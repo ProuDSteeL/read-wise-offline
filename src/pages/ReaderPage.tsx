@@ -401,7 +401,16 @@ const ReaderPage = () => {
         <span className="max-w-[50%] truncate text-sm font-semibold text-foreground">{book?.title}</span>
         <div className="flex items-center gap-2">
           {summary?.audio_url && (
-            <button onClick={() => setShowAudioPlayer(!showAudioPlayer)} className="tap-highlight">
+            <button onClick={() => {
+              const next = !showAudioPlayer;
+              setShowAudioPlayer(next);
+              if (next && summary?.audio_url && id && audioCtx.state.bookId !== id) {
+                audioCtx.play(id, summary.audio_url, book?.title);
+              }
+              if (!next) {
+                audioCtx.stop();
+              }
+            }} className="tap-highlight">
               <Headphones className={`h-5 w-5 transition-colors ${showAudioPlayer ? "text-primary" : "text-muted-foreground"}`} />
             </button>
           )}
