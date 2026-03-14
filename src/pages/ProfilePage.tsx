@@ -1,15 +1,18 @@
-import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil } from "lucide-react";
+import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useProfileStats } from "@/hooks/useProfileStats";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { Switch } from "@/components/ui/switch";
 
 const ProfilePage = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { data: isAdmin } = useIsAdmin();
   const { data: stats } = useProfileStats();
+  const push = usePushNotifications();
 
   if (loading) {
     return (
@@ -98,6 +101,21 @@ const ProfilePage = () => {
         ))}
       </div>
 
+      {/* Notifications */}
+      {push.isSupported && (
+        <div className="flex items-center gap-3 rounded-2xl bg-card p-4 shadow-card">
+          <Bell className="h-5 w-5 text-sage" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">Push-уведомления</p>
+            <p className="text-[11px] text-muted-foreground">Напоминания о чтении раз в 3 дня</p>
+          </div>
+          <Switch
+            checked={push.isSubscribed}
+            onCheckedChange={() => push.toggle()}
+            disabled={push.loading}
+          />
+        </div>
+      )}
       {isAdmin && (
         <button
           onClick={() => navigate("/admin/books")}
