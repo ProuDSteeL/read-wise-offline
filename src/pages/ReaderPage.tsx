@@ -493,7 +493,11 @@ const ReaderPage = () => {
                     <p className="flex-1 text-sm italic text-muted-foreground">«{h.text}»</p>
                     <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
-                        onClick={() => handleClickExistingHighlight(h)}
+                        onClick={() => {
+                          setEditingHighlight(h);
+                          setEditNote(h.note || "");
+                          setEditMenuPos(null); // show inline below the list item
+                        }}
                         className="rounded-lg p-1 text-muted-foreground hover:bg-secondary"
                       >
                         <Pencil className="h-3.5 w-3.5" />
