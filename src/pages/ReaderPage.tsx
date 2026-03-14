@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, ReactNode } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
@@ -105,6 +105,8 @@ interface HighlightData {
 const ReaderPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locState = location.state as { audioPosition?: number; audioSpeed?: number; autoPlayAudio?: boolean } | null;
   const { user } = useAuth();
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
@@ -121,7 +123,7 @@ const ReaderPage = () => {
     parseInt(localStorage.getItem("reader-font-size") || "18")
   );
   const [showSettings, setShowSettings] = useState(false);
-  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(!!locState?.autoPlayAudio);
 
   // New selection state
   const [selectedText, setSelectedText] = useState("");
@@ -602,6 +604,9 @@ const ReaderPage = () => {
             bookTitle={book?.title}
             onClose={() => setShowAudioPlayer(false)}
             onExpand={() => navigate(`/book/${id}/listen`)}
+            initialPosition={locState?.audioPosition}
+            initialSpeed={locState?.audioSpeed}
+            autoPlay={locState?.autoPlayAudio}
           />
         </>
       )}

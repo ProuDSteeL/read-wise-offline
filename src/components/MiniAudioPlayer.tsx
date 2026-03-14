@@ -17,9 +17,12 @@ interface MiniAudioPlayerProps {
   bookTitle?: string;
   onClose?: () => void;
   onExpand?: () => void;
+  initialPosition?: number;
+  initialSpeed?: number;
+  autoPlay?: boolean;
 }
 
-const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand }: MiniAudioPlayerProps) => {
+const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand, initialPosition, initialSpeed, autoPlay }: MiniAudioPlayerProps) => {
   const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -29,12 +32,27 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand }: Min
   const [duration, setDuration] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [speed, setSpeed] = useState(() => {
+    if (initialSpeed) return initialSpeed;
     const saved = localStorage.getItem("audio-speed");
     return saved ? parseFloat(saved) : 1;
   });
 
-  // Load saved position
+  // Load saved position or use initialPosition
+  const positionApplied = useRef(false);
   useEffect(() => {
+    if (positionApplied.current) return;
+    if (!audioRef.current) return;
+
+    if (initialPosition != null && initialPosition > 0) {
+      audioRef.current.currentTime = initialPosition;
+      setCurrentTime(initialPosition);
+      positionApplied.current = true;
+      if (autoPlay) {
+        audioRef.current.play().then(() => setPlaying(true)).catch(() => {});
+      }
+      return;
+    }
+
     if (!user || !bookId) return;
     supabase
       .from("user_progress")
@@ -43,11 +61,12 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand }: Min
       .eq("book_id", bookId)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.audio_position && audioRef.current) {
+        if (data?.audio_position && audioRef.current && !positionApplied.current) {
           audioRef.current.currentTime = Number(data.audio_position);
+          positionApplied.current = true;
         }
       });
-  }, [user, bookId]);
+  }, [user, bookId, initialPosition, autoPlay]);
 
   // Apply speed
   useEffect(() => {
@@ -196,6 +215,15 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand }: Min
           if (audioRef.current) {
             setDuration(audioRef.current.duration);
             audioRef.current.playbackRate = speed;
+            // Apply initial position after metadata loads
+            if (initialPosition != null && initialPosition > 0 && !positionApplied.current) {
+              audioRef.current.currentTime = initialPosition;
+              setCurrentTime(initialPosition);
+              positionApplied.current = true;
+            }
+            if (autoPlay && !playing) {
+              audioRef.current.play().then(() => setPlaying(true)).catch(() => {});
+            }
           }
         }}
         onEnded={() => setPlaying(false)}
