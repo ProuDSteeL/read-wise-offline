@@ -31,6 +31,7 @@ const App = () => (
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
             <Route path="/book/:id" element={<BookPage />} />
+            <Route path="/admin/book/new" element={<AdminBookForm />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
