@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star } from "lucide-react";
+import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBook, useKeyIdeas } from "@/hooks/useBooks";
