@@ -32,6 +32,7 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand, initi
   const [duration, setDuration] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [speed, setSpeed] = useState(() => {
+    if (initialSpeed) return initialSpeed;
     const saved = localStorage.getItem("audio-speed");
     return saved ? parseFloat(saved) : 1;
   });
