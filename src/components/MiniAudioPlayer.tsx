@@ -37,8 +37,22 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand, initi
     return saved ? parseFloat(saved) : 1;
   });
 
-  // Load saved position
+  // Load saved position or use initialPosition
+  const positionApplied = useRef(false);
   useEffect(() => {
+    if (positionApplied.current) return;
+    if (!audioRef.current) return;
+
+    if (initialPosition != null && initialPosition > 0) {
+      audioRef.current.currentTime = initialPosition;
+      setCurrentTime(initialPosition);
+      positionApplied.current = true;
+      if (autoPlay) {
+        audioRef.current.play().then(() => setPlaying(true)).catch(() => {});
+      }
+      return;
+    }
+
     if (!user || !bookId) return;
     supabase
       .from("user_progress")
@@ -47,11 +61,12 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand, initi
       .eq("book_id", bookId)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.audio_position && audioRef.current) {
+        if (data?.audio_position && audioRef.current && !positionApplied.current) {
           audioRef.current.currentTime = Number(data.audio_position);
+          positionApplied.current = true;
         }
       });
-  }, [user, bookId]);
+  }, [user, bookId, initialPosition, autoPlay]);
 
   // Apply speed
   useEffect(() => {
