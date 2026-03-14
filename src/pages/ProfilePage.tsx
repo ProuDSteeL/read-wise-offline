@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useProfileStats } from "@/hooks/useProfileStats";
 
 const ProfilePage = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { data: isAdmin } = useIsAdmin();
+  const { data: stats } = useProfileStats();
 
   if (loading) {
     return (
@@ -56,9 +58,9 @@ const ProfilePage = () => {
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { value: "0", label: "Прочитано", icon: BookOpen },
-          { value: "0 ч", label: "Время", icon: Clock },
-          { value: "0", label: "Серия дней", icon: Flame },
+          { value: String(stats?.readCount ?? 0), label: "Прочитано", icon: BookOpen },
+          { value: `${stats?.totalHours ?? 0} ч`, label: "Время", icon: Clock },
+          { value: String(stats?.streak ?? 0), label: "Серия дней", icon: Flame },
         ].map(({ value, label, icon: Icon }) => (
           <div
             key={label}
