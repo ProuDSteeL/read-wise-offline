@@ -599,14 +599,8 @@ const ReaderPage = () => {
         <>
           <div className="h-24" /> {/* Spacer so content isn't hidden behind player */}
           <MiniAudioPlayer
-            audioUrl={summary.audio_url}
-            bookId={id!}
-            bookTitle={book?.title}
             onClose={() => setShowAudioPlayer(false)}
-            onExpand={(pos, spd) => navigate(`/book/${id}/listen`, { state: { audioPosition: pos, audioSpeed: spd } })}
-            initialPosition={locState?.audioPosition}
-            initialSpeed={locState?.audioSpeed}
-            autoPlay={locState?.autoPlayAudio}
+            onExpand={() => navigate(`/book/${id}/listen`)}
           />
         </>
       )}
