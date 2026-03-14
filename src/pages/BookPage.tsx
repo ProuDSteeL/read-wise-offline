@@ -16,6 +16,52 @@ const BookPage = () => {
   const { data: keyIdeas } = useKeyIdeas(id!);
   const queryClient = useQueryClient();
 
+  // User rating
+  const { data: userRating } = useQuery({
+    queryKey: ["user_rating", user?.id, id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_ratings")
+        .select("rating")
+        .eq("user_id", user!.id)
+        .eq("book_id", id!)
+        .maybeSingle();
+      return data?.rating ?? null;
+    },
+    enabled: !!user && !!id,
+  });
+
+  const rateMutation = useMutation({
+    mutationFn: async (rating: number) => {
+      const { error } = await supabase.from("user_ratings").upsert(
+        { user_id: user!.id, book_id: id!, rating },
+        { onConflict: "user_id,book_id" }
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user_rating", user?.id, id] });
+      queryClient.invalidateQueries({ queryKey: ["book", id] });
+      toast({ title: "Оценка сохранена" });
+    },
+  });
+
+  const handleShare = async () => {
+    if (!book) return;
+    const shareData = {
+      title: book.title,
+      text: `${book.title} — ${book.author}. Читай саммари в Букс!`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        toast({ title: "Ссылка скопирована" });
+      }
+    } catch {}
+  };
   // Bookmark (want_to_read) status
   const { data: isBookmarked } = useQuery({
     queryKey: ["is_bookmarked", user?.id, id],
