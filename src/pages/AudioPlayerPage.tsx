@@ -158,7 +158,22 @@ const AudioPlayerPage = () => {
           <X className="h-5 w-5 text-foreground" />
         </button>
         <span className="text-xs font-medium text-muted-foreground">Аудио</span>
-        <div className="w-5" />
+        <button
+          onClick={() => {
+            // Save position then go to reader
+            if (audioRef.current && user) {
+              supabase.from("user_progress").upsert(
+                { user_id: user.id, book_id: id!, audio_position: audioRef.current.currentTime },
+                { onConflict: "user_id,book_id" }
+              );
+            }
+            navigate(`/book/${id}/read`);
+          }}
+          className="tap-highlight"
+          title="Читать"
+        >
+          <BookOpen className="h-5 w-5 text-foreground" />
+        </button>
       </div>
 
       {/* Cover + info */}
