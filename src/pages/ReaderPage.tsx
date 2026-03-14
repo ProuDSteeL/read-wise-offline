@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ReactNode } from "react";
+import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { X, Settings2, Bookmark, BookmarkCheck, Highlighter, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
