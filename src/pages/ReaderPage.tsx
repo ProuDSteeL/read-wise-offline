@@ -601,7 +601,7 @@ const ReaderPage = () => {
             bookId={id!}
             bookTitle={book?.title}
             onClose={() => setShowAudioPlayer(false)}
-            onExpand={() => navigate(`/audio/${id}`)}
+            onExpand={() => navigate(`/book/${id}/listen`)}
           />
         </>
       )}
