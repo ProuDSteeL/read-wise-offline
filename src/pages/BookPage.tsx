@@ -16,62 +16,62 @@ const BookPage = () => {
   const { data: keyIdeas } = useKeyIdeas(id!);
   const queryClient = useQueryClient();
 
-  // Favorite status
-  const { data: isFavorite } = useQuery({
-    queryKey: ["is_favorite", user?.id, id],
+  // Bookmark (want_to_read) status
+  const { data: isBookmarked } = useQuery({
+    queryKey: ["is_bookmarked", user?.id, id],
     queryFn: async () => {
       const { data } = await supabase
         .from("user_shelves")
         .select("id")
         .eq("user_id", user!.id)
         .eq("book_id", id!)
-        .eq("shelf", "favorite")
+        .eq("shelf", "want_to_read")
         .maybeSingle();
       return !!data;
     },
     enabled: !!user && !!id,
   });
 
-  const favMutation = useMutation({
+  const bookmarkMutation = useMutation({
     mutationFn: async () => {
-      if (isFavorite) {
+      if (isBookmarked) {
         await supabase
           .from("user_shelves")
           .delete()
           .eq("user_id", user!.id)
           .eq("book_id", id!)
-          .eq("shelf", "favorite");
+          .eq("shelf", "want_to_read");
       } else {
         await supabase.from("user_shelves").insert({
           user_id: user!.id,
           book_id: id!,
-          shelf: "favorite",
+          shelf: "want_to_read",
         });
       }
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["is_favorite", user?.id, id] });
-      const prev = queryClient.getQueryData(["is_favorite", user?.id, id]);
-      queryClient.setQueryData(["is_favorite", user?.id, id], !isFavorite);
+      await queryClient.cancelQueries({ queryKey: ["is_bookmarked", user?.id, id] });
+      const prev = queryClient.getQueryData(["is_bookmarked", user?.id, id]);
+      queryClient.setQueryData(["is_bookmarked", user?.id, id], !isBookmarked);
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      queryClient.setQueryData(["is_favorite", user?.id, id], ctx?.prev);
+      queryClient.setQueryData(["is_bookmarked", user?.id, id], ctx?.prev);
       toast({ title: "Ошибка", variant: "destructive" });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["is_favorite", user?.id, id] });
+      queryClient.invalidateQueries({ queryKey: ["is_bookmarked", user?.id, id] });
       queryClient.invalidateQueries({ queryKey: ["shelf_counts"] });
       queryClient.invalidateQueries({ queryKey: ["user_shelves"] });
     },
   });
 
-  const handleFavorite = () => {
+  const handleBookmark = () => {
     if (!user) {
       navigate("/auth");
       return;
     }
-    favMutation.mutate();
+    bookmarkMutation.mutate();
   };
 
   if (isLoading) {
