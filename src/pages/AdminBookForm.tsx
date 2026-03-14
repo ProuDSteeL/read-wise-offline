@@ -143,19 +143,38 @@ const AdminBookForm = () => {
         if (audioFile.size > MAX_AUDIO_SIZE) {
           throw new Error("Файл слишком большой. Максимум 100 МБ.");
         }
-        const ext = audioFile.name.split(".").pop();
+
+        const ext = audioFile.name.split(".").pop() || "mp3";
         const path = `${crypto.randomUUID()}.${ext}`;
-        console.log("Uploading audio:", audioFile.name, "size:", audioFile.size, "type:", audioFile.type);
-        const { error: uploadErr } = await supabase.storage
-          .from("audio-files")
-          .upload(path, audioFile, { 
-            contentType: audioFile.type,
-            duplex: 'half',
-          });
-        if (uploadErr) {
-          console.error("Audio upload error:", uploadErr);
-          throw new Error(`Ошибка загрузки аудио: ${uploadErr.message}`);
+
+        const uploadWithRetry = async (attempt = 1): Promise<void> => {
+          const { error: uploadErr } = await supabase.storage
+            .from("audio-files")
+            .upload(path, audioFile, {
+              contentType: audioFile.type || "audio/mpeg",
+              upsert: false,
+            });
+
+          if (!uploadErr) return;
+
+          if (uploadErr.message?.toLowerCase().includes("failed to fetch") && attempt < 3) {
+            await new Promise((resolve) => setTimeout(resolve, 700 * attempt));
+            return uploadWithRetry(attempt + 1);
+          }
+
+          throw uploadErr;
+        };
+
+        try {
+          await uploadWithRetry();
+        } catch (error: any) {
+          const message = (error?.message || "").toLowerCase();
+          if (message.includes("failed to fetch")) {
+            throw new Error("Сетевая ошибка при загрузке аудио. Проверьте интернет и попробуйте файл до 20–50 МБ.");
+          }
+          throw new Error(`Ошибка загрузки аудио: ${error?.message || "неизвестная ошибка"}`);
         }
+
         const { data: urlData } = supabase.storage.from("audio-files").getPublicUrl(path);
         audioUrl = urlData.publicUrl;
         audioSize = audioFile.size;
