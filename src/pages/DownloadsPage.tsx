@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Trash2, HardDrive, Settings2 } from "lucide-react";
+import { ArrowLeft, Trash2, HardDrive, Settings2, WifiOff, BookOpen } from "lucide-react";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDownloads } from "@/hooks/useDownloads";
 import { formatBytes } from "@/lib/offlineStorage";
 import { Progress } from "@/components/ui/progress";
@@ -18,6 +19,7 @@ import {
 
 const DownloadsPage = () => {
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const { downloads, totalUsed, loading, remove, storageLimitMB, setStorageLimitMB } = useDownloads();
   const [showSettings, setShowSettings] = useState(false);
   const [deleteBookId, setDeleteBookId] = useState<string | null>(null);
@@ -28,6 +30,13 @@ const DownloadsPage = () => {
 
   return (
     <div className="animate-fade-in min-h-screen bg-background pb-24">
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="flex items-center gap-2 bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
+          <WifiOff className="h-3.5 w-3.5" />
+          Нет подключения — доступны только загрузки
+        </div>
+      )}
       {/* Header */}
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 glass border-b border-border/60">
         <button onClick={() => navigate(-1)} className="tap-highlight">
@@ -90,9 +99,9 @@ const DownloadsPage = () => {
                 src={dl.coverUrl || "/placeholder.svg"}
                 alt={dl.title}
                 className="h-14 w-10 shrink-0 rounded-lg object-cover"
-                onClick={() => navigate(`/book/${dl.bookId}`)}
+                onClick={() => navigate(isOnline ? `/book/${dl.bookId}` : `/offline/read/${dl.bookId}`)}
               />
-              <div className="flex-1 min-w-0" onClick={() => navigate(`/book/${dl.bookId}`)}>
+              <div className="flex-1 min-w-0" onClick={() => navigate(isOnline ? `/book/${dl.bookId}` : `/offline/read/${dl.bookId}`)}>
                 <p className="text-sm font-medium text-foreground truncate">{dl.title}</p>
                 <p className="text-xs text-muted-foreground truncate">{dl.author}</p>
                 <div className="flex items-center gap-2 mt-1">
