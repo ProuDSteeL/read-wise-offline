@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Play, Pause, SkipBack, SkipForward, X, Moon, Gauge, BookOpen } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
@@ -26,6 +26,8 @@ const SLEEP_OPTIONS = [
 const AudioPlayerPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locState = location.state as { audioPosition?: number; audioSpeed?: number } | null;
   const { user } = useAuth();
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
@@ -38,6 +40,7 @@ const AudioPlayerPage = () => {
 
   // Speed
   const [speed, setSpeed] = useState(() => {
+    if (locState?.audioSpeed) return locState.audioSpeed;
     const saved = localStorage.getItem("audio-speed");
     return saved ? parseFloat(saved) : 1;
   });
@@ -51,8 +54,19 @@ const AudioPlayerPage = () => {
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showSleepPanel, setShowSleepPanel] = useState(false);
 
-  // Load saved position
+  const positionApplied = useRef(false);
   useEffect(() => {
+    if (positionApplied.current) return;
+    if (!audioRef.current) return;
+
+    // Prefer position from navigation state
+    if (locState?.audioPosition != null && locState.audioPosition > 0) {
+      audioRef.current.currentTime = locState.audioPosition;
+      setCurrentTime(locState.audioPosition);
+      positionApplied.current = true;
+      return;
+    }
+
     if (!user || !id) return;
     supabase
       .from("user_progress")
@@ -61,11 +75,12 @@ const AudioPlayerPage = () => {
       .eq("book_id", id)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.audio_position && audioRef.current) {
+        if (data?.audio_position && audioRef.current && !positionApplied.current) {
           audioRef.current.currentTime = Number(data.audio_position);
+          positionApplied.current = true;
         }
       });
-  }, [user, id, summary]);
+  }, [user, id, summary, locState]);
 
   // Apply speed
   useEffect(() => {
@@ -299,6 +314,11 @@ const AudioPlayerPage = () => {
           if (audioRef.current) {
             setDuration(audioRef.current.duration);
             audioRef.current.playbackRate = speed;
+            if (!positionApplied.current && locState?.audioPosition != null && locState.audioPosition > 0) {
+              audioRef.current.currentTime = locState.audioPosition;
+              setCurrentTime(locState.audioPosition);
+              positionApplied.current = true;
+            }
           }
         }}
         onEnded={() => setPlaying(false)}

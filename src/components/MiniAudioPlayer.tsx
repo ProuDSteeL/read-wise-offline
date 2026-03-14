@@ -16,7 +16,7 @@ interface MiniAudioPlayerProps {
   bookId: string;
   bookTitle?: string;
   onClose?: () => void;
-  onExpand?: () => void;
+  onExpand?: (position: number, speed: number) => void;
   initialPosition?: number;
   initialSpeed?: number;
   autoPlay?: boolean;
@@ -172,7 +172,7 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand, initi
                 }
                 audioRef.current?.pause();
                 setPlaying(false);
-                onExpand?.();
+                onExpand?.(audioRef.current?.currentTime ?? 0, speed);
               }}
               className="flex min-w-0 flex-1 flex-col text-left tap-highlight"
             >

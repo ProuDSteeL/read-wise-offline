@@ -603,7 +603,7 @@ const ReaderPage = () => {
             bookId={id!}
             bookTitle={book?.title}
             onClose={() => setShowAudioPlayer(false)}
-            onExpand={() => navigate(`/book/${id}/listen`)}
+            onExpand={(pos, spd) => navigate(`/book/${id}/listen`, { state: { audioPosition: pos, audioSpeed: spd } })}
             initialPosition={locState?.audioPosition}
             initialSpeed={locState?.audioSpeed}
             autoPlay={locState?.autoPlayAudio}
