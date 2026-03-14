@@ -16,6 +16,7 @@ import AdminBookForm from "./pages/AdminBookForm";
 import AdminCollections from "./pages/AdminCollections";
 import AdminBookList from "./pages/AdminBookList";
 import AuthPage from "./pages/AuthPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
