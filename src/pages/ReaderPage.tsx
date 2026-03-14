@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { X, Settings2, Bookmark, BookmarkCheck, Highlighter, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -134,13 +134,13 @@ const ReaderPage = () => {
   const [editNote, setEditNote] = useState("");
   const [editMenuPos, setEditMenuPos] = useState<{ top: number; left: number } | null>(null);
 
-  // Bookmark
-  const { data: isBookmarked } = useQuery({
-    queryKey: ["is_bookmarked", user?.id, id],
+  // Favorite
+  const { data: isFavorite } = useQuery({
+    queryKey: ["is_favorite", user?.id, id],
     queryFn: async () => {
       const { data } = await supabase
         .from("user_shelves").select("id")
-        .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "want_to_read")
+        .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "favorite")
         .maybeSingle();
       return !!data;
     },
@@ -249,24 +249,24 @@ const ReaderPage = () => {
     return () => document.removeEventListener("click", handler);
   }, [editingHighlight]);
 
-  const bookmarkMutation = useMutation({
+  const favMutation = useMutation({
     mutationFn: async () => {
-      if (isBookmarked) {
+      if (isFavorite) {
         await supabase.from("user_shelves").delete()
-          .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "want_to_read");
+          .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "favorite");
       } else {
-        await supabase.from("user_shelves").insert({ user_id: user!.id, book_id: id!, shelf: "want_to_read" });
+        await supabase.from("user_shelves").insert({ user_id: user!.id, book_id: id!, shelf: "favorite" });
       }
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["is_bookmarked", user?.id, id] });
-      const prev = queryClient.getQueryData(["is_bookmarked", user?.id, id]);
-      queryClient.setQueryData(["is_bookmarked", user?.id, id], !isBookmarked);
+      await queryClient.cancelQueries({ queryKey: ["is_favorite", user?.id, id] });
+      const prev = queryClient.getQueryData(["is_favorite", user?.id, id]);
+      queryClient.setQueryData(["is_favorite", user?.id, id], !isFavorite);
       return { prev };
     },
-    onError: (_e, _v, ctx) => { queryClient.setQueryData(["is_bookmarked", user?.id, id], ctx?.prev); },
+    onError: (_e, _v, ctx) => { queryClient.setQueryData(["is_favorite", user?.id, id], ctx?.prev); },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["is_bookmarked", user?.id, id] });
+      queryClient.invalidateQueries({ queryKey: ["is_favorite", user?.id, id] });
       queryClient.invalidateQueries({ queryKey: ["shelf_counts"] });
     },
   });
@@ -361,8 +361,8 @@ const ReaderPage = () => {
         </button>
         <span className="max-w-[50%] truncate text-sm font-semibold text-foreground">{book?.title}</span>
         <div className="flex items-center gap-2">
-          <button onClick={() => { if (!user) navigate("/auth"); else bookmarkMutation.mutate(); }} className="tap-highlight">
-            {isBookmarked ? <BookmarkCheck className="h-5 w-5 text-primary" /> : <Bookmark className="h-5 w-5 text-muted-foreground" />}
+          <button onClick={() => { if (!user) navigate("/auth"); else favMutation.mutate(); }} className="tap-highlight">
+            <Heart className={`h-5 w-5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
           </button>
           <button onClick={() => setShowSettings(!showSettings)} className="tap-highlight">
             <Settings2 className={`h-5 w-5 ${showSettings ? "text-primary" : "text-muted-foreground"}`} />
