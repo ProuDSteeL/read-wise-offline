@@ -75,18 +75,20 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
 function highlightChildren(
   children: ReactNode,
   highlights: Array<{ id: string; text: string; note: string | null; color?: string }>,
-  onClickHighlight: (h: any) => void
 ): ReactNode {
   if (!highlights.length) return children;
 
   if (typeof children === "string") {
-    return <>{applyHighlights(children, highlights, onClickHighlight)}</>;
+    return <>{applyHighlights(children, highlights)}</>;
   }
 
   if (Array.isArray(children)) {
-    return <>{children.map((child, i) => (
-      <span key={i}>{highlightChildren(child, highlights, onClickHighlight)}</span>
-    ))}</>;
+    return <>{children.map((child, i) => {
+      if (typeof child === "string") {
+        return <React.Fragment key={i}>{applyHighlights(child, highlights)}</React.Fragment>;
+      }
+      return child;
+    })}</>;
   }
 
   return children;
