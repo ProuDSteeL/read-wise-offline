@@ -1,8 +1,10 @@
+import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2 } from "lucide-react";
+import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Eye, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBook, useKeyIdeas } from "@/hooks/useBooks";
+import BookCard from "@/components/BookCard";
+import { useBook, useKeyIdeas, usePopularBooks } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +16,10 @@ const BookPage = () => {
   const { user } = useAuth();
   const { data: book, isLoading } = useBook(id!);
   const { data: keyIdeas } = useKeyIdeas(id!);
+  const { data: relatedBooks } = usePopularBooks();
   const queryClient = useQueryClient();
+  const [activeIdeaIdx, setActiveIdeaIdx] = useState(0);
+  const ideaScrollRef = useRef<HTMLDivElement>(null);
 
   const { data: userRating } = useQuery({
     queryKey: ["user_rating", user?.id, id],
@@ -80,18 +85,10 @@ const BookPage = () => {
   const bookmarkMutation = useMutation({
     mutationFn: async () => {
       if (isBookmarked) {
-        await supabase
-          .from("user_shelves")
-          .delete()
-          .eq("user_id", user!.id)
-          .eq("book_id", id!)
-          .eq("shelf", "want_to_read");
+        await supabase.from("user_shelves").delete()
+          .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "want_to_read");
       } else {
-        await supabase.from("user_shelves").insert({
-          user_id: user!.id,
-          book_id: id!,
-          shelf: "want_to_read",
-        });
+        await supabase.from("user_shelves").insert({ user_id: user!.id, book_id: id!, shelf: "want_to_read" });
       }
     },
     onMutate: async () => {
@@ -116,6 +113,15 @@ const BookPage = () => {
     bookmarkMutation.mutate();
   };
 
+  const handleIdeaScroll = () => {
+    if (!ideaScrollRef.current) return;
+    const el = ideaScrollRef.current;
+    const scrollLeft = el.scrollLeft;
+    const cardWidth = el.firstElementChild?.clientWidth ?? 280;
+    const idx = Math.round(scrollLeft / (cardWidth + 12));
+    setActiveIdeaIdx(idx);
+  };
+
   if (isLoading) {
     return (
       <div className="animate-fade-in space-y-4 px-4 pt-4">
@@ -135,129 +141,171 @@ const BookPage = () => {
     );
   }
 
+  const filteredRelated = relatedBooks?.filter(b => b.id !== id).slice(0, 6);
+
   return (
     <div className="animate-fade-in pb-28">
-      {/* Header */}
-      <div className="relative">
-        <div className="absolute left-4 top-4 z-10 flex w-[calc(100%-2rem)] justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl glass shadow-card tap-highlight"
-          >
-            <ArrowLeft className="h-5 w-5 text-foreground" />
+      {/* Top bar */}
+      <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 glass">
+        <button onClick={() => navigate(-1)} className="tap-highlight">
+          <ArrowLeft className="h-5 w-5 text-foreground" />
+        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => { if (!user) navigate("/auth"); else handleBookmark(); }} className="tap-highlight">
+            <BookMarked className={`h-5 w-5 transition-colors ${isBookmarked ? "fill-primary text-primary" : "text-muted-foreground"}`} />
           </button>
-          <button
-            onClick={handleShare}
-            className="flex h-10 w-10 items-center justify-center rounded-xl glass shadow-card tap-highlight"
-          >
-            <Share2 className="h-5 w-5 text-foreground" />
+          <button onClick={handleShare} className="tap-highlight">
+            <Share2 className="h-5 w-5 text-muted-foreground" />
           </button>
-        </div>
-
-        <div className="relative flex justify-center overflow-hidden px-4 pb-8 pt-16">
-          {/* Background blur of cover */}
-          <div className="absolute inset-0 overflow-hidden">
-            <img src={book.cover_url || "/placeholder.svg"} alt="" className="h-full w-full scale-150 object-cover opacity-15 blur-3xl" />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
-          </div>
-          <img
-            src={book.cover_url || "/placeholder.svg"}
-            alt={book.title}
-            className="relative h-60 w-auto rounded-2xl shadow-elevated object-cover"
-          />
         </div>
       </div>
 
-      <div className="space-y-5 px-4">
-        <div className="text-center">
-          <h1 className="text-xl font-extrabold tracking-tight text-foreground">{book.title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{book.author}</p>
-        </div>
+      {/* Cover */}
+      <div className="flex justify-center px-8 py-6">
+        <img
+          src={book.cover_url || "/placeholder.svg"}
+          alt={book.title}
+          className="h-64 w-auto rounded-2xl shadow-elevated object-cover"
+        />
+      </div>
 
-        <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground">
-          {book.read_time_min ? (
-            <div className="flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
-              <span>{book.read_time_min} мин</span>
-            </div>
-          ) : null}
-          {book.listen_time_min ? (
-            <div className="flex items-center gap-1.5">
-              <Headphones className="h-3.5 w-3.5" />
-              <span>{book.listen_time_min} мин</span>
-            </div>
-          ) : null}
-          {book.rating && Number(book.rating) > 0 ? (
-            <div className="flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              <span className="font-medium">{Number(book.rating).toFixed(1)}</span>
-            </div>
-          ) : null}
-        </div>
+      {/* Title + Author */}
+      <div className="text-center px-4 space-y-1">
+        <h1 className="text-xl font-extrabold tracking-tight text-foreground">{book.title}</h1>
+        <p className="text-sm text-muted-foreground">{book.author}</p>
+      </div>
 
-        {book.categories && book.categories.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2">
-            {book.categories.map((cat) => (
-              <span key={cat} className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-card">
-                {cat}
-              </span>
-            ))}
+      {/* Stats row — SmartReading style */}
+      <div className="mt-4 flex items-center justify-center gap-6">
+        {book.read_time_min ? (
+          <div className="flex flex-col items-center gap-1">
+            <BookOpen className="h-5 w-5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{book.read_time_min} минут</span>
           </div>
-        )}
-
-        {book.description && (
-          <div className="space-y-2">
-            <h2 className="text-[15px] font-bold text-foreground">О книге</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground font-serif">{book.description}</p>
+        ) : null}
+        {book.listen_time_min ? (
+          <div className="flex flex-col items-center gap-1">
+            <Headphones className="h-5 w-5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{book.listen_time_min} минут</span>
           </div>
-        )}
+        ) : null}
+        {book.views_count ? (
+          <div className="flex flex-col items-center gap-1">
+            <Eye className="h-5 w-5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">{book.views_count}</span>
+          </div>
+        ) : null}
+        {book.rating && Number(book.rating) > 0 ? (
+          <div className="flex flex-col items-center gap-1">
+            <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+            <span className="text-xs text-muted-foreground">{Number(book.rating).toFixed(1)}</span>
+          </div>
+        ) : null}
+      </div>
 
+      <div className="mt-6 space-y-6 px-4">
+        {/* About */}
+        <section>
+          <h2 className="text-lg font-bold text-foreground mb-3">О книге</h2>
+          {book.categories && book.categories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {book.categories.map((cat) => (
+                <span key={cat} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground">
+                  {cat}
+                </span>
+              ))}
+            </div>
+          )}
+          {book.description && (
+            <p className="text-sm leading-relaxed text-foreground">{book.description}</p>
+          )}
+        </section>
+
+        {/* Why read — numbered list in card */}
         {book.why_read && Array.isArray(book.why_read) && (book.why_read as string[]).length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-[15px] font-bold text-foreground">Зачем читать</h2>
-            <ul className="space-y-2">
+          <section className="rounded-2xl bg-card p-5 shadow-card">
+            <h2 className="text-base font-bold text-foreground mb-3">Зачем читать?</h2>
+            <ol className="space-y-3">
               {(book.why_read as string[]).map((reason, i) => (
-                <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full gradient-primary" />
-                  {reason}
+                <li key={i} className="flex items-start gap-3 text-sm text-foreground">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-sage">
+                    {i + 1}
+                  </span>
+                  <span className="leading-relaxed">{reason}</span>
                 </li>
               ))}
-            </ul>
-          </div>
+            </ol>
+          </section>
         )}
 
+        {/* About author — collapsible */}
+        {book.about_author && (
+          <section>
+            <h2 className="text-lg font-bold text-foreground mb-2">Об авторе</h2>
+            <p className="text-sm leading-relaxed text-foreground line-clamp-3">
+              {book.about_author}
+            </p>
+          </section>
+        )}
+
+        {/* Key ideas — swipeable carousel with dots */}
         {keyIdeas && keyIdeas.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-[15px] font-bold text-foreground">
-              Ключевые идеи · {keyIdeas.length}
-            </h2>
-            <div className="space-y-2.5">
-              {keyIdeas.map((idea, i) => (
-                <div key={idea.id} className="rounded-2xl bg-card p-4 shadow-card">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg gradient-primary text-[11px] font-bold text-primary-foreground">
-                      {i + 1}
-                    </span>
-                    <h3 className="text-sm font-semibold text-foreground">{idea.title}</h3>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground font-serif line-clamp-3">{idea.content}</p>
+          <section className="rounded-2xl bg-card p-5 shadow-card">
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full gradient-accent px-3 py-1 text-xs font-semibold text-primary-foreground">
+              ✦ Ключевые мысли
+            </div>
+            <div
+              ref={ideaScrollRef}
+              onScroll={handleIdeaScroll}
+              className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory -mx-5 px-5"
+            >
+              {keyIdeas.map((idea) => (
+                <div key={idea.id} className="w-full shrink-0 snap-center">
+                  <p className="text-sm font-semibold text-foreground mb-1">{idea.title}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{idea.content}</p>
                 </div>
               ))}
             </div>
-          </div>
+            {/* Dots */}
+            <div className="mt-3 flex justify-center gap-1.5">
+              {keyIdeas.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === activeIdeaIdx ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/20"
+                  }`}
+                />
+              ))}
+            </div>
+          </section>
         )}
 
-        {book.about_author && (
-          <div className="space-y-2">
-            <h2 className="text-[15px] font-bold text-foreground">Об авторе</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground font-serif">{book.about_author}</p>
-          </div>
+        {/* Related books */}
+        {filteredRelated && filteredRelated.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">С этим саммари читают</h2>
+              <button onClick={() => navigate("/search")} className="text-xs font-medium text-sage tap-highlight">Все</button>
+            </div>
+            <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+              {filteredRelated.map((b) => (
+                <BookCard
+                  key={b.id}
+                  title={b.title}
+                  author={b.author}
+                  coverUrl={b.cover_url || "/placeholder.svg"}
+                  readTimeMin={b.read_time_min ?? undefined}
+                  onClick={() => navigate(`/book/${b.id}`)}
+                />
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Rating */}
         {user && (
-          <div className="space-y-2">
-            <h2 className="text-[15px] font-bold text-foreground">Ваша оценка</h2>
+          <section className="space-y-2">
+            <h2 className="text-lg font-bold text-foreground">Рейтинг</h2>
             <div className="flex gap-1.5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -266,36 +314,24 @@ const BookPage = () => {
                   className="tap-highlight p-0.5"
                 >
                   <Star
-                    className={`h-8 w-8 transition-all duration-200 ${
+                    className={`h-8 w-8 transition-all ${
                       (userRating ?? 0) >= star
-                        ? "fill-amber-400 text-amber-400 scale-100"
-                        : "text-muted-foreground/20 hover:text-amber-300/50"
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-muted-foreground/20"
                     }`}
                   />
                 </button>
               ))}
             </div>
-          </div>
+          </section>
         )}
       </div>
 
-      {/* Sticky bottom bar */}
+      {/* Sticky bottom bar — SmartReading style */}
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 glass safe-bottom">
         <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
-          <button
-            onClick={handleBookmark}
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl tap-highlight transition-all ${
-              isBookmarked ? "bg-primary/10 shadow-glow" : "bg-card shadow-card"
-            }`}
-          >
-            <BookMarked
-              className={`h-5 w-5 transition-all ${
-                isBookmarked ? "fill-primary text-primary" : "text-foreground"
-              }`}
-            />
-          </button>
           <Button
-            className="h-12 flex-1 gap-2 rounded-xl text-sm font-semibold gradient-primary border-0 hover:opacity-90"
+            className="h-12 flex-1 gap-2 rounded-full text-sm font-bold"
             onClick={() => navigate(`/book/${id}/read`)}
           >
             <BookOpen className="h-4 w-4" />
@@ -303,8 +339,7 @@ const BookPage = () => {
           </Button>
           {book.listen_time_min && book.listen_time_min > 0 && (
             <Button
-              variant="secondary"
-              className="h-12 flex-1 gap-2 rounded-xl text-sm font-semibold shadow-card"
+              className="h-12 flex-1 gap-2 rounded-full text-sm font-bold gradient-accent border-0 hover:opacity-90"
               onClick={() => navigate(`/book/${id}/listen`)}
             >
               <Headphones className="h-4 w-4" />

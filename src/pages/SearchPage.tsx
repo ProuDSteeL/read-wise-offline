@@ -30,7 +30,6 @@ const SearchPage = () => {
   const { data: allBooks } = usePublishedBooks();
 
   const isSearching = query.length >= 2;
-
   let displayBooks = isSearching ? results : allBooks;
 
   if (activeCategory && displayBooks) {
@@ -49,22 +48,17 @@ const SearchPage = () => {
   }
 
   const handleCategoryClick = (cat: string) => {
-    if (activeCategory === cat) {
-      setActiveCategory(null);
-    } else {
-      setActiveCategory(cat);
-      if (!isSearching) setQuery("");
-    }
+    setActiveCategory(activeCategory === cat ? null : cat);
   };
 
   return (
     <div className="animate-fade-in space-y-4 px-4 pt-14 pb-6">
       <div className="flex items-center gap-2">
-        <h1 className="flex-1 text-[28px] font-extrabold tracking-tight text-foreground">Поиск</h1>
+        <h1 className="flex-1 text-[26px] font-extrabold tracking-tight text-foreground">Поиск</h1>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all tap-highlight ${
-            showFilters ? "bg-primary/10 text-primary shadow-glow" : "bg-card text-muted-foreground shadow-card"
+          className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors tap-highlight ${
+            showFilters ? "bg-primary/10 text-primary" : "bg-card text-muted-foreground shadow-card"
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -75,7 +69,7 @@ const SearchPage = () => {
         <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
         <Input
           placeholder="Название, автор или тема..."
-          className="h-11 pl-10 rounded-xl bg-card border-0 shadow-card text-sm placeholder:text-muted-foreground/50"
+          className="h-11 pl-10 rounded-xl bg-card border-0 shadow-card text-sm"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -88,8 +82,8 @@ const SearchPage = () => {
             onClick={() => handleCategoryClick(cat)}
             className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all tap-highlight ${
               activeCategory === cat
-                ? "gradient-primary text-primary-foreground shadow-glow"
-                : "bg-card text-foreground shadow-card border border-border hover:border-primary/30"
+                ? "bg-primary text-primary-foreground"
+                : "bg-card border border-border text-foreground"
             }`}
           >
             {cat}
@@ -103,9 +97,9 @@ const SearchPage = () => {
             <button
               key={key}
               onClick={() => setSortBy(key)}
-              className={`rounded-xl px-3.5 py-2 text-xs font-medium transition-all tap-highlight ${
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all tap-highlight ${
                 sortBy === key
-                  ? "bg-primary text-primary-foreground"
+                  ? "gradient-accent text-primary-foreground"
                   : "bg-card text-muted-foreground shadow-card"
               }`}
             >
@@ -127,7 +121,7 @@ const SearchPage = () => {
         </div>
       ) : displayBooks && displayBooks.length > 0 ? (
         <>
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-xs text-muted-foreground">
             {activeCategory ? `${activeCategory} · ` : ""}{displayBooks.length} книг
           </p>
           <div className="grid grid-cols-2 gap-4 pb-4">
@@ -144,20 +138,13 @@ const SearchPage = () => {
             ))}
           </div>
         </>
-      ) : isSearching || activeCategory ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted mb-4">
-            <Search className="h-7 w-7 text-muted-foreground/30" />
-          </div>
-          <p className="text-sm text-muted-foreground">Ничего не найдено</p>
-        </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted mb-4">
-            <Search className="h-7 w-7 text-muted-foreground/30" />
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sage-light mb-4">
+            <Search className="h-7 w-7 text-sage/40" />
           </div>
           <p className="text-sm text-muted-foreground">
-            Введите запрос, чтобы найти саммари
+            {isSearching || activeCategory ? "Ничего не найдено" : "Введите запрос, чтобы найти саммари"}
           </p>
         </div>
       )}
