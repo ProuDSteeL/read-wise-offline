@@ -101,7 +101,22 @@ const ProfilePage = () => {
         ))}
       </div>
 
-      {isAdmin && (
+      {/* Notifications */}
+      {push.isSupported && (
+        <div className="flex items-center gap-3 rounded-2xl bg-card p-4 shadow-card">
+          <Bell className="h-5 w-5 text-sage" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">Push-уведомления</p>
+            <p className="text-[11px] text-muted-foreground">Напоминания о чтении раз в 3 дня</p>
+          </div>
+          <Switch
+            checked={push.isSubscribed}
+            onCheckedChange={() => push.toggle()}
+            disabled={push.loading}
+          />
+        </div>
+      )}
+
         <button
           onClick={() => navigate("/admin/books")}
           className="flex w-full items-center gap-3 rounded-2xl bg-card p-4 shadow-card transition-colors tap-highlight"
