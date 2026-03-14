@@ -248,6 +248,30 @@ const BookPage = () => {
             <p className="text-sm leading-relaxed text-muted-foreground font-serif">{book.about_author}</p>
           </div>
         )}
+
+        {/* Rating */}
+        {user && (
+          <div className="space-y-2">
+            <h2 className="text-base font-semibold text-foreground">Ваша оценка</h2>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => rateMutation.mutate(star)}
+                  className="tap-highlight p-0.5"
+                >
+                  <Star
+                    className={`h-7 w-7 transition-colors ${
+                      (userRating ?? 0) >= star
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-muted-foreground/30"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sticky bottom bar */}
