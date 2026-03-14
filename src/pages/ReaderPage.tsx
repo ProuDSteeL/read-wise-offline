@@ -121,6 +121,7 @@ const ReaderPage = () => {
     parseInt(localStorage.getItem("reader-font-size") || "18")
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
 
   // New selection state
   const [selectedText, setSelectedText] = useState("");
