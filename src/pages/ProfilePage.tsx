@@ -75,10 +75,10 @@ const ProfilePage = () => {
         <Button
           variant="outline"
           className="w-full justify-start gap-3 rounded-xl"
-          onClick={() => navigate("/admin/book/new")}
+          onClick={() => navigate("/admin/books")}
         >
           <Shield className="h-4 w-4" />
-          Добавить книгу
+          Управление книгами
         </Button>
       )}
 
