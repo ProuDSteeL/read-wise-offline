@@ -1,7 +1,8 @@
-import { User, Settings, LogIn, LogOut, BookOpen, Clock, Flame } from "lucide-react";
+import { User, Settings, LogIn, LogOut, BookOpen, Clock, Flame, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 const ProfilePage = () => {
   const { user, loading, signOut } = useAuth();
