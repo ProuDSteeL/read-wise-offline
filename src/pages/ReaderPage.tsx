@@ -46,6 +46,7 @@ const ReaderPage = () => {
   // Selection / highlight state
   const [selectedText, setSelectedText] = useState("");
   const [showSelectionMenu, setShowSelectionMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [highlightNote, setHighlightNote] = useState("");
   const [showNoteInput, setShowNoteInput] = useState(false);
 
