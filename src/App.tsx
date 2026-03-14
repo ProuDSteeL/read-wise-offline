@@ -10,6 +10,8 @@ import SearchPage from "./pages/SearchPage";
 import ShelvesPage from "./pages/ShelvesPage";
 import ProfilePage from "./pages/ProfilePage";
 import BookPage from "./pages/BookPage";
+import ReaderPage from "./pages/ReaderPage";
+import AudioPlayerPage from "./pages/AudioPlayerPage";
 import AdminBookForm from "./pages/AdminBookForm";
 import AdminBookList from "./pages/AdminBookList";
 import AuthPage from "./pages/AuthPage";
@@ -32,6 +34,8 @@ const App = () => (
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
             <Route path="/book/:id" element={<BookPage />} />
+            <Route path="/book/:id/read" element={<ReaderPage />} />
+            <Route path="/book/:id/listen" element={<AudioPlayerPage />} />
             <Route path="/admin/books" element={<AdminBookList />} />
             <Route path="/admin/book/new" element={<AdminBookForm />} />
             <Route path="/admin/book/:id/edit" element={<AdminBookForm />} />
