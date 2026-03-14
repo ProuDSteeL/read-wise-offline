@@ -105,6 +105,8 @@ interface HighlightData {
 const ReaderPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locState = location.state as { audioPosition?: number; audioSpeed?: number; autoPlayAudio?: boolean } | null;
   const { user } = useAuth();
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
