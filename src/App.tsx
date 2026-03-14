@@ -13,6 +13,7 @@ import ProfilePage from "./pages/ProfilePage";
 import BookPage from "./pages/BookPage";
 import ReaderPage from "./pages/ReaderPage";
 import AudioPlayerPage from "./pages/AudioPlayerPage";
+import DownloadsPage from "./pages/DownloadsPage";
 import AdminBookForm from "./pages/AdminBookForm";
 import AdminCollections from "./pages/AdminCollections";
 import AdminBookList from "./pages/AdminBookList";
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/shelves" element={<ShelvesPage />} />
+                <Route path="/downloads" element={<DownloadsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Route>
               <Route path="/book/:id" element={<BookPage />} />

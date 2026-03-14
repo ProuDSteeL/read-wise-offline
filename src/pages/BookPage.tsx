@@ -9,6 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useSummary } from "@/hooks/useSummary";
+import { useDownloads } from "@/hooks/useDownloads";
+import DownloadDialog from "@/components/DownloadDialog";
 
 const BookPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,9 +20,12 @@ const BookPage = () => {
   const { data: book, isLoading } = useBook(id!);
   const { data: keyIdeas } = useKeyIdeas(id!);
   const { data: relatedBooks } = usePopularBooks();
+  const { data: summary } = useSummary(id!);
+  const { isDownloaded, download: downloadBook, activeDownloads } = useDownloads();
   const queryClient = useQueryClient();
   const [activeIdeaIdx, setActiveIdeaIdx] = useState(0);
   const ideaScrollRef = useRef<HTMLDivElement>(null);
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
 
   const { data: userRating } = useQuery({
     queryKey: ["user_rating", user?.id, id],
@@ -151,6 +157,12 @@ const BookPage = () => {
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
         <div className="flex items-center gap-3">
+          <button onClick={() => {
+            if (!user) { navigate("/auth"); return; }
+            setShowDownloadDialog(true);
+          }} className="tap-highlight">
+            <Download className={`h-5 w-5 transition-colors ${isDownloaded(id!) ? "text-primary" : "text-muted-foreground"}`} />
+          </button>
           <button onClick={() => { if (!user) navigate("/auth"); else handleBookmark(); }} className="tap-highlight">
             <BookMarked className={`h-5 w-5 transition-colors ${isBookmarked ? "fill-primary text-primary" : "text-muted-foreground"}`} />
           </button>
@@ -348,6 +360,30 @@ const BookPage = () => {
           )}
         </div>
       </div>
+
+      {/* Download dialog */}
+      <DownloadDialog
+        open={showDownloadDialog}
+        onOpenChange={setShowDownloadDialog}
+        bookTitle={book.title}
+        hasText={!!summary?.content}
+        hasAudio={!!summary?.audio_url}
+        audioSizeBytes={summary?.audio_size_bytes ?? undefined}
+        textContent={summary?.content}
+        alreadyDownloaded={isDownloaded(id!) ? { hasText: isDownloaded(id!)!.hasText, hasAudio: isDownloaded(id!)!.hasAudio } : null}
+        downloading={activeDownloads.has(id!)}
+        onDownload={(type) => {
+          downloadBook(
+            id!,
+            type,
+            { title: book.title, author: book.author, coverUrl: book.cover_url },
+            summary?.content,
+            summary?.audio_url,
+            summary?.audio_size_bytes ?? 0
+          );
+          setShowDownloadDialog(false);
+        }}
+      />
     </div>
   );
 };
