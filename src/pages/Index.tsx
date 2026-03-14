@@ -159,6 +159,25 @@ const Index = () => {
         <CollectionSection key={col.id} collection={col} />
       ))}
 
+      {/* Recommendations */}
+      {user && recommendations && recommendations.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="px-4 text-lg font-semibold text-foreground">Для вас</h2>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+            {recommendations.map((book) => (
+              <BookCard
+                key={book.id}
+                title={book.title}
+                author={book.author}
+                coverUrl={book.cover_url || "/placeholder.svg"}
+                readTimeMin={book.read_time_min ?? undefined}
+                onClick={() => navigate(`/book/${book.id}`)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* New */}
       <section className="space-y-3">
         <h2 className="px-4 text-lg font-semibold text-foreground">Новинки</h2>
