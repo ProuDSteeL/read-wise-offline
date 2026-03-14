@@ -40,6 +40,7 @@ const App = () => (
             <Route path="/admin/books" element={<AdminBookList />} />
             <Route path="/admin/book/new" element={<AdminBookForm />} />
             <Route path="/admin/book/:id/edit" element={<AdminBookForm />} />
+            <Route path="/admin/collections" element={<AdminCollections />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

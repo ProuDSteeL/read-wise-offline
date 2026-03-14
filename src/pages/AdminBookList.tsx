@@ -82,9 +82,14 @@ const AdminBookList = () => {
           </button>
           <h1 className="text-lg font-bold text-foreground">Управление книгами</h1>
         </div>
-        <Button size="sm" onClick={() => navigate("/admin/book/new")} className="gap-1 rounded-xl">
-          <Plus className="h-4 w-4" /> Новая
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate("/admin/collections")} className="gap-1 rounded-xl">
+            <Library className="h-4 w-4" /> Коллекции
+          </Button>
+          <Button size="sm" onClick={() => navigate("/admin/book/new")} className="gap-1 rounded-xl">
+            <Plus className="h-4 w-4" /> Новая
+          </Button>
+        </div>
       </div>
 
       <div className="p-4 space-y-3">
