@@ -30,6 +30,14 @@ const Index = () => {
     (p) => p.progress_percent && p.progress_percent > 0 && p.progress_percent < 100
   );
 
+  // Build a map of bookId -> progress for showing on cards
+  const progressMap = new Map<string, number>();
+  progress?.forEach((p: any) => {
+    if (p.progress_percent && p.progress_percent > 0) {
+      progressMap.set(p.book_id, Number(p.progress_percent));
+    }
+  });
+
   return (
     <div className="animate-fade-in space-y-6 pb-4">
       <div className="px-4 pt-12">
@@ -51,6 +59,26 @@ const Index = () => {
         ))}
       </div>
 
+      {/* Continue reading — shown first */}
+      {user && continueBooks && continueBooks.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="px-4 text-lg font-semibold text-foreground">Продолжить</h2>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+            {continueBooks.map((p: any) => (
+              <BookCard
+                key={p.book_id}
+                title={p.books?.title ?? ""}
+                author={p.books?.author ?? ""}
+                coverUrl={p.books?.cover_url || "/placeholder.svg"}
+                readTimeMin={p.books?.read_time_min ?? undefined}
+                progress={Number(p.progress_percent)}
+                onClick={() => navigate(`/book/${p.book_id}`)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Popular */}
       <section className="space-y-3">
         <h2 className="px-4 text-lg font-semibold text-foreground">Популярное</h2>
@@ -65,6 +93,7 @@ const Index = () => {
                 author={book.author}
                 coverUrl={book.cover_url || "/placeholder.svg"}
                 readTimeMin={book.read_time_min ?? undefined}
+                progress={progressMap.get(book.id)}
                 onClick={() => navigate(`/book/${book.id}`)}
               />
             ))}
@@ -88,6 +117,7 @@ const Index = () => {
                 author={book.author}
                 coverUrl={book.cover_url || "/placeholder.svg"}
                 readTimeMin={book.read_time_min ?? undefined}
+                progress={progressMap.get(book.id)}
                 onClick={() => navigate(`/book/${book.id}`)}
               />
             ))}
@@ -96,26 +126,6 @@ const Index = () => {
           <p className="px-4 text-sm text-muted-foreground">Каталог пока пуст</p>
         )}
       </section>
-
-      {/* Continue reading */}
-      {user && continueBooks && continueBooks.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="px-4 text-lg font-semibold text-foreground">Продолжить</h2>
-          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
-            {continueBooks.map((p: any) => (
-              <BookCard
-                key={p.book_id}
-                title={p.books?.title ?? ""}
-                author={p.books?.author ?? ""}
-                coverUrl={p.books?.cover_url || "/placeholder.svg"}
-                readTimeMin={p.books?.read_time_min ?? undefined}
-                progress={Number(p.progress_percent)}
-                onClick={() => navigate(`/book/${p.book_id}`)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 };
