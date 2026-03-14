@@ -16,6 +16,7 @@ import AdminBookForm from "./pages/AdminBookForm";
 import AdminCollections from "./pages/AdminCollections";
 import AdminBookList from "./pages/AdminBookList";
 import AuthPage from "./pages/AuthPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/admin/book/:id/edit" element={<AdminBookForm />} />
             <Route path="/admin/collections" element={<AdminCollections />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
