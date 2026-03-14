@@ -139,12 +139,23 @@ const AdminBookForm = () => {
 
       // Upload audio
       if (audioFile) {
+        const MAX_AUDIO_SIZE = 100 * 1024 * 1024; // 100MB
+        if (audioFile.size > MAX_AUDIO_SIZE) {
+          throw new Error("Файл слишком большой. Максимум 100 МБ.");
+        }
         const ext = audioFile.name.split(".").pop();
         const path = `${crypto.randomUUID()}.${ext}`;
+        console.log("Uploading audio:", audioFile.name, "size:", audioFile.size, "type:", audioFile.type);
         const { error: uploadErr } = await supabase.storage
           .from("audio-files")
-          .upload(path, audioFile, { contentType: audioFile.type });
-        if (uploadErr) throw uploadErr;
+          .upload(path, audioFile, { 
+            contentType: audioFile.type,
+            duplex: 'half',
+          });
+        if (uploadErr) {
+          console.error("Audio upload error:", uploadErr);
+          throw new Error(`Ошибка загрузки аудио: ${uploadErr.message}`);
+        }
         const { data: urlData } = supabase.storage.from("audio-files").getPublicUrl(path);
         audioUrl = urlData.publicUrl;
         audioSize = audioFile.size;
