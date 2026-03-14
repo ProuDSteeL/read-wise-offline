@@ -54,8 +54,19 @@ const AudioPlayerPage = () => {
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showSleepPanel, setShowSleepPanel] = useState(false);
 
-  // Load saved position
+  const positionApplied = useRef(false);
   useEffect(() => {
+    if (positionApplied.current) return;
+    if (!audioRef.current) return;
+
+    // Prefer position from navigation state
+    if (locState?.audioPosition != null && locState.audioPosition > 0) {
+      audioRef.current.currentTime = locState.audioPosition;
+      setCurrentTime(locState.audioPosition);
+      positionApplied.current = true;
+      return;
+    }
+
     if (!user || !id) return;
     supabase
       .from("user_progress")
@@ -64,11 +75,12 @@ const AudioPlayerPage = () => {
       .eq("book_id", id)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.audio_position && audioRef.current) {
+        if (data?.audio_position && audioRef.current && !positionApplied.current) {
           audioRef.current.currentTime = Number(data.audio_position);
+          positionApplied.current = true;
         }
       });
-  }, [user, id, summary]);
+  }, [user, id, summary, locState]);
 
   // Apply speed
   useEffect(() => {
