@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Play, Pause, SkipBack, SkipForward, X, Moon, Gauge, BookOpen } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { useAudio } from "@/contexts/AudioContext";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 
@@ -26,24 +25,9 @@ const SLEEP_OPTIONS = [
 const AudioPlayerPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const locState = location.state as { audioPosition?: number; audioSpeed?: number } | null;
-  const { user } = useAuth();
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const saveTimer = useRef<ReturnType<typeof setTimeout>>();
-
-  // Speed
-  const [speed, setSpeed] = useState(() => {
-    if (locState?.audioSpeed) return locState.audioSpeed;
-    const saved = localStorage.getItem("audio-speed");
-    return saved ? parseFloat(saved) : 1;
-  });
+  const audio = useAudio();
 
   // Sleep timer
   const [sleepMinutes, setSleepMinutes] = useState(0);
@@ -54,39 +38,13 @@ const AudioPlayerPage = () => {
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showSleepPanel, setShowSleepPanel] = useState(false);
 
-  const positionApplied = useRef(false);
+  // Start playing when page loads (if not already playing this book)
   useEffect(() => {
-    if (positionApplied.current) return;
-    if (!audioRef.current) return;
-
-    // Prefer position from navigation state
-    if (locState?.audioPosition != null && locState.audioPosition > 0) {
-      audioRef.current.currentTime = locState.audioPosition;
-      setCurrentTime(locState.audioPosition);
-      positionApplied.current = true;
-      return;
+    if (!summary?.audio_url || !id) return;
+    if (audio.state.bookId !== id) {
+      audio.play(id, summary.audio_url, book?.title);
     }
-
-    if (!user || !id) return;
-    supabase
-      .from("user_progress")
-      .select("audio_position")
-      .eq("user_id", user.id)
-      .eq("book_id", id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.audio_position && audioRef.current && !positionApplied.current) {
-          audioRef.current.currentTime = Number(data.audio_position);
-          positionApplied.current = true;
-        }
-      });
-  }, [user, id, summary, locState]);
-
-  // Apply speed
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.playbackRate = speed;
-    localStorage.setItem("audio-speed", String(speed));
-  }, [speed]);
+  }, [summary?.audio_url, id, book?.title]);
 
   // Sleep timer logic
   useEffect(() => {
@@ -99,9 +57,7 @@ const AudioPlayerPage = () => {
     sleepInterval.current = setInterval(() => {
       setSleepRemaining((prev) => {
         if (prev <= 1) {
-          // Pause audio
-          audioRef.current?.pause();
-          setPlaying(false);
+          audio.togglePlay();
           setSleepMinutes(0);
           clearInterval(sleepInterval.current);
           toast({ title: "Таймер сна сработал", description: "Воспроизведение остановлено" });
@@ -113,39 +69,8 @@ const AudioPlayerPage = () => {
     return () => clearInterval(sleepInterval.current);
   }, [sleepMinutes]);
 
-  const savePosition = useCallback(
-    (time: number) => {
-      if (!user || !id) return;
-      clearTimeout(saveTimer.current);
-      saveTimer.current = setTimeout(() => {
-        supabase.from("user_progress").upsert(
-          { user_id: user.id, book_id: id, audio_position: time },
-          { onConflict: "user_id,book_id" }
-        );
-      }, 2000);
-    },
-    [user, id]
-  );
-
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (playing) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setPlaying(!playing);
-  };
-
-  const skip = (seconds: number) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = Math.max(0, Math.min(duration, audioRef.current.currentTime + seconds));
-  };
-
   const handleSeek = (value: number[]) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = value[0];
-    setCurrentTime(value[0]);
+    audio.seek(value[0]);
   };
 
   if (isLoading) {
@@ -165,6 +90,8 @@ const AudioPlayerPage = () => {
     );
   }
 
+  const { playing, currentTime, duration, speed } = audio.state;
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
@@ -174,17 +101,7 @@ const AudioPlayerPage = () => {
         </button>
         <span className="text-xs font-medium text-muted-foreground">Аудио</span>
         <button
-          onClick={() => {
-            const pos = audioRef.current?.currentTime || 0;
-            const spd = speed;
-            if (audioRef.current && user) {
-              supabase.from("user_progress").upsert(
-                { user_id: user.id, book_id: id!, audio_position: pos },
-                { onConflict: "user_id,book_id" }
-              );
-            }
-            navigate(`/book/${id}/read`, { state: { audioPosition: pos, audioSpeed: spd, autoPlayAudio: true } });
-          }}
+          onClick={() => navigate(`/book/${id}/read`, { state: { autoPlayAudio: true } })}
           className="tap-highlight"
           title="Читать"
         >
@@ -224,16 +141,16 @@ const AudioPlayerPage = () => {
 
         {/* Main controls */}
         <div className="flex items-center justify-center gap-8">
-          <button onClick={() => skip(-15)} className="tap-highlight text-foreground">
+          <button onClick={() => audio.skip(-15)} className="tap-highlight text-foreground">
             <SkipBack className="h-6 w-6" />
           </button>
           <button
-            onClick={togglePlay}
+            onClick={audio.togglePlay}
             className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elevated tap-highlight"
           >
             {playing ? <Pause className="h-7 w-7" /> : <Play className="ml-1 h-7 w-7" />}
           </button>
-          <button onClick={() => skip(15)} className="tap-highlight text-foreground">
+          <button onClick={() => audio.skip(15)} className="tap-highlight text-foreground">
             <SkipForward className="h-6 w-6" />
           </button>
         </div>
@@ -266,7 +183,7 @@ const AudioPlayerPage = () => {
             {SPEEDS.map((s) => (
               <button
                 key={s}
-                onClick={() => { setSpeed(s); setShowSpeedPanel(false); }}
+                onClick={() => { audio.setSpeed(s); setShowSpeedPanel(false); }}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                   speed === s
                     ? "bg-primary text-primary-foreground"
@@ -298,31 +215,6 @@ const AudioPlayerPage = () => {
           </div>
         )}
       </div>
-
-      {/* Hidden audio element */}
-      <audio
-        ref={audioRef}
-        src={summary.audio_url}
-        preload="metadata"
-        onTimeUpdate={() => {
-          if (audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime);
-            savePosition(audioRef.current.currentTime);
-          }
-        }}
-        onLoadedMetadata={() => {
-          if (audioRef.current) {
-            setDuration(audioRef.current.duration);
-            audioRef.current.playbackRate = speed;
-            if (!positionApplied.current && locState?.audioPosition != null && locState.audioPosition > 0) {
-              audioRef.current.currentTime = locState.audioPosition;
-              setCurrentTime(locState.audioPosition);
-              positionApplied.current = true;
-            }
-          }
-        }}
-        onEnded={() => setPlaying(false)}
-      />
     </div>
   );
 };

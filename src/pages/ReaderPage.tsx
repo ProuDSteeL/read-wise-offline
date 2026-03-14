@@ -5,6 +5,7 @@ import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAudio } from "@/contexts/AudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,7 @@ const ReaderPage = () => {
   const location = useLocation();
   const locState = location.state as { audioPosition?: number; audioSpeed?: number; autoPlayAudio?: boolean } | null;
   const { user } = useAuth();
+  const audioCtx = useAudio();
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
   const queryClient = useQueryClient();
@@ -123,7 +125,25 @@ const ReaderPage = () => {
     parseInt(localStorage.getItem("reader-font-size") || "18")
   );
   const [showSettings, setShowSettings] = useState(false);
-  const [showAudioPlayer, setShowAudioPlayer] = useState(!!locState?.autoPlayAudio);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(() => {
+    // Show mini-player if coming back from full player or audio is already playing for this book
+    return !!locState?.autoPlayAudio || audioCtx.state.bookId === id;
+  });
+
+  // Start audio when mini-player is shown
+  useEffect(() => {
+    if (showAudioPlayer && summary?.audio_url && id) {
+      if (audioCtx.state.bookId !== id) {
+        audio_start();
+      }
+    }
+  }, [showAudioPlayer, summary?.audio_url, id]);
+
+  const audio_start = () => {
+    if (summary?.audio_url && id) {
+      audioCtx.play(id, summary.audio_url, book?.title);
+    }
+  };
 
   // New selection state
   const [selectedText, setSelectedText] = useState("");
@@ -381,7 +401,16 @@ const ReaderPage = () => {
         <span className="max-w-[50%] truncate text-sm font-semibold text-foreground">{book?.title}</span>
         <div className="flex items-center gap-2">
           {summary?.audio_url && (
-            <button onClick={() => setShowAudioPlayer(!showAudioPlayer)} className="tap-highlight">
+            <button onClick={() => {
+              const next = !showAudioPlayer;
+              setShowAudioPlayer(next);
+              if (next && summary?.audio_url && id && audioCtx.state.bookId !== id) {
+                audioCtx.play(id, summary.audio_url, book?.title);
+              }
+              if (!next) {
+                audioCtx.stop();
+              }
+            }} className="tap-highlight">
               <Headphones className={`h-5 w-5 transition-colors ${showAudioPlayer ? "text-primary" : "text-muted-foreground"}`} />
             </button>
           )}
@@ -599,14 +628,8 @@ const ReaderPage = () => {
         <>
           <div className="h-24" /> {/* Spacer so content isn't hidden behind player */}
           <MiniAudioPlayer
-            audioUrl={summary.audio_url}
-            bookId={id!}
-            bookTitle={book?.title}
             onClose={() => setShowAudioPlayer(false)}
-            onExpand={(pos, spd) => navigate(`/book/${id}/listen`, { state: { audioPosition: pos, audioSpeed: spd } })}
-            initialPosition={locState?.audioPosition}
-            initialSpeed={locState?.audioSpeed}
-            autoPlay={locState?.autoPlayAudio}
+            onExpand={() => navigate(`/book/${id}/listen`)}
           />
         </>
       )}
