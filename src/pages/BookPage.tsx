@@ -360,6 +360,30 @@ const BookPage = () => {
           )}
         </div>
       </div>
+
+      {/* Download dialog */}
+      <DownloadDialog
+        open={showDownloadDialog}
+        onOpenChange={setShowDownloadDialog}
+        bookTitle={book.title}
+        hasText={!!summary?.content}
+        hasAudio={!!summary?.audio_url}
+        audioSizeBytes={summary?.audio_size_bytes ?? undefined}
+        textContent={summary?.content}
+        alreadyDownloaded={isDownloaded(id!) ? { hasText: isDownloaded(id!)!.hasText, hasAudio: isDownloaded(id!)!.hasAudio } : null}
+        downloading={activeDownloads.has(id!)}
+        onDownload={(type) => {
+          downloadBook(
+            id!,
+            type,
+            { title: book.title, author: book.author, coverUrl: book.cover_url },
+            summary?.content,
+            summary?.audio_url,
+            summary?.audio_size_bytes ?? 0
+          );
+          setShowDownloadDialog(false);
+        }}
+      />
     </div>
   );
 };
