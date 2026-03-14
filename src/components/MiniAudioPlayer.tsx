@@ -17,6 +17,9 @@ interface MiniAudioPlayerProps {
   bookTitle?: string;
   onClose?: () => void;
   onExpand?: () => void;
+  initialPosition?: number;
+  initialSpeed?: number;
+  autoPlay?: boolean;
 }
 
 const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand }: MiniAudioPlayerProps) => {
