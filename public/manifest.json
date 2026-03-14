@@ -1,0 +1,17 @@
+{
+  "name": "Букс — саммари книг",
+  "short_name": "Букс",
+  "description": "Саммари нон-фикшн книг на русском языке",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF8",
+  "theme_color": "#6C5CE7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
