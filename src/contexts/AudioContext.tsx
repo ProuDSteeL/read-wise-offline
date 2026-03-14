@@ -218,7 +218,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [user, state.bookId]);
 
   return (
-    <AudioContext.Provider value={{ state, audioRef, play, togglePlay, seek, skip, setSpeed, stop, isActive }}>
+    <AudioContext.Provider value={{ state, audioRef, play, load, togglePlay, seek, skip, setSpeed, stop, isActive }}>
       {children}
       {/* Single persistent audio element */}
       <audio
