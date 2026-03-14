@@ -12,6 +12,7 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const { data: isAdmin } = useIsAdmin();
   const { data: stats } = useProfileStats();
+  const push = usePushNotifications();
 
   if (loading) {
     return (
