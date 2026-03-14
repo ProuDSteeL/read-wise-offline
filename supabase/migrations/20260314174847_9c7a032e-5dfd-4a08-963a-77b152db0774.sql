@@ -1,0 +1,1 @@
+ALTER TABLE public.user_progress ADD CONSTRAINT user_progress_user_book_unique UNIQUE (user_id, book_id);
