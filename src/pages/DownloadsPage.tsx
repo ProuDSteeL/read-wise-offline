@@ -19,6 +19,7 @@ import {
 
 const DownloadsPage = () => {
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const { downloads, totalUsed, loading, remove, storageLimitMB, setStorageLimitMB } = useDownloads();
   const [showSettings, setShowSettings] = useState(false);
   const [deleteBookId, setDeleteBookId] = useState<string | null>(null);
@@ -29,6 +30,13 @@ const DownloadsPage = () => {
 
   return (
     <div className="animate-fade-in min-h-screen bg-background pb-24">
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="flex items-center gap-2 bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
+          <WifiOff className="h-3.5 w-3.5" />
+          Нет подключения — доступны только загрузки
+        </div>
+      )}
       {/* Header */}
       <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-3 glass border-b border-border/60">
         <button onClick={() => navigate(-1)} className="tap-highlight">
