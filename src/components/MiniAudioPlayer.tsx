@@ -16,9 +16,10 @@ interface MiniAudioPlayerProps {
   bookId: string;
   bookTitle?: string;
   onClose?: () => void;
+  onExpand?: () => void;
 }
 
-const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose }: MiniAudioPlayerProps) => {
+const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand }: MiniAudioPlayerProps) => {
   const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -140,15 +141,29 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose }: MiniAudioPlay
               <SkipForward className="h-4 w-4" />
             </button>
 
-            {/* Title & time */}
-            <div className="flex min-w-0 flex-1 flex-col">
+            {/* Title & time — tap to open full player */}
+            <button
+              onClick={() => {
+                // Save current position before navigating
+                if (audioRef.current && user) {
+                  supabase.from("user_progress").upsert(
+                    { user_id: user.id, book_id: bookId, audio_position: audioRef.current.currentTime },
+                    { onConflict: "user_id,book_id" }
+                  );
+                }
+                audioRef.current?.pause();
+                setPlaying(false);
+                onExpand?.();
+              }}
+              className="flex min-w-0 flex-1 flex-col text-left tap-highlight"
+            >
               {bookTitle && (
                 <p className="truncate text-[11px] font-medium text-foreground">{bookTitle}</p>
               )}
               <p className="text-[10px] text-muted-foreground">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </p>
-            </div>
+            </button>
 
             {/* Speed */}
             <button
