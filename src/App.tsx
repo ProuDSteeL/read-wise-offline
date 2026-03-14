@@ -36,12 +36,12 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/shelves" element={<ShelvesPage />} />
+                <Route path="/downloads" element={<DownloadsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
               </Route>
               <Route path="/book/:id" element={<BookPage />} />
               <Route path="/book/:id/read" element={<ReaderPage />} />
               <Route path="/book/:id/listen" element={<AudioPlayerPage />} />
-              <Route path="/downloads" element={<DownloadsPage />} />
               <Route path="/admin/books" element={<AdminBookList />} />
               <Route path="/admin/book/new" element={<AdminBookForm />} />
               <Route path="/admin/book/:id/edit" element={<AdminBookForm />} />
