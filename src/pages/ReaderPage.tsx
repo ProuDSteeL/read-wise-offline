@@ -375,53 +375,52 @@ const ReaderPage = () => {
       )}
 
       {/* Bottom selection menu */}
-      {showSelectionMenu && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 animate-fade-in safe-bottom">
-          <div className="mx-auto max-w-md border-t bg-card px-4 py-3 shadow-elevated">
+      {showSelectionMenu && menuPosition && (
+        <div
+          className="absolute z-50"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
+        >
+          <div className="w-[200px] animate-fade-in rounded-2xl border bg-card p-2 shadow-elevated">
             {showNoteInput ? (
-              <div className="space-y-2">
-                <p className="line-clamp-1 text-xs italic text-muted-foreground">«{selectedText}»</p>
+              <div className="space-y-2 p-1">
                 <Input
                   value={highlightNote}
                   onChange={(e) => setHighlightNote(e.target.value)}
-                  placeholder="Добавьте заметку..."
-                  className="rounded-xl bg-secondary border-0 text-sm"
+                  placeholder="Заметка..."
+                  className="h-8 rounded-lg bg-secondary border-0 text-xs"
                   autoFocus
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="flex-1"
+                    className="h-7 flex-1 text-xs"
                     onClick={() => { setShowNoteInput(false); setHighlightNote(""); }}
                   >
-                    Отмена
+                    ✕
                   </Button>
                   <Button
                     size="sm"
-                    className="flex-1 rounded-xl"
+                    className="h-7 flex-1 rounded-lg text-xs"
                     onClick={handleSaveHighlight}
                     disabled={highlightMutation.isPending}
                   >
-                    Сохранить
+                    OK
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <p className="flex-1 truncate text-xs italic text-muted-foreground">
-                  «{selectedText}»
-                </p>
+              <div className="flex gap-1">
                 <button
                   onClick={handleSaveHighlight}
-                  className="flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-2 text-xs font-medium text-primary tap-highlight"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-primary hover:bg-primary/10 tap-highlight"
                 >
                   <Highlighter className="h-3.5 w-3.5" />
                   Выделить
                 </button>
                 <button
                   onClick={() => setShowNoteInput(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-secondary px-3 py-2 text-xs font-medium text-foreground tap-highlight"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-foreground hover:bg-secondary tap-highlight"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   Заметка
