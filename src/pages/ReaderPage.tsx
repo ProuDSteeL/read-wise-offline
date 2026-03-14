@@ -123,7 +123,7 @@ const ReaderPage = () => {
     parseInt(localStorage.getItem("reader-font-size") || "18")
   );
   const [showSettings, setShowSettings] = useState(false);
-  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(!!locState?.autoPlayAudio);
 
   // New selection state
   const [selectedText, setSelectedText] = useState("");
