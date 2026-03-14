@@ -38,11 +38,12 @@ const AudioPlayerPage = () => {
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showSleepPanel, setShowSleepPanel] = useState(false);
 
-  // Start playing when page loads (if not already playing this book)
+  // Load audio source when page loads (don't auto-play unless already playing)
   useEffect(() => {
     if (!summary?.audio_url || !id) return;
     if (audio.state.bookId !== id) {
-      audio.play(id, summary.audio_url, book?.title);
+      // Different book — load it but don't auto-play
+      audio.load(id, summary.audio_url, book?.title);
     }
   }, [summary?.audio_url, id, book?.title]);
 
