@@ -157,6 +157,12 @@ const BookPage = () => {
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
         <div className="flex items-center gap-3">
+          <button onClick={() => {
+            if (!user) { navigate("/auth"); return; }
+            setShowDownloadDialog(true);
+          }} className="tap-highlight">
+            <Download className={`h-5 w-5 transition-colors ${isDownloaded(id!) ? "text-primary" : "text-muted-foreground"}`} />
+          </button>
           <button onClick={() => { if (!user) navigate("/auth"); else handleBookmark(); }} className="tap-highlight">
             <BookMarked className={`h-5 w-5 transition-colors ${isBookmarked ? "fill-primary text-primary" : "text-muted-foreground"}`} />
           </button>
