@@ -590,6 +590,17 @@ const ReaderPage = () => {
             </div>
           </div>
         </div>
+      {/* Mini audio player */}
+      {showAudioPlayer && summary?.audio_url && (
+        <>
+          <div className="h-24" /> {/* Spacer so content isn't hidden behind player */}
+          <MiniAudioPlayer
+            audioUrl={summary.audio_url}
+            bookId={id!}
+            bookTitle={book?.title}
+            onClose={() => setShowAudioPlayer(false)}
+          />
+        </>
       )}
     </div>
   );
