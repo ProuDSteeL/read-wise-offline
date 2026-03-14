@@ -26,6 +26,8 @@ const SLEEP_OPTIONS = [
 const AudioPlayerPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locState = location.state as { audioPosition?: number; audioSpeed?: number } | null;
   const { user } = useAuth();
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
