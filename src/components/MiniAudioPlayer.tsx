@@ -22,7 +22,7 @@ interface MiniAudioPlayerProps {
   autoPlay?: boolean;
 }
 
-const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand }: MiniAudioPlayerProps) => {
+const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand, initialPosition, initialSpeed, autoPlay }: MiniAudioPlayerProps) => {
   const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
