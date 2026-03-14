@@ -99,9 +99,9 @@ const DownloadsPage = () => {
                 src={dl.coverUrl || "/placeholder.svg"}
                 alt={dl.title}
                 className="h-14 w-10 shrink-0 rounded-lg object-cover"
-                onClick={() => navigate(`/book/${dl.bookId}`)}
+                onClick={() => navigate(isOnline ? `/book/${dl.bookId}` : `/offline/read/${dl.bookId}`)}
               />
-              <div className="flex-1 min-w-0" onClick={() => navigate(`/book/${dl.bookId}`)}>
+              <div className="flex-1 min-w-0" onClick={() => navigate(isOnline ? `/book/${dl.bookId}` : `/offline/read/${dl.bookId}`)}>
                 <p className="text-sm font-medium text-foreground truncate">{dl.title}</p>
                 <p className="text-xs text-muted-foreground truncate">{dl.author}</p>
                 <div className="flex items-center gap-2 mt-1">
