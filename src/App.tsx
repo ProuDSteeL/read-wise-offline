@@ -13,6 +13,7 @@ import BookPage from "./pages/BookPage";
 import ReaderPage from "./pages/ReaderPage";
 import AudioPlayerPage from "./pages/AudioPlayerPage";
 import AdminBookForm from "./pages/AdminBookForm";
+import AdminCollections from "./pages/AdminCollections";
 import AdminBookList from "./pages/AdminBookList";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/admin/books" element={<AdminBookList />} />
             <Route path="/admin/book/new" element={<AdminBookForm />} />
             <Route path="/admin/book/:id/edit" element={<AdminBookForm />} />
+            <Route path="/admin/collections" element={<AdminCollections />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
