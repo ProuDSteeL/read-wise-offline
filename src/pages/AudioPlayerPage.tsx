@@ -40,6 +40,7 @@ const AudioPlayerPage = () => {
 
   // Speed
   const [speed, setSpeed] = useState(() => {
+    if (locState?.audioSpeed) return locState.audioSpeed;
     const saved = localStorage.getItem("audio-speed");
     return saved ? parseFloat(saved) : 1;
   });
