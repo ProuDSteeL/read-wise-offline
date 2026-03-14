@@ -143,12 +143,18 @@ const BookPage = () => {
     <div className="animate-fade-in pb-28">
       {/* Header */}
       <div className="relative">
-        <div className="absolute left-4 top-4 z-10">
+        <div className="absolute left-4 top-4 z-10 flex w-[calc(100%-2rem)] justify-between">
           <button
             onClick={() => navigate(-1)}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm tap-highlight"
           >
             <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm tap-highlight"
+          >
+            <Share2 className="h-5 w-5 text-foreground" />
           </button>
         </div>
 
