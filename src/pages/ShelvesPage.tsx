@@ -11,11 +11,18 @@ import type { Book } from "@/hooks/useBooks";
 
 type ShelfKey = "favorite" | "read" | "want_to_read" | "downloads";
 
-const SHELF_META: Record<ShelfKey, { icon: typeof Heart; label: string }> = {
-  favorite: { icon: Heart, label: "Избранное" },
-  read: { icon: BookOpen, label: "Прочитано" },
-  want_to_read: { icon: BookMarked, label: "Хочу прочитать" },
-  downloads: { icon: Download, label: "Мои загрузки" },
+const SHELF_META: Record<ShelfKey, { icon: typeof Heart; label: string; gradient: string }> = {
+  favorite: { icon: Heart, label: "Избранное", gradient: "from-pink-500/10 to-rose-500/10" },
+  read: { icon: BookOpen, label: "Прочитано", gradient: "from-emerald-500/10 to-teal-500/10" },
+  want_to_read: { icon: BookMarked, label: "Хочу прочитать", gradient: "from-primary/10 to-violet-500/10" },
+  downloads: { icon: Download, label: "Мои загрузки", gradient: "from-blue-500/10 to-cyan-500/10" },
+};
+
+const SHELF_ICON_COLORS: Record<ShelfKey, string> = {
+  favorite: "text-rose-500",
+  read: "text-emerald-500",
+  want_to_read: "text-primary",
+  downloads: "text-blue-500",
 };
 
 const ShelvesPage = () => {
@@ -26,7 +33,6 @@ const ShelvesPage = () => {
   const { data: downloadCount } = useDownloadCount();
   const [activeShelf, setActiveShelf] = useState<ShelfKey | null>(null);
 
-  // Fetch books for active shelf
   const { data: shelfBooks, isLoading: loadingBooks } = useQuery({
     queryKey: ["shelf_books", user?.id, activeShelf],
     queryFn: async () => {
@@ -68,17 +74,18 @@ const ShelvesPage = () => {
 
   if (!user) {
     return (
-      <div className="animate-fade-in flex flex-col items-center gap-4 px-4 pt-32 text-center">
-        <BookOpen className="h-12 w-12 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">Войдите, чтобы сохранять книги на полки</p>
-        <Button className="rounded-xl" onClick={() => navigate("/auth")}>
+      <div className="animate-fade-in flex flex-col items-center gap-5 px-4 pt-32 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
+          <BookOpen className="h-8 w-8 text-primary" />
+        </div>
+        <p className="text-sm text-muted-foreground leading-relaxed">Войдите, чтобы сохранять<br/>книги на полки</p>
+        <Button className="rounded-xl h-11 px-8" onClick={() => navigate("/auth")}>
           <LogIn className="mr-2 h-4 w-4" /> Войти
         </Button>
       </div>
     );
   }
 
-  // Shelf list view
   if (!activeShelf) {
     const shelves = [
       { key: "favorite" as const, count: counts?.favorite ?? 0 },
@@ -88,22 +95,23 @@ const ShelvesPage = () => {
     ];
 
     return (
-      <div className="animate-fade-in space-y-6 px-4 pt-12">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Мои полки</h1>
-        <div className="space-y-2">
+      <div className="animate-fade-in space-y-6 px-4 pt-14">
+        <h1 className="text-[28px] font-extrabold tracking-tight text-foreground">Мои полки</h1>
+        <div className="space-y-3">
           {shelves.map(({ key, count }) => {
-            const { icon: Icon, label } = SHELF_META[key];
+            const { icon: Icon, label, gradient } = SHELF_META[key];
+            const iconColor = SHELF_ICON_COLORS[key];
             return (
               <button
                 key={key}
                 onClick={() => setActiveShelf(key)}
-                className="flex w-full items-center gap-4 rounded-xl bg-card p-4 shadow-card transition-colors tap-highlight hover:bg-secondary"
+                className={`flex w-full items-center gap-4 rounded-2xl bg-gradient-to-r ${gradient} bg-card p-4 shadow-card transition-all tap-highlight hover:shadow-elevated`}
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                  <Icon className="h-5 w-5 text-primary" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-card shadow-card">
+                  <Icon className={`h-5 w-5 ${iconColor}`} />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-foreground">{label}</p>
+                  <p className="text-sm font-semibold text-foreground">{label}</p>
                   <p className="text-xs text-muted-foreground">{count} книг</p>
                 </div>
               </button>
@@ -114,15 +122,15 @@ const ShelvesPage = () => {
     );
   }
 
-  // Shelf detail view
   const { icon: ShelfIcon, label: shelfLabel } = SHELF_META[activeShelf];
+  const iconColor = SHELF_ICON_COLORS[activeShelf];
   const table = activeShelf === "downloads" ? "user_downloads" : "user_shelves";
 
   return (
-    <div className="animate-fade-in space-y-4 px-4 pt-12">
+    <div className="animate-fade-in space-y-4 px-4 pt-14">
       <div className="flex items-center gap-3">
-        <button onClick={() => setActiveShelf(null)} className="tap-highlight">
-          <ArrowLeft className="h-5 w-5 text-foreground" />
+        <button onClick={() => setActiveShelf(null)} className="flex h-9 w-9 items-center justify-center rounded-xl bg-card shadow-card tap-highlight">
+          <ArrowLeft className="h-4 w-4 text-foreground" />
         </button>
         <h1 className="text-xl font-bold text-foreground">{shelfLabel}</h1>
       </div>
@@ -132,25 +140,27 @@ const ShelvesPage = () => {
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
       ) : !shelfBooks?.length ? (
-        <div className="py-12 text-center">
-          <ShelfIcon className="mx-auto h-10 w-10 text-muted-foreground/30" />
-          <p className="mt-3 text-sm text-muted-foreground">Здесь пока пусто</p>
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+            <ShelfIcon className={`h-6 w-6 ${iconColor} opacity-40`} />
+          </div>
+          <p className="text-sm text-muted-foreground">Здесь пока пусто</p>
         </div>
       ) : (
         <div className="space-y-2">
           {shelfBooks.map((book) => (
             <div
               key={book._join_id}
-              className="flex items-center gap-3 rounded-xl bg-card p-3 shadow-card"
+              className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-card"
             >
               <button
                 onClick={() => navigate(`/book/${book.id}`)}
                 className="flex flex-1 items-center gap-3 text-left tap-highlight"
               >
                 {book.cover_url ? (
-                  <img src={book.cover_url} alt="" className="h-16 w-12 rounded-lg object-cover" />
+                  <img src={book.cover_url} alt="" className="h-16 w-12 rounded-xl object-cover shadow-card" />
                 ) : (
-                  <div className="h-16 w-12 rounded-lg bg-secondary" />
+                  <div className="h-16 w-12 rounded-xl bg-muted" />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">{book.title}</p>
@@ -159,7 +169,7 @@ const ShelvesPage = () => {
               </button>
               <button
                 onClick={() => removeFromShelf.mutate({ joinId: book._join_id, table })}
-                className="shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive tap-highlight"
+                className="shrink-0 rounded-xl p-2.5 text-muted-foreground/40 hover:bg-destructive/8 hover:text-destructive tap-highlight transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

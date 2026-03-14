@@ -1,4 +1,4 @@
-import { User, Settings, LogIn, LogOut, BookOpen, Clock, Flame, Shield } from "lucide-react";
+import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -21,19 +21,19 @@ const ProfilePage = () => {
 
   if (!user) {
     return (
-      <div className="animate-fade-in space-y-6 px-4 pt-12">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Профиль</h1>
-        <div className="flex flex-col items-center gap-4 rounded-2xl bg-card p-8 shadow-card text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-8 w-8 text-primary" />
+      <div className="animate-fade-in space-y-6 px-4 pt-14">
+        <h1 className="text-[28px] font-extrabold tracking-tight text-foreground">Профиль</h1>
+        <div className="flex flex-col items-center gap-5 rounded-2xl bg-card p-8 shadow-card text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/8">
+            <User className="h-10 w-10 text-primary" />
           </div>
           <div>
-            <p className="font-semibold text-foreground">Войдите в аккаунт</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-lg font-bold text-foreground">Войдите в аккаунт</p>
+            <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
               Сохраняйте прогресс и синхронизируйте между устройствами
             </p>
           </div>
-          <Button className="w-full rounded-xl" onClick={() => navigate("/auth")}>
+          <Button className="w-full rounded-xl h-12 text-sm font-semibold" onClick={() => navigate("/auth")}>
             <LogIn className="mr-2 h-4 w-4" />
             Войти
           </Button>
@@ -43,16 +43,16 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="animate-fade-in space-y-6 px-4 pt-12">
-      <h1 className="text-2xl font-bold tracking-tight text-foreground">Профиль</h1>
+    <div className="animate-fade-in space-y-6 px-4 pt-14">
+      <h1 className="text-[28px] font-extrabold tracking-tight text-foreground">Профиль</h1>
 
-      <div className="flex items-center gap-4 rounded-2xl bg-card p-4 shadow-card">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <User className="h-6 w-6 text-primary" />
+      <div className="flex items-center gap-4 rounded-2xl bg-card p-5 shadow-card">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl gradient-primary">
+          <User className="h-6 w-6 text-primary-foreground" />
         </div>
-        <div className="flex-1">
-          <p className="font-semibold text-foreground">{user.email}</p>
-          <p className="text-xs text-muted-foreground">Бесплатный план</p>
+        <div className="flex-1 min-w-0">
+          <p className="truncate font-semibold text-foreground">{user.email}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Бесплатный план</p>
         </div>
       </div>
 
@@ -64,34 +64,41 @@ const ProfilePage = () => {
         ].map(({ value, label, icon: Icon }) => (
           <div
             key={label}
-            className="flex flex-col items-center gap-1 rounded-xl bg-card p-4 shadow-card"
+            className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-4 shadow-card"
           >
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xl font-bold text-foreground">{value}</span>
-            <span className="text-xs text-muted-foreground">{label}</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/8">
+              <Icon className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-xl font-extrabold text-foreground">{value}</span>
+            <span className="text-[11px] text-muted-foreground">{label}</span>
           </div>
         ))}
       </div>
 
-      {isAdmin && (
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-3 rounded-xl"
-          onClick={() => navigate("/admin/books")}
-        >
-          <Shield className="h-4 w-4" />
-          Управление книгами
-        </Button>
-      )}
+      <div className="space-y-2">
+        {isAdmin && (
+          <button
+            onClick={() => navigate("/admin/books")}
+            className="flex w-full items-center gap-3 rounded-2xl bg-card p-4 shadow-card transition-colors tap-highlight hover:bg-secondary"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/8">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <span className="flex-1 text-left text-sm font-medium text-foreground">Управление книгами</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+        )}
 
-      <Button
-        variant="ghost"
-        className="w-full justify-start gap-3 rounded-xl text-destructive"
-        onClick={signOut}
-      >
-        <LogOut className="h-4 w-4" />
-        Выйти
-      </Button>
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-3 rounded-2xl p-4 transition-colors tap-highlight hover:bg-destructive/5"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/8">
+            <LogOut className="h-5 w-5 text-destructive" />
+          </div>
+          <span className="flex-1 text-left text-sm font-medium text-destructive">Выйти</span>
+        </button>
+      </div>
     </div>
   );
 };

@@ -31,26 +31,19 @@ const SearchPage = () => {
 
   const isSearching = query.length >= 2;
 
-  // Apply category filter
   let displayBooks = isSearching ? results : allBooks;
 
   if (activeCategory && displayBooks) {
     displayBooks = displayBooks.filter((b) => b.categories?.includes(activeCategory));
   }
 
-  // Sort
   if (displayBooks) {
     displayBooks = [...displayBooks].sort((a, b) => {
       switch (sortBy) {
-        case "popular":
-          return (b.views_count ?? 0) - (a.views_count ?? 0);
-        case "rating":
-          return (Number(b.rating) || 0) - (Number(a.rating) || 0);
-        case "fastest":
-          return (a.read_time_min ?? 999) - (b.read_time_min ?? 999);
-        case "newest":
-        default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "popular": return (b.views_count ?? 0) - (a.views_count ?? 0);
+        case "rating": return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+        case "fastest": return (a.read_time_min ?? 999) - (b.read_time_min ?? 999);
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
   }
@@ -65,13 +58,13 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-4 px-4 pt-12 pb-4">
+    <div className="animate-fade-in space-y-4 px-4 pt-14 pb-6">
       <div className="flex items-center gap-2">
-        <h1 className="flex-1 text-2xl font-bold tracking-tight text-foreground">Поиск</h1>
+        <h1 className="flex-1 text-[28px] font-extrabold tracking-tight text-foreground">Поиск</h1>
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors tap-highlight ${
-            showFilters ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
+          className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all tap-highlight ${
+            showFilters ? "bg-primary/10 text-primary shadow-glow" : "bg-card text-muted-foreground shadow-card"
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -79,25 +72,24 @@ const SearchPage = () => {
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
         <Input
           placeholder="Название, автор или тема..."
-          className="pl-10 rounded-xl bg-secondary border-0"
+          className="h-11 pl-10 rounded-xl bg-card border-0 shadow-card text-sm placeholder:text-muted-foreground/50"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
 
-      {/* Category chips */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
         {ALL_CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => handleCategoryClick(cat)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors tap-highlight ${
+            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all tap-highlight ${
               activeCategory === cat
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-muted"
+                ? "gradient-primary text-primary-foreground shadow-glow"
+                : "bg-card text-foreground shadow-card border border-border hover:border-primary/30"
             }`}
           >
             {cat}
@@ -105,14 +97,13 @@ const SearchPage = () => {
         ))}
       </div>
 
-      {/* Sort options */}
       {showFilters && (
         <div className="flex gap-2 animate-fade-in">
           {SORT_OPTIONS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => setSortBy(key)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors tap-highlight ${
+              className={`rounded-xl px-3.5 py-2 text-xs font-medium transition-all tap-highlight ${
                 sortBy === key
                   ? "bg-primary text-primary-foreground"
                   : "bg-card text-muted-foreground shadow-card"
@@ -128,15 +119,15 @@ const SearchPage = () => {
         <div className="grid grid-cols-2 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="space-y-2">
-              <Skeleton className="aspect-[3/4] w-full rounded-xl" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="aspect-[3/4] w-full rounded-2xl" />
+              <Skeleton className="h-4 w-3/4 rounded-lg" />
+              <Skeleton className="h-3 w-1/2 rounded-lg" />
             </div>
           ))}
         </div>
       ) : displayBooks && displayBooks.length > 0 ? (
         <>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground/60">
             {activeCategory ? `${activeCategory} · ` : ""}{displayBooks.length} книг
           </p>
           <div className="grid grid-cols-2 gap-4 pb-4">
@@ -155,12 +146,16 @@ const SearchPage = () => {
         </>
       ) : isSearching || activeCategory ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Search className="mb-4 h-12 w-12 text-muted-foreground/40" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted mb-4">
+            <Search className="h-7 w-7 text-muted-foreground/30" />
+          </div>
           <p className="text-sm text-muted-foreground">Ничего не найдено</p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Search className="mb-4 h-12 w-12 text-muted-foreground/40" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted mb-4">
+            <Search className="h-7 w-7 text-muted-foreground/30" />
+          </div>
           <p className="text-sm text-muted-foreground">
             Введите запрос, чтобы найти саммари
           </p>
