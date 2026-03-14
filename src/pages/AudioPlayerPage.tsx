@@ -160,14 +160,15 @@ const AudioPlayerPage = () => {
         <span className="text-xs font-medium text-muted-foreground">Аудио</span>
         <button
           onClick={() => {
-            // Save position then go to reader
+            const pos = audioRef.current?.currentTime || 0;
+            const spd = speed;
             if (audioRef.current && user) {
               supabase.from("user_progress").upsert(
-                { user_id: user.id, book_id: id!, audio_position: audioRef.current.currentTime },
+                { user_id: user.id, book_id: id!, audio_position: pos },
                 { onConflict: "user_id,book_id" }
               );
             }
-            navigate(`/book/${id}/read`);
+            navigate(`/book/${id}/read`, { state: { audioPosition: pos, audioSpeed: spd, autoPlayAudio: true } });
           }}
           className="tap-highlight"
           title="Читать"
