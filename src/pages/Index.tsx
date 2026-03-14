@@ -1,9 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import BookCard from "@/components/BookCard";
-import { usePopularBooks, useNewBooks } from "@/hooks/useBooks";
+import { usePopularBooks, useNewBooks, useCollections, type Book } from "@/hooks/useBooks";
 import { useUserProgress } from "@/hooks/useUserData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const categories = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы"];
 
@@ -19,10 +21,59 @@ const BookRowSkeleton = () => (
   </div>
 );
 
+const useCollectionBooks = (bookIds: string[] | null) => {
+  return useQuery({
+    queryKey: ["collection_books", bookIds],
+    queryFn: async () => {
+      if (!bookIds?.length) return [];
+      const { data, error } = await supabase
+        .from("books")
+        .select("*")
+        .eq("status", "published")
+        .in("id", bookIds);
+      if (error) throw error;
+      return data as Book[];
+    },
+    enabled: !!bookIds?.length,
+  });
+};
+
+const CollectionSection = ({ collection }: { collection: { id: string; title: string; description: string | null; book_ids: string[] | null } }) => {
+  const navigate = useNavigate();
+  const { data: books, isLoading } = useCollectionBooks(collection.book_ids);
+
+  if (isLoading) return <BookRowSkeleton />;
+  if (!books?.length) return null;
+
+  return (
+    <section className="space-y-3">
+      <div className="px-4">
+        <h2 className="text-lg font-semibold text-foreground">{collection.title}</h2>
+        {collection.description && (
+          <p className="mt-0.5 text-xs text-muted-foreground">{collection.description}</p>
+        )}
+      </div>
+      <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+        {books.map((book) => (
+          <BookCard
+            key={book.id}
+            title={book.title}
+            author={book.author}
+            coverUrl={book.cover_url || "/placeholder.svg"}
+            readTimeMin={book.read_time_min ?? undefined}
+            onClick={() => navigate(`/book/${book.id}`)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const { data: popular, isLoading: loadingPopular } = usePopularBooks();
   const { data: newest, isLoading: loadingNew } = useNewBooks();
+  const { data: collections } = useCollections();
   const { user } = useAuth();
   const { data: progress } = useUserProgress();
 
@@ -30,7 +81,6 @@ const Index = () => {
     (p) => p.progress_percent && p.progress_percent > 0 && p.progress_percent < 100
   );
 
-  // Build a map of bookId -> progress for showing on cards
   const progressMap = new Map<string, number>();
   progress?.forEach((p: any) => {
     if (p.progress_percent && p.progress_percent > 0) {
@@ -59,7 +109,7 @@ const Index = () => {
         ))}
       </div>
 
-      {/* Continue reading — shown first */}
+      {/* Continue reading */}
       {user && continueBooks && continueBooks.length > 0 && (
         <section className="space-y-3">
           <h2 className="px-4 text-lg font-semibold text-foreground">Продолжить</h2>
@@ -102,6 +152,11 @@ const Index = () => {
           <p className="px-4 text-sm text-muted-foreground">Каталог пока пуст</p>
         )}
       </section>
+
+      {/* Collections */}
+      {collections && collections.length > 0 && collections.map((col) => (
+        <CollectionSection key={col.id} collection={col} />
+      ))}
 
       {/* New */}
       <section className="space-y-3">
