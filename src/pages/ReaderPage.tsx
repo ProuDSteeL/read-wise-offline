@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ReactNode } from "react";
+import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { X, Settings2, Bookmark, BookmarkCheck, Highlighter, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
@@ -26,7 +26,7 @@ const HIGHLIGHT_COLORS = [
 const themeClasses: Record<ReaderTheme, string> = { light: "", dark: "dark", sepia: "sepia" };
 
 // Highlight text segments within a string
-function applyHighlights(text: string, highlights: Array<{ id: string; text: string; note: string | null; color?: string }>, onClickHighlight: (h: any) => void): ReactNode[] {
+function applyHighlights(text: string, highlights: Array<{ id: string; text: string; note: string | null; color?: string }>): ReactNode[] {
   if (!highlights.length) return [text];
 
   const parts: ReactNode[] = [];
@@ -54,8 +54,8 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
     parts.push(
       <mark
         key={`hl-${keyIdx++}`}
-        className={`${color.bg} cursor-pointer rounded-sm px-0.5 transition-colors`}
-        onClick={(e) => { e.stopPropagation(); onClickHighlight(hl); }}
+        className={`${color.bg} rounded-sm px-0.5`}
+        data-highlight-id={hl.id}
       >
         {hl.text}
       </mark>
@@ -75,18 +75,20 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
 function highlightChildren(
   children: ReactNode,
   highlights: Array<{ id: string; text: string; note: string | null; color?: string }>,
-  onClickHighlight: (h: any) => void
 ): ReactNode {
   if (!highlights.length) return children;
 
   if (typeof children === "string") {
-    return <>{applyHighlights(children, highlights, onClickHighlight)}</>;
+    return <>{applyHighlights(children, highlights)}</>;
   }
 
   if (Array.isArray(children)) {
-    return <>{children.map((child, i) => (
-      <span key={i}>{highlightChildren(child, highlights, onClickHighlight)}</span>
-    ))}</>;
+    return <>{children.map((child, i) => {
+      if (typeof child === "string") {
+        return <React.Fragment key={i}>{applyHighlights(child, highlights)}</React.Fragment>;
+      }
+      return child;
+    })}</>;
   }
 
   return children;
@@ -167,29 +169,71 @@ const ReaderPage = () => {
     localStorage.setItem("reader-font-size", String(fontSize));
   }, [theme, fontFamily, fontSize]);
 
-  // Text selection listener
+  // Text selection — only check on mouseup/touchend so we don't interfere with dragging
   useEffect(() => {
-    const handler = () => {
+    const checkSelection = () => {
       if (editingHighlight) return;
-      const sel = window.getSelection();
-      const text = sel?.toString().trim();
-      if (text && text.length > 2 && sel?.rangeCount) {
-        const rect = sel.getRangeAt(0).getBoundingClientRect();
-        setSelectedText(text);
-        setMenuPosition({
-          top: rect.bottom + window.scrollY + 6,
-          left: Math.max(8, Math.min(rect.left + rect.width / 2 - 110, window.innerWidth - 230)),
-        });
-        setShowSelectionMenu(true);
-      } else if (!showNoteInput) {
+      // Small delay to let browser finalize selection
+      setTimeout(() => {
+        const sel = window.getSelection();
+        const text = sel?.toString().trim();
+        if (text && text.length > 2 && sel?.rangeCount) {
+          const rect = sel.getRangeAt(0).getBoundingClientRect();
+          setSelectedText(text);
+          setMenuPosition({
+            top: rect.bottom + window.scrollY + 8,
+            left: Math.max(8, Math.min(rect.left + rect.width / 2 - 110, window.innerWidth - 230)),
+          });
+          setShowSelectionMenu(true);
+        }
+      }, 10);
+    };
+
+    const clearSelection = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't clear if clicking on menu or mark
+      if (target.closest("[data-highlight-menu]") || target.closest("mark")) return;
+      if (!window.getSelection()?.toString().trim() && !showNoteInput) {
         setShowSelectionMenu(false);
         setSelectedText("");
         setMenuPosition(null);
       }
     };
-    document.addEventListener("selectionchange", handler);
-    return () => document.removeEventListener("selectionchange", handler);
-  }, [showNoteInput, editingHighlight]);
+
+    // Handle click on existing highlight marks
+    const handleMarkClick = (e: MouseEvent) => {
+      const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]");
+      if (!mark) return;
+      const hlId = mark.getAttribute("data-highlight-id");
+      const hl = highlights.find((h) => h.id === hlId);
+      if (!hl) return;
+
+      // Only open edit if there's no active text selection
+      const sel = window.getSelection();
+      if (sel?.toString().trim()) return;
+
+      const rect = mark.getBoundingClientRect();
+      setEditMenuPos({
+        top: rect.bottom + window.scrollY + 8,
+        left: Math.max(8, Math.min(rect.left + rect.width / 2 - 110, window.innerWidth - 230)),
+      });
+      setEditingHighlight(hl);
+      setEditNote(hl.note || "");
+    };
+
+    const container = contentRef.current;
+    document.addEventListener("mouseup", checkSelection);
+    document.addEventListener("touchend", checkSelection);
+    document.addEventListener("mousedown", clearSelection);
+    container?.addEventListener("click", handleMarkClick);
+
+    return () => {
+      document.removeEventListener("mouseup", checkSelection);
+      document.removeEventListener("touchend", checkSelection);
+      document.removeEventListener("mousedown", clearSelection);
+      container?.removeEventListener("click", handleMarkClick);
+    };
+  }, [showNoteInput, editingHighlight, highlights]);
 
   // Close edit menu on outside click
   useEffect(() => {
@@ -285,26 +329,9 @@ const ReaderPage = () => {
     createHighlight.mutate({ text: selectedText, note: highlightNote || undefined, color: selectedColor });
   };
 
-  const handleClickExistingHighlight = (hl: HighlightData) => {
-    // Find the mark element position
-    const marks = contentRef.current?.querySelectorAll("mark");
-    let rect: DOMRect | undefined;
-    marks?.forEach((m) => {
-      if (m.textContent === hl.text) rect = m.getBoundingClientRect();
-    });
-    if (rect) {
-      setEditMenuPos({
-        top: rect.bottom + window.scrollY + 6,
-        left: Math.max(8, Math.min(rect.left + rect.width / 2 - 110, window.innerWidth - 230)),
-      });
-    }
-    setEditingHighlight(hl);
-    setEditNote(hl.note || "");
-  };
-
   // Wrapper to inject highlights into markdown text nodes
   const wrapWithHighlights = (children: ReactNode) =>
-    highlightChildren(children, highlights, handleClickExistingHighlight);
+    highlightChildren(children, highlights);
 
   if (isLoading) {
     return (
@@ -449,7 +476,11 @@ const ReaderPage = () => {
                     <p className="flex-1 text-sm italic text-muted-foreground">«{h.text}»</p>
                     <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
-                        onClick={() => handleClickExistingHighlight(h)}
+                        onClick={() => {
+                          setEditingHighlight(h);
+                          setEditNote(h.note || "");
+                          setEditMenuPos(null); // show inline below the list item
+                        }}
                         className="rounded-lg p-1 text-muted-foreground hover:bg-secondary"
                       >
                         <Pencil className="h-3.5 w-3.5" />
