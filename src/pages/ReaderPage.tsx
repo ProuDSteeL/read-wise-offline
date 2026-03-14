@@ -306,7 +306,7 @@ const ReaderPage = () => {
 
   // Wrapper to inject highlights into markdown text nodes
   const wrapWithHighlights = (children: ReactNode) =>
-    highlightChildren(children, highlights, handleClickExistingHighlight);
+    highlightChildren(children, highlights);
 
   if (isLoading) {
     return (
