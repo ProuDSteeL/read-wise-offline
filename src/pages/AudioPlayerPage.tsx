@@ -314,6 +314,11 @@ const AudioPlayerPage = () => {
           if (audioRef.current) {
             setDuration(audioRef.current.duration);
             audioRef.current.playbackRate = speed;
+            if (!positionApplied.current && locState?.audioPosition != null && locState.audioPosition > 0) {
+              audioRef.current.currentTime = locState.audioPosition;
+              setCurrentTime(locState.audioPosition);
+              positionApplied.current = true;
+            }
           }
         }}
         onEnded={() => setPlaying(false)}
