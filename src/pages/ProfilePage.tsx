@@ -1,9 +1,11 @@
-import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil } from "lucide-react";
+import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useProfileStats } from "@/hooks/useProfileStats";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { Switch } from "@/components/ui/switch";
 
 const ProfilePage = () => {
   const { user, loading, signOut } = useAuth();
