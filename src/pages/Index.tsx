@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ChevronRight } from "lucide-react";
 import BookCard from "@/components/BookCard";
+import ContinueCard from "@/components/ContinueCard";
 import SectionHeader from "@/components/SectionHeader";
 import { usePopularBooks, useNewBooks, useCollections, type Book } from "@/hooks/useBooks";
 import { useUserProgress } from "@/hooks/useUserData";
@@ -87,44 +88,23 @@ const Index = () => {
   });
 
   return (
-    <div className="animate-fade-in space-y-7 pb-6">
-      {/* Hero header */}
-      <div className="relative overflow-hidden px-4 pb-2 pt-14">
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -left-4 top-4 h-24 w-24 rounded-full bg-accent/5 blur-2xl" />
-        <h1 className="relative text-[28px] font-extrabold tracking-tight text-foreground">
-          Букс
-        </h1>
-        <p className="relative mt-1 text-sm text-muted-foreground">
-          Ключевые идеи лучших книг за 15 минут
-        </p>
+    <div className="animate-fade-in space-y-6 pb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-14">
+        <h1 className="text-[26px] font-extrabold tracking-tight text-foreground">Главная</h1>
       </div>
 
-      {/* Category chips */}
-      <div className="flex gap-2 overflow-x-auto px-4 scrollbar-hide">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => navigate(`/search?category=${encodeURIComponent(cat)}`)}
-            className="shrink-0 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-foreground shadow-card transition-all hover:border-primary/30 hover:shadow-glow tap-highlight"
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Continue reading */}
+      {/* Continue reading — SmartReading-style horizontal cards */}
       {user && continueBooks && continueBooks.length > 0 && (
         <section className="space-y-3">
-          <SectionHeader title="Продолжить" />
-          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
-            {continueBooks.map((p: any) => (
-              <BookCard
+          <SectionHeader title="Продолжить" onSeeAll={() => navigate("/shelves")} />
+          <div className="space-y-2 px-4">
+            {continueBooks.slice(0, 3).map((p: any) => (
+              <ContinueCard
                 key={p.book_id}
                 title={p.books?.title ?? ""}
                 author={p.books?.author ?? ""}
                 coverUrl={p.books?.cover_url || "/placeholder.svg"}
-                readTimeMin={p.books?.read_time_min ?? undefined}
                 progress={Number(p.progress_percent)}
                 onClick={() => navigate(`/book/${p.book_id}`)}
               />
@@ -133,9 +113,27 @@ const Index = () => {
         </section>
       )}
 
+      {/* Featured collection banner */}
+      {collections && collections.length > 0 && collections[0] && (
+        <FeaturedBanner collection={collections[0]} />
+      )}
+
+      {/* Category chips */}
+      <div className="flex gap-2 overflow-x-auto px-4 scrollbar-hide">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => navigate(`/search?category=${encodeURIComponent(cat)}`)}
+            className="shrink-0 rounded-full border border-border bg-card px-4 py-2 text-xs font-medium text-foreground transition-all hover:border-primary/30 tap-highlight"
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
       {/* Popular */}
       <section className="space-y-3">
-        <SectionHeader title="Популярное" />
+        <SectionHeader title="Популярное" onSeeAll={() => navigate("/search")} />
         {loadingPopular ? (
           <BookRowSkeleton />
         ) : popular && popular.length > 0 ? (
@@ -159,8 +157,8 @@ const Index = () => {
         )}
       </section>
 
-      {/* Collections */}
-      {collections && collections.length > 0 && collections.map((col) => (
+      {/* Remaining collections */}
+      {collections && collections.slice(1).map((col) => (
         <CollectionSection key={col.id} collection={col} />
       ))}
 
@@ -168,7 +166,7 @@ const Index = () => {
       {user && recommendations && recommendations.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2 px-4">
-            <Sparkles className="h-4 w-4 text-primary" />
+            <Sparkles className="h-4 w-4 text-sage" />
             <h2 className="text-[17px] font-bold tracking-tight text-foreground">Для вас</h2>
           </div>
           <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
@@ -188,7 +186,7 @@ const Index = () => {
 
       {/* New */}
       <section className="space-y-3">
-        <SectionHeader title="Новинки" />
+        <SectionHeader title="Новинки" onSeeAll={() => navigate("/search")} />
         {loadingNew ? (
           <BookRowSkeleton />
         ) : newest && newest.length > 0 ? (
@@ -212,6 +210,34 @@ const Index = () => {
         )}
       </section>
     </div>
+  );
+};
+
+/* Featured banner like SmartReading promo cards */
+const FeaturedBanner = ({ collection }: { collection: { id: string; title: string; description: string | null; book_ids: string[] | null } }) => {
+  const navigate = useNavigate();
+  const { data: books } = useCollectionBooks(collection.book_ids);
+  const firstBook = books?.[0];
+
+  return (
+    <button
+      onClick={() => firstBook ? navigate(`/book/${firstBook.id}`) : undefined}
+      className="mx-4 flex items-center gap-4 rounded-2xl bg-sage-light p-4 shadow-card tap-highlight text-left"
+    >
+      <div className="flex-1 space-y-1">
+        <p className="text-xs font-medium text-sage">Подборка</p>
+        <p className="text-sm font-bold text-foreground leading-snug">{collection.title}</p>
+        {collection.description && (
+          <p className="text-xs text-muted-foreground line-clamp-2">{collection.description}</p>
+        )}
+        <div className="mt-2 inline-flex items-center gap-1 rounded-full gradient-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+          К саммари <ChevronRight className="h-3 w-3" />
+        </div>
+      </div>
+      {firstBook?.cover_url && (
+        <img src={firstBook.cover_url} alt="" className="h-24 w-auto rounded-xl shadow-card object-cover" />
+      )}
+    </button>
   );
 };
 
