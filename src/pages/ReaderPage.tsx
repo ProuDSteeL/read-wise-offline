@@ -590,6 +590,8 @@ const ReaderPage = () => {
             </div>
           </div>
         </div>
+      )}
+
       {/* Mini audio player */}
       {showAudioPlayer && summary?.audio_url && (
         <>
