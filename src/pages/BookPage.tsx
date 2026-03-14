@@ -20,9 +20,12 @@ const BookPage = () => {
   const { data: book, isLoading } = useBook(id!);
   const { data: keyIdeas } = useKeyIdeas(id!);
   const { data: relatedBooks } = usePopularBooks();
+  const { data: summary } = useSummary(id!);
+  const { isDownloaded, download: downloadBook, activeDownloads } = useDownloads();
   const queryClient = useQueryClient();
   const [activeIdeaIdx, setActiveIdeaIdx] = useState(0);
   const ideaScrollRef = useRef<HTMLDivElement>(null);
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
 
   const { data: userRating } = useQuery({
     queryKey: ["user_rating", user?.id, id],
