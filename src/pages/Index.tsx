@@ -6,6 +6,7 @@ import { useUserProgress } from "@/hooks/useUserData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useRecommendations } from "@/hooks/useRecommendations";
 
 const categories = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы"];
 
