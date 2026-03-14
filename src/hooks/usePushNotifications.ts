@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 // VAPID public key — safe to expose in client code
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "";
+const VAPID_PUBLIC_KEY = "BP1UhTY_5L4tAct4cVAD2hoI6JKOE8jA0Hfc_9fi9Zd8FcFvRlgD4k8h5zyimyF-mRBA2C8jNPPJFcBdg4Pvrdg";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
