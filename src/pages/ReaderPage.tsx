@@ -134,13 +134,13 @@ const ReaderPage = () => {
   const [editNote, setEditNote] = useState("");
   const [editMenuPos, setEditMenuPos] = useState<{ top: number; left: number } | null>(null);
 
-  // Bookmark
-  const { data: isBookmarked } = useQuery({
-    queryKey: ["is_bookmarked", user?.id, id],
+  // Favorite
+  const { data: isFavorite } = useQuery({
+    queryKey: ["is_favorite", user?.id, id],
     queryFn: async () => {
       const { data } = await supabase
         .from("user_shelves").select("id")
-        .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "want_to_read")
+        .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "favorite")
         .maybeSingle();
       return !!data;
     },
