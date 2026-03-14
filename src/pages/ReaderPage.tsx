@@ -125,7 +125,25 @@ const ReaderPage = () => {
     parseInt(localStorage.getItem("reader-font-size") || "18")
   );
   const [showSettings, setShowSettings] = useState(false);
-  const [showAudioPlayer, setShowAudioPlayer] = useState(!!locState?.autoPlayAudio);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(() => {
+    // Show mini-player if coming back from full player or audio is already playing for this book
+    return !!locState?.autoPlayAudio || audioCtx.state.bookId === id;
+  });
+
+  // Start audio when mini-player is shown
+  useEffect(() => {
+    if (showAudioPlayer && summary?.audio_url && id) {
+      if (audioCtx.state.bookId !== id) {
+        audio_start();
+      }
+    }
+  }, [showAudioPlayer, summary?.audio_url, id]);
+
+  const audio_start = () => {
+    if (summary?.audio_url && id) {
+      audioCtx.play(id, summary.audio_url, book?.title);
+    }
+  };
 
   // New selection state
   const [selectedText, setSelectedText] = useState("");
