@@ -329,23 +329,6 @@ const ReaderPage = () => {
     createHighlight.mutate({ text: selectedText, note: highlightNote || undefined, color: selectedColor });
   };
 
-  const handleClickExistingHighlight = (hl: HighlightData) => {
-    // Find the mark element position
-    const marks = contentRef.current?.querySelectorAll("mark");
-    let rect: DOMRect | undefined;
-    marks?.forEach((m) => {
-      if (m.textContent === hl.text) rect = m.getBoundingClientRect();
-    });
-    if (rect) {
-      setEditMenuPos({
-        top: rect.bottom + window.scrollY + 6,
-        left: Math.max(8, Math.min(rect.left + rect.width / 2 - 110, window.innerWidth - 230)),
-      });
-    }
-    setEditingHighlight(hl);
-    setEditNote(hl.note || "");
-  };
-
   // Wrapper to inject highlights into markdown text nodes
   const wrapWithHighlights = (children: ReactNode) =>
     highlightChildren(children, highlights);
