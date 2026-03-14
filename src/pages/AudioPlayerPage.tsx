@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Play, Pause, SkipBack, SkipForward, X, Moon, Gauge, BookOpen } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
