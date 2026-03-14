@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Literata:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,31 +7,31 @@
 @layer base {
   :root {
     --background: 40 20% 98%;
-    --foreground: 200 18% 20%;
+    --foreground: 220 25% 14%;
 
-    --card: 40 20% 99%;
-    --card-foreground: 200 18% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 14%;
 
-    --popover: 40 20% 99%;
-    --popover-foreground: 200 18% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 14%;
 
     --primary: 249 76% 64%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 40 12% 94%;
-    --secondary-foreground: 200 18% 20%;
+    --secondary: 240 8% 95%;
+    --secondary-foreground: 220 25% 14%;
 
-    --muted: 40 12% 94%;
-    --muted-foreground: 200 10% 50%;
+    --muted: 240 8% 95%;
+    --muted-foreground: 220 10% 46%;
 
     --accent: 162 100% 36%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 14 74% 55%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 12% 90%;
-    --input: 40 12% 90%;
+    --border: 240 6% 92%;
+    --input: 240 6% 92%;
     --ring: 249 76% 64%;
 
     --radius: 0.75rem;
@@ -46,37 +48,38 @@
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-serif: 'Literata', 'Georgia', serif;
 
-    --shadow-card: 0 2px 8px hsl(0 0% 0% / 0.06);
-    --shadow-elevated: 0 8px 24px hsl(0 0% 0% / 0.1);
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.04), 0 4px 12px hsl(0 0% 0% / 0.03);
+    --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.06), 0 12px 40px hsl(0 0% 0% / 0.08);
+    --shadow-glow: 0 0 0 1px hsl(249 76% 64% / 0.08), 0 4px 20px hsl(249 76% 64% / 0.12);
   }
 
   .dark {
-    --background: 220 20% 8%;
-    --foreground: 40 20% 92%;
+    --background: 225 20% 7%;
+    --foreground: 40 20% 94%;
 
-    --card: 220 18% 11%;
-    --card-foreground: 40 20% 92%;
+    --card: 225 18% 10%;
+    --card-foreground: 40 20% 94%;
 
-    --popover: 220 18% 11%;
-    --popover-foreground: 40 20% 92%;
+    --popover: 225 18% 10%;
+    --popover-foreground: 40 20% 94%;
 
     --primary: 249 76% 68%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 16%;
-    --secondary-foreground: 40 20% 92%;
+    --secondary: 225 14% 14%;
+    --secondary-foreground: 40 20% 94%;
 
-    --muted: 220 14% 16%;
+    --muted: 225 14% 14%;
     --muted-foreground: 220 10% 55%;
 
     --accent: 162 80% 42%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 14 74% 45%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 18%;
-    --input: 220 14% 18%;
+    --border: 225 14% 16%;
+    --input: 225 14% 16%;
     --ring: 249 76% 68%;
 
     --sidebar-background: 220 20% 6%;
@@ -87,6 +90,10 @@
     --sidebar-accent-foreground: 40 20% 92%;
     --sidebar-border: 220 14% 18%;
     --sidebar-ring: 249 76% 68%;
+
+    --shadow-card: 0 1px 3px hsl(0 0% 0% / 0.2), 0 4px 12px hsl(0 0% 0% / 0.15);
+    --shadow-elevated: 0 4px 16px hsl(0 0% 0% / 0.25), 0 12px 40px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 0 1px hsl(249 76% 68% / 0.15), 0 4px 20px hsl(249 76% 68% / 0.2);
   }
 
   .sepia {
@@ -127,10 +134,12 @@
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
+    letter-spacing: -0.02em;
   }
 }
 
@@ -147,11 +156,40 @@
     box-shadow: var(--shadow-elevated);
   }
 
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .tap-highlight {
-    @apply transition-transform duration-100 active:scale-[0.98];
+    @apply transition-all duration-150 active:scale-[0.97] active:opacity-80;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .glass {
+    @apply bg-background/80 backdrop-blur-xl;
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(249 76% 64%), hsl(280 72% 60%));
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(162 100% 36%), hsl(175 70% 40%));
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(249 76% 64%), hsl(280 72% 60%));
   }
 }
