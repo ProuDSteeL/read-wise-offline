@@ -16,6 +16,7 @@ interface AudioContextType {
   state: AudioState;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   play: (bookId: string, audioUrl: string, bookTitle?: string, position?: number, speed?: number) => void;
+  load: (bookId: string, audioUrl: string, bookTitle?: string, position?: number) => void;
   togglePlay: () => void;
   seek: (time: number) => void;
   skip: (seconds: number) => void;
@@ -123,6 +124,52 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     [state.bookId, state.audioUrl, state.speed, user]
   );
 
+  // Load without auto-playing
+  const load = useCallback(
+    (bookId: string, audioUrl: string, bookTitle?: string, position?: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (state.bookId === bookId && state.audioUrl === audioUrl) return;
+
+      audio.src = audioUrl;
+      audio.playbackRate = state.speed;
+      audio.load();
+
+      const onLoaded = () => {
+        if (position != null && position > 0) {
+          audio.currentTime = position;
+        }
+        audio.removeEventListener("loadedmetadata", onLoaded);
+      };
+      audio.addEventListener("loadedmetadata", onLoaded);
+
+      if (position == null && user) {
+        supabase
+          .from("user_progress")
+          .select("audio_position")
+          .eq("user_id", user.id)
+          .eq("book_id", bookId)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.audio_position && audio.src.includes(audioUrl)) {
+              audio.currentTime = Number(data.audio_position);
+            }
+          });
+      }
+
+      setState({
+        bookId,
+        bookTitle: bookTitle || "",
+        audioUrl,
+        playing: false,
+        currentTime: position || 0,
+        duration: 0,
+        speed: state.speed,
+      });
+    },
+    [state.bookId, state.audioUrl, state.speed, user]
+  );
+
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !isActive) return;
@@ -171,7 +218,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   }, [user, state.bookId]);
 
   return (
-    <AudioContext.Provider value={{ state, audioRef, play, togglePlay, seek, skip, setSpeed, stop, isActive }}>
+    <AudioContext.Provider value={{ state, audioRef, play, load, togglePlay, seek, skip, setSpeed, stop, isActive }}>
       {children}
       {/* Single persistent audio element */}
       <audio
