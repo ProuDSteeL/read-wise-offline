@@ -71,6 +71,17 @@ const ProfilePage = () => {
         ))}
       </div>
 
+      {isAdmin && (
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-3 rounded-xl"
+          onClick={() => navigate("/admin/book/new")}
+        >
+          <Shield className="h-4 w-4" />
+          Добавить книгу
+        </Button>
+      )}
+
       <Button
         variant="ghost"
         className="w-full justify-start gap-3 rounded-xl text-destructive"
