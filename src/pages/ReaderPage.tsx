@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2 } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -329,6 +329,21 @@ const ReaderPage = () => {
     createHighlight.mutate({ text: selectedText, note: highlightNote || undefined, color: selectedColor });
   };
 
+  const handleShareText = async (text: string) => {
+    const shareData = {
+      text: `«${text}»\n— ${book?.title}, ${book?.author}`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.text);
+        toast({ title: "Цитата скопирована" });
+      }
+    } catch {}
+  };
+
   // Wrapper to inject highlights into markdown text nodes
   const wrapWithHighlights = (children: ReactNode) =>
     highlightChildren(children, highlights);
@@ -536,6 +551,10 @@ const ReaderPage = () => {
                   <button onClick={() => setShowNoteInput(true)}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-foreground hover:bg-secondary tap-highlight">
                     <MessageSquare className="h-3.5 w-3.5" /> Заметка
+                  </button>
+                  <button onClick={() => { handleShareText(selectedText); resetSelection(); }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-foreground hover:bg-secondary tap-highlight">
+                    <Share2 className="h-3.5 w-3.5" /> Поделиться
                   </button>
                 </div>
               </div>

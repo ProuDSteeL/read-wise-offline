@@ -6,6 +6,7 @@ import { useUserProgress } from "@/hooks/useUserData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useRecommendations } from "@/hooks/useRecommendations";
 
 const categories = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы"];
 
@@ -76,7 +77,7 @@ const Index = () => {
   const { data: collections } = useCollections();
   const { user } = useAuth();
   const { data: progress } = useUserProgress();
-
+  const { data: recommendations } = useRecommendations();
   const continueBooks = progress?.filter(
     (p) => p.progress_percent && p.progress_percent > 0 && p.progress_percent < 100
   );
@@ -157,6 +158,25 @@ const Index = () => {
       {collections && collections.length > 0 && collections.map((col) => (
         <CollectionSection key={col.id} collection={col} />
       ))}
+
+      {/* Recommendations */}
+      {user && recommendations && recommendations.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="px-4 text-lg font-semibold text-foreground">Для вас</h2>
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+            {recommendations.map((book) => (
+              <BookCard
+                key={book.id}
+                title={book.title}
+                author={book.author}
+                coverUrl={book.cover_url || "/placeholder.svg"}
+                readTimeMin={book.read_time_min ?? undefined}
+                onClick={() => navigate(`/book/${book.id}`)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* New */}
       <section className="space-y-3">

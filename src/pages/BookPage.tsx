@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star } from "lucide-react";
+import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBook, useKeyIdeas } from "@/hooks/useBooks";
@@ -16,6 +16,52 @@ const BookPage = () => {
   const { data: keyIdeas } = useKeyIdeas(id!);
   const queryClient = useQueryClient();
 
+  // User rating
+  const { data: userRating } = useQuery({
+    queryKey: ["user_rating", user?.id, id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_ratings")
+        .select("rating")
+        .eq("user_id", user!.id)
+        .eq("book_id", id!)
+        .maybeSingle();
+      return data?.rating ?? null;
+    },
+    enabled: !!user && !!id,
+  });
+
+  const rateMutation = useMutation({
+    mutationFn: async (rating: number) => {
+      const { error } = await supabase.from("user_ratings").upsert(
+        { user_id: user!.id, book_id: id!, rating },
+        { onConflict: "user_id,book_id" }
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user_rating", user?.id, id] });
+      queryClient.invalidateQueries({ queryKey: ["book", id] });
+      toast({ title: "Оценка сохранена" });
+    },
+  });
+
+  const handleShare = async () => {
+    if (!book) return;
+    const shareData = {
+      title: book.title,
+      text: `${book.title} — ${book.author}. Читай саммари в Букс!`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        toast({ title: "Ссылка скопирована" });
+      }
+    } catch {}
+  };
   // Bookmark (want_to_read) status
   const { data: isBookmarked } = useQuery({
     queryKey: ["is_bookmarked", user?.id, id],
@@ -97,12 +143,18 @@ const BookPage = () => {
     <div className="animate-fade-in pb-28">
       {/* Header */}
       <div className="relative">
-        <div className="absolute left-4 top-4 z-10">
+        <div className="absolute left-4 top-4 z-10 flex w-[calc(100%-2rem)] justify-between">
           <button
             onClick={() => navigate(-1)}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm tap-highlight"
           >
             <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm tap-highlight"
+          >
+            <Share2 className="h-5 w-5 text-foreground" />
           </button>
         </div>
 
@@ -194,6 +246,30 @@ const BookPage = () => {
           <div className="space-y-2">
             <h2 className="text-base font-semibold text-foreground">Об авторе</h2>
             <p className="text-sm leading-relaxed text-muted-foreground font-serif">{book.about_author}</p>
+          </div>
+        )}
+
+        {/* Rating */}
+        {user && (
+          <div className="space-y-2">
+            <h2 className="text-base font-semibold text-foreground">Ваша оценка</h2>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => rateMutation.mutate(star)}
+                  className="tap-highlight p-0.5"
+                >
+                  <Star
+                    className={`h-7 w-7 transition-colors ${
+                      (userRating ?? 0) >= star
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-muted-foreground/30"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
