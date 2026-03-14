@@ -1,17 +1,27 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, SkipBack, SkipForward, X } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, X, Moon, Gauge } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
+import { toast } from "@/hooks/use-toast";
 
 const formatTime = (s: number) => {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, "0")}`;
 };
+
+const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const SLEEP_OPTIONS = [
+  { label: "Выкл", minutes: 0 },
+  { label: "5 мин", minutes: 5 },
+  { label: "15 мин", minutes: 15 },
+  { label: "30 мин", minutes: 30 },
+  { label: "60 мин", minutes: 60 },
+];
 
 const AudioPlayerPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +35,21 @@ const AudioPlayerPage = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Speed
+  const [speed, setSpeed] = useState(() => {
+    const saved = localStorage.getItem("audio-speed");
+    return saved ? parseFloat(saved) : 1;
+  });
+
+  // Sleep timer
+  const [sleepMinutes, setSleepMinutes] = useState(0);
+  const [sleepRemaining, setSleepRemaining] = useState(0);
+  const sleepInterval = useRef<ReturnType<typeof setInterval>>();
+
+  // Panels
+  const [showSpeedPanel, setShowSpeedPanel] = useState(false);
+  const [showSleepPanel, setShowSleepPanel] = useState(false);
 
   // Load saved position
   useEffect(() => {
@@ -42,17 +67,44 @@ const AudioPlayerPage = () => {
       });
   }, [user, id, summary]);
 
+  // Apply speed
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = speed;
+    localStorage.setItem("audio-speed", String(speed));
+  }, [speed]);
+
+  // Sleep timer logic
+  useEffect(() => {
+    clearInterval(sleepInterval.current);
+    if (sleepMinutes <= 0) {
+      setSleepRemaining(0);
+      return;
+    }
+    setSleepRemaining(sleepMinutes * 60);
+    sleepInterval.current = setInterval(() => {
+      setSleepRemaining((prev) => {
+        if (prev <= 1) {
+          // Pause audio
+          audioRef.current?.pause();
+          setPlaying(false);
+          setSleepMinutes(0);
+          clearInterval(sleepInterval.current);
+          toast({ title: "Таймер сна сработал", description: "Воспроизведение остановлено" });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(sleepInterval.current);
+  }, [sleepMinutes]);
+
   const savePosition = useCallback(
     (time: number) => {
       if (!user || !id) return;
       clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
         supabase.from("user_progress").upsert(
-          {
-            user_id: user.id,
-            book_id: id,
-            audio_position: time,
-          },
+          { user_id: user.id, book_id: id, audio_position: time },
           { onConflict: "user_id,book_id" }
         );
       }, 2000);
@@ -135,11 +187,11 @@ const AudioPlayerPage = () => {
           />
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
+            <span>-{formatTime(Math.max(0, duration - currentTime))}</span>
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Main controls */}
         <div className="flex items-center justify-center gap-8">
           <button onClick={() => skip(-15)} className="tap-highlight text-foreground">
             <SkipBack className="h-6 w-6" />
@@ -154,6 +206,66 @@ const AudioPlayerPage = () => {
             <SkipForward className="h-6 w-6" />
           </button>
         </div>
+
+        {/* Secondary controls: speed + sleep */}
+        <div className="flex items-center justify-center gap-6">
+          <button
+            onClick={() => { setShowSpeedPanel(!showSpeedPanel); setShowSleepPanel(false); }}
+            className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-foreground tap-highlight"
+          >
+            <Gauge className="h-3.5 w-3.5" />
+            {speed}×
+          </button>
+          <button
+            onClick={() => { setShowSleepPanel(!showSleepPanel); setShowSpeedPanel(false); }}
+            className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium tap-highlight ${
+              sleepMinutes > 0
+                ? "bg-primary/10 text-primary"
+                : "bg-secondary text-foreground"
+            }`}
+          >
+            <Moon className="h-3.5 w-3.5" />
+            {sleepMinutes > 0 ? formatTime(sleepRemaining) : "Сон"}
+          </button>
+        </div>
+
+        {/* Speed panel */}
+        {showSpeedPanel && (
+          <div className="animate-fade-in flex flex-wrap justify-center gap-2 rounded-xl bg-card p-3 shadow-card">
+            {SPEEDS.map((s) => (
+              <button
+                key={s}
+                onClick={() => { setSpeed(s); setShowSpeedPanel(false); }}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  speed === s
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                {s}×
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Sleep timer panel */}
+        {showSleepPanel && (
+          <div className="animate-fade-in flex flex-wrap justify-center gap-2 rounded-xl bg-card p-3 shadow-card">
+            {SLEEP_OPTIONS.map(({ label, minutes }) => (
+              <button
+                key={minutes}
+                onClick={() => { setSleepMinutes(minutes); setShowSleepPanel(false); }}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  sleepMinutes === minutes
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Hidden audio element */}
@@ -168,7 +280,10 @@ const AudioPlayerPage = () => {
           }
         }}
         onLoadedMetadata={() => {
-          if (audioRef.current) setDuration(audioRef.current.duration);
+          if (audioRef.current) {
+            setDuration(audioRef.current.duration);
+            audioRef.current.playbackRate = speed;
+          }
         }}
         onEnded={() => setPlaying(false)}
       />
