@@ -16,6 +16,7 @@ interface AudioContextType {
   state: AudioState;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   play: (bookId: string, audioUrl: string, bookTitle?: string, position?: number, speed?: number) => void;
+  load: (bookId: string, audioUrl: string, bookTitle?: string, position?: number) => void;
   togglePlay: () => void;
   seek: (time: number) => void;
   skip: (seconds: number) => void;
