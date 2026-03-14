@@ -85,13 +85,13 @@ export const saveAudioOffline = async (
   }
 
   const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+  const chunks: BlobPart[] = [];
   let loaded = 0;
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
+    chunks.push(value as unknown as BlobPart);
     loaded += value.length;
     onProgress?.(loaded, total);
   }
