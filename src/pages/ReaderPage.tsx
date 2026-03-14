@@ -94,12 +94,25 @@ const ReaderPage = () => {
     const handleSelectionChange = () => {
       const selection = window.getSelection();
       const text = selection?.toString().trim();
-      if (text && text.length > 2) {
-        setSelectedText(text);
-        setShowSelectionMenu(true);
+      if (text && text.length > 2 && selection?.rangeCount) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const containerRect = contentRef.current?.getBoundingClientRect();
+        if (rect && containerRect) {
+          setSelectedText(text);
+          setMenuPosition({
+            top: rect.bottom + window.scrollY + 6,
+            left: Math.max(16, Math.min(
+              rect.left + rect.width / 2 - 100,
+              window.innerWidth - 216
+            )),
+          });
+          setShowSelectionMenu(true);
+        }
       } else if (!showNoteInput) {
         setShowSelectionMenu(false);
         setSelectedText("");
+        setMenuPosition(null);
       }
     };
 
