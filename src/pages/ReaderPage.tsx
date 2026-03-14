@@ -208,7 +208,7 @@ const ReaderPage = () => {
   const fontClass = fontFamily === "serif" ? "font-serif" : "font-sans";
 
   return (
-    <div className={`min-h-screen ${themeClasses[theme]} bg-background text-foreground transition-colors duration-300`}>
+    <div className={`relative min-h-screen ${themeClasses[theme]} bg-background text-foreground transition-colors duration-300`}>
       {/* Header */}
       <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur-xl">
         <button onClick={() => navigate(-1)} className="tap-highlight">
