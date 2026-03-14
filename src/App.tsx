@@ -28,6 +28,7 @@ const queryClient = new QueryClient();
 
 const AppRoutes = () => {
   const isOnline = useOnlineStatus();
+  useOfflineSync();
 
   if (!isOnline) {
     return (
