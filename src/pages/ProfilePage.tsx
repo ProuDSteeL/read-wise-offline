@@ -116,7 +116,7 @@ const ProfilePage = () => {
           />
         </div>
       )}
-
+      {isAdmin && (
         <button
           onClick={() => navigate("/admin/books")}
           className="flex w-full items-center gap-3 rounded-2xl bg-card p-4 shadow-card transition-colors tap-highlight"
