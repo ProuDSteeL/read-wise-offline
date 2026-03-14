@@ -251,6 +251,7 @@ export type Database = {
       user_highlights: {
         Row: {
           book_id: string
+          color: string | null
           created_at: string
           id: string
           note: string | null
@@ -259,6 +260,7 @@ export type Database = {
         }
         Insert: {
           book_id: string
+          color?: string | null
           created_at?: string
           id?: string
           note?: string | null
@@ -267,6 +269,7 @@ export type Database = {
         }
         Update: {
           book_id?: string
+          color?: string | null
           created_at?: string
           id?: string
           note?: string | null

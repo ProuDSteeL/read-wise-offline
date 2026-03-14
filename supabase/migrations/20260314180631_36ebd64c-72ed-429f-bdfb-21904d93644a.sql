@@ -1,0 +1,1 @@
+ALTER TABLE public.user_highlights ADD COLUMN color text DEFAULT 'yellow';
