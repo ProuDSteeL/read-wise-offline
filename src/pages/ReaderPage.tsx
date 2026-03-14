@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { X, Settings2, Bookmark, BookmarkCheck, Highlighter, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
