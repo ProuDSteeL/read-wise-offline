@@ -1,7 +1,7 @@
-import { useState, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Upload, Loader2 } from "lucide-react";
+import { useState, useEffect, FormEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Plus, Trash2, Upload, Loader2, Music } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -19,6 +19,8 @@ interface KeyIdeaInput {
 
 const AdminBookForm = () => {
   const navigate = useNavigate();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = !!editId;
   const { user } = useAuth();
   const { data: isAdmin, isLoading: checkingAdmin } = useIsAdmin();
   const queryClient = useQueryClient();
@@ -34,16 +36,81 @@ const AdminBookForm = () => {
   const [keyIdeas, setKeyIdeas] = useState<KeyIdeaInput[]>([{ title: "", content: "" }]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [summaryContent, setSummaryContent] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [publish, setPublish] = useState(false);
+
+  // Load existing book data for edit mode
+  const { data: existingBook, isLoading: loadingBook } = useQuery({
+    queryKey: ["admin-book", editId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("books").select("*").eq("id", editId!).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEditMode,
+  });
+
+  const { data: existingIdeas } = useQuery({
+    queryKey: ["admin-key-ideas", editId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("key_ideas").select("*").eq("book_id", editId!).order("order_index");
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEditMode,
+  });
+
+  const { data: existingSummary } = useQuery({
+    queryKey: ["admin-summary", editId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("summaries").select("*").eq("book_id", editId!).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEditMode,
+  });
+
+  // Populate form when edit data loads
+  useEffect(() => {
+    if (existingBook) {
+      setTitle(existingBook.title);
+      setAuthor(existingBook.author);
+      setDescription(existingBook.description || "");
+      setAboutAuthor(existingBook.about_author || "");
+      setReadTime(existingBook.read_time_min?.toString() || "");
+      setListenTime(existingBook.listen_time_min?.toString() || "");
+      setSelectedCategories(existingBook.categories || []);
+      const why = existingBook.why_read as string[] | null;
+      setWhyRead(why?.length ? why : [""]);
+      setCoverPreview(existingBook.cover_url || null);
+    }
+  }, [existingBook]);
+
+  useEffect(() => {
+    if (existingIdeas?.length) {
+      setKeyIdeas(existingIdeas.map((i) => ({ title: i.title, content: i.content })));
+    }
+  }, [existingIdeas]);
+
+  useEffect(() => {
+    if (existingSummary) {
+      setSummaryContent(existingSummary.content || "");
+      if (existingSummary.audio_url) setAudioFileName("Загружено ранее");
+    }
+  }, [existingSummary]);
 
   const handleCoverChange = (file: File | null) => {
     setCoverFile(file);
     if (file) {
-      const url = URL.createObjectURL(file);
-      setCoverPreview(url);
-    } else {
-      setCoverPreview(null);
+      setCoverPreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleAudioChange = (file: File | null) => {
+    setAudioFile(file);
+    setAudioFileName(file?.name || null);
   };
 
   const toggleCategory = (cat: string) => {
@@ -54,7 +121,9 @@ const AdminBookForm = () => {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      let coverUrl: string | null = null;
+      let coverUrl: string | null = isEditMode ? existingBook?.cover_url || null : null;
+      let audioUrl: string | null = isEditMode ? existingSummary?.audio_url || null : null;
+      let audioSize: number | null = isEditMode ? existingSummary?.audio_size_bytes || null : null;
 
       // Upload cover
       if (coverFile) {
@@ -68,31 +137,57 @@ const AdminBookForm = () => {
         coverUrl = urlData.publicUrl;
       }
 
-      // Insert book
-      const { data: book, error: bookErr } = await supabase
-        .from("books")
-        .insert({
-          title,
-          author,
-          description: description || null,
-          about_author: aboutAuthor || null,
-          read_time_min: readTime ? parseInt(readTime) : 0,
-          listen_time_min: listenTime ? parseInt(listenTime) : 0,
-          categories: selectedCategories,
-          why_read: whyRead.filter((r) => r.trim()),
-          cover_url: coverUrl,
-          status: publish ? "published" : "draft",
-        })
-        .select("id")
-        .single();
-      if (bookErr) throw bookErr;
+      // Upload audio
+      if (audioFile) {
+        const ext = audioFile.name.split(".").pop();
+        const path = `${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("audio-files")
+          .upload(path, audioFile, { contentType: audioFile.type });
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from("audio-files").getPublicUrl(path);
+        audioUrl = urlData.publicUrl;
+        audioSize = audioFile.size;
+      }
+
+      const bookPayload = {
+        title,
+        author,
+        description: description || null,
+        about_author: aboutAuthor || null,
+        read_time_min: readTime ? parseInt(readTime) : 0,
+        listen_time_min: listenTime ? parseInt(listenTime) : 0,
+        categories: selectedCategories,
+        why_read: whyRead.filter((r) => r.trim()),
+        cover_url: coverUrl,
+        status: publish ? "published" as const : "draft" as const,
+      };
+
+      let bookId: string;
+
+      if (isEditMode) {
+        const { error } = await supabase.from("books").update(bookPayload).eq("id", editId!);
+        if (error) throw error;
+        bookId = editId!;
+
+        // Replace key ideas
+        await supabase.from("key_ideas").delete().eq("book_id", bookId);
+      } else {
+        const { data: book, error } = await supabase
+          .from("books")
+          .insert(bookPayload)
+          .select("id")
+          .single();
+        if (error) throw error;
+        bookId = book.id;
+      }
 
       // Insert key ideas
       const validIdeas = keyIdeas.filter((k) => k.title.trim() && k.content.trim());
       if (validIdeas.length > 0) {
         const { error: ideasErr } = await supabase.from("key_ideas").insert(
           validIdeas.map((idea, i) => ({
-            book_id: book.id,
+            book_id: bookId,
             title: idea.title,
             content: idea.content,
             order_index: i,
@@ -101,11 +196,34 @@ const AdminBookForm = () => {
         if (ideasErr) throw ideasErr;
       }
 
-      return book.id;
+      // Upsert summary
+      if (summaryContent.trim() || audioUrl) {
+        const summaryPayload = {
+          book_id: bookId,
+          content: summaryContent || null,
+          audio_url: audioUrl,
+          audio_size_bytes: audioSize,
+          published_at: publish ? new Date().toISOString() : null,
+        };
+
+        if (isEditMode && existingSummary) {
+          const { error } = await supabase.from("summaries").update(summaryPayload).eq("id", existingSummary.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("summaries").insert(summaryPayload);
+          if (error) throw error;
+        }
+      }
+
+      return bookId;
     },
     onSuccess: (bookId) => {
       queryClient.invalidateQueries({ queryKey: ["books"] });
-      toast({ title: "Книга добавлена!", description: publish ? "Опубликована" : "Сохранена как черновик" });
+      queryClient.invalidateQueries({ queryKey: ["admin-books"] });
+      toast({
+        title: isEditMode ? "Книга обновлена!" : "Книга добавлена!",
+        description: publish ? "Опубликована" : "Сохранена как черновик",
+      });
       navigate(`/book/${bookId}`);
     },
     onError: (err: any) => {
@@ -122,7 +240,7 @@ const AdminBookForm = () => {
     mutation.mutate();
   };
 
-  if (checkingAdmin) {
+  if (checkingAdmin || (isEditMode && loadingBook)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -134,7 +252,6 @@ const AdminBookForm = () => {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4">
         <p className="text-lg font-semibold text-foreground">Доступ запрещён</p>
-        <p className="text-sm text-muted-foreground">Эта страница только для администраторов</p>
         <Button variant="outline" onClick={() => navigate("/")}>На главную</Button>
       </div>
     );
@@ -142,12 +259,13 @@ const AdminBookForm = () => {
 
   return (
     <div className="mx-auto min-h-screen max-w-md bg-background">
-      {/* Header */}
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b bg-background/90 px-4 py-3 backdrop-blur-xl">
         <button onClick={() => navigate(-1)} className="tap-highlight">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <h1 className="text-lg font-bold text-foreground">Добавить книгу</h1>
+        <h1 className="text-lg font-bold text-foreground">
+          {isEditMode ? "Редактировать книгу" : "Добавить книгу"}
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 p-4 pb-8">
@@ -162,14 +280,12 @@ const AdminBookForm = () => {
                 <Upload className="h-6 w-6 text-muted-foreground" />
               </div>
             )}
-            <div>
-              <Input
-                type="file"
-                accept="image/*"
-                className="text-xs"
-                onChange={(e) => handleCoverChange(e.target.files?.[0] || null)}
-              />
-            </div>
+            <Input
+              type="file"
+              accept="image/*"
+              className="text-xs"
+              onChange={(e) => handleCoverChange(e.target.files?.[0] || null)}
+            />
           </div>
         </div>
 
@@ -255,6 +371,39 @@ const AdminBookForm = () => {
         <div className="space-y-1">
           <label className="text-sm font-medium text-foreground">Об авторе</label>
           <Textarea value={aboutAuthor} onChange={(e) => setAboutAuthor(e.target.value)} placeholder="Биография автора..." rows={2} className="rounded-xl bg-secondary border-0 resize-none" />
+        </div>
+
+        {/* Summary (Markdown) */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-foreground">Саммари (Markdown)</label>
+          <Textarea
+            value={summaryContent}
+            onChange={(e) => setSummaryContent(e.target.value)}
+            placeholder="# Введение&#10;&#10;Текст саммари в формате Markdown..."
+            rows={8}
+            className="rounded-xl bg-secondary border-0 resize-none font-mono text-xs"
+          />
+        </div>
+
+        {/* Audio upload */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Аудио саммари</label>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
+              <Music className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="flex-1">
+              <Input
+                type="file"
+                accept="audio/*"
+                className="text-xs"
+                onChange={(e) => handleAudioChange(e.target.files?.[0] || null)}
+              />
+              {audioFileName && (
+                <p className="mt-1 text-xs text-muted-foreground">{audioFileName}</p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Key ideas */}
