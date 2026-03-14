@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, ReactNode } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
