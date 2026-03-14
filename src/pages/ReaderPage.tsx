@@ -329,6 +329,21 @@ const ReaderPage = () => {
     createHighlight.mutate({ text: selectedText, note: highlightNote || undefined, color: selectedColor });
   };
 
+  const handleShareText = async (text: string) => {
+    const shareData = {
+      text: `«${text}»\n— ${book?.title}, ${book?.author}`,
+      url: window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareData.text);
+        toast({ title: "Цитата скопирована" });
+      }
+    } catch {}
+  };
+
   // Wrapper to inject highlights into markdown text nodes
   const wrapWithHighlights = (children: ReactNode) =>
     highlightChildren(children, highlights);
