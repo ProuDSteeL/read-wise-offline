@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2 } from "lucide-react";
+import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
+import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
