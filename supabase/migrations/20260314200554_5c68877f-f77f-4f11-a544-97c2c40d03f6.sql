@@ -1,0 +1,1 @@
+ALTER TABLE public.user_downloads ADD CONSTRAINT user_downloads_user_book_unique UNIQUE (user_id, book_id);
