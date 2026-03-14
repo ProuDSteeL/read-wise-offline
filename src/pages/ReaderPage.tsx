@@ -54,8 +54,8 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
     parts.push(
       <mark
         key={`hl-${keyIdx++}`}
-        className={`${color.bg} cursor-pointer rounded-sm px-0.5 transition-colors`}
-        onClick={(e) => { e.stopPropagation(); onClickHighlight(hl); }}
+        className={`${color.bg} rounded-sm px-0.5`}
+        data-highlight-id={hl.id}
       >
         {hl.text}
       </mark>
