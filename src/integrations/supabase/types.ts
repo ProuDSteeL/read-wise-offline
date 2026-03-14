@@ -14,16 +14,382 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      books: {
+        Row: {
+          about_author: string | null
+          author: string
+          categories: string[] | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          listen_time_min: number | null
+          rating: number | null
+          read_time_min: number | null
+          status: Database["public"]["Enums"]["book_status"]
+          tags: string[] | null
+          title: string
+          updated_at: string
+          views_count: number | null
+          why_read: Json | null
+        }
+        Insert: {
+          about_author?: string | null
+          author: string
+          categories?: string[] | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          listen_time_min?: number | null
+          rating?: number | null
+          read_time_min?: number | null
+          status?: Database["public"]["Enums"]["book_status"]
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          views_count?: number | null
+          why_read?: Json | null
+        }
+        Update: {
+          about_author?: string | null
+          author?: string
+          categories?: string[] | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          listen_time_min?: number | null
+          rating?: number | null
+          read_time_min?: number | null
+          status?: Database["public"]["Enums"]["book_status"]
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          views_count?: number | null
+          why_read?: Json | null
+        }
+        Relationships: []
+      }
+      collections: {
+        Row: {
+          book_ids: string[] | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_featured: boolean | null
+          order_index: number | null
+          title: string
+        }
+        Insert: {
+          book_ids?: string[] | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_featured?: boolean | null
+          order_index?: number | null
+          title: string
+        }
+        Update: {
+          book_ids?: string[] | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_featured?: boolean | null
+          order_index?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
+      key_ideas: {
+        Row: {
+          book_id: string
+          content: string
+          created_at: string
+          id: string
+          order_index: number
+          title: string
+        }
+        Insert: {
+          book_id: string
+          content: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          title: string
+        }
+        Update: {
+          book_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          order_index?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "key_ideas_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          name: string | null
+          subscription_expires_at: string | null
+          subscription_type: Database["public"]["Enums"]["subscription_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          subscription_expires_at?: string | null
+          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          subscription_expires_at?: string | null
+          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      summaries: {
+        Row: {
+          audio_size_bytes: number | null
+          audio_url: string | null
+          book_id: string
+          content: string | null
+          created_at: string
+          id: string
+          published_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          audio_size_bytes?: number | null
+          audio_url?: string | null
+          book_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audio_size_bytes?: number | null
+          audio_url?: string | null
+          book_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summaries_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: true
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_downloads: {
+        Row: {
+          book_id: string
+          content_type: Database["public"]["Enums"]["download_content_type"]
+          downloaded_at: string
+          id: string
+          size_bytes: number | null
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          content_type?: Database["public"]["Enums"]["download_content_type"]
+          downloaded_at?: string
+          id?: string
+          size_bytes?: number | null
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          content_type?: Database["public"]["Enums"]["download_content_type"]
+          downloaded_at?: string
+          id?: string
+          size_bytes?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_downloads_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_highlights: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          note: string | null
+          text: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          text: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_highlights_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_progress: {
+        Row: {
+          audio_position: number | null
+          book_id: string
+          id: string
+          last_position: string | null
+          progress_percent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audio_position?: number | null
+          book_id: string
+          id?: string
+          last_position?: string | null
+          progress_percent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audio_position?: number | null
+          book_id?: string
+          id?: string
+          last_position?: string | null
+          progress_percent?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_shelves: {
+        Row: {
+          book_id: string
+          created_at: string
+          id: string
+          shelf: Database["public"]["Enums"]["shelf_type"]
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          id?: string
+          shelf: Database["public"]["Enums"]["shelf_type"]
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          id?: string
+          shelf?: Database["public"]["Enums"]["shelf_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_shelves_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      book_status: "draft" | "published" | "archived"
+      download_content_type: "text" | "audio" | "both"
+      shelf_type: "favorite" | "read" | "want_to_read"
+      subscription_type: "free" | "pro_monthly" | "pro_yearly"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +516,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      book_status: ["draft", "published", "archived"],
+      download_content_type: ["text", "audio", "both"],
+      shelf_type: ["favorite", "read", "want_to_read"],
+      subscription_type: ["free", "pro_monthly", "pro_yearly"],
+    },
   },
 } as const
