@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BookOpen, Heart, BookMarked, Download, LogIn, ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useShelfCounts, useDownloadCount, useUserShelves } from "@/hooks/useUserData";
+import { useShelfCounts, useDownloadCount } from "@/hooks/useUserData";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -11,18 +11,11 @@ import type { Book } from "@/hooks/useBooks";
 
 type ShelfKey = "favorite" | "read" | "want_to_read" | "downloads";
 
-const SHELF_META: Record<ShelfKey, { icon: typeof Heart; label: string; gradient: string }> = {
-  favorite: { icon: Heart, label: "Избранное", gradient: "from-pink-500/10 to-rose-500/10" },
-  read: { icon: BookOpen, label: "Прочитано", gradient: "from-emerald-500/10 to-teal-500/10" },
-  want_to_read: { icon: BookMarked, label: "Хочу прочитать", gradient: "from-primary/10 to-violet-500/10" },
-  downloads: { icon: Download, label: "Мои загрузки", gradient: "from-blue-500/10 to-cyan-500/10" },
-};
-
-const SHELF_ICON_COLORS: Record<ShelfKey, string> = {
-  favorite: "text-rose-500",
-  read: "text-emerald-500",
-  want_to_read: "text-primary",
-  downloads: "text-blue-500",
+const SHELF_META: Record<ShelfKey, { icon: typeof Heart; label: string }> = {
+  favorite: { icon: Heart, label: "Избранное" },
+  read: { icon: BookOpen, label: "Прочитано" },
+  want_to_read: { icon: BookMarked, label: "Хочу прочитать" },
+  downloads: { icon: Download, label: "Мои загрузки" },
 };
 
 const ShelvesPage = () => {
@@ -66,8 +59,6 @@ const ShelvesPage = () => {
       queryClient.invalidateQueries({ queryKey: ["shelf_books", user?.id, activeShelf] });
       queryClient.invalidateQueries({ queryKey: ["shelf_counts"] });
       queryClient.invalidateQueries({ queryKey: ["download_count"] });
-      queryClient.invalidateQueries({ queryKey: ["is_favorite"] });
-      queryClient.invalidateQueries({ queryKey: ["is_bookmarked"] });
       toast({ title: "Удалено с полки" });
     },
   });
@@ -75,11 +66,11 @@ const ShelvesPage = () => {
   if (!user) {
     return (
       <div className="animate-fade-in flex flex-col items-center gap-5 px-4 pt-32 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/8">
-          <BookOpen className="h-8 w-8 text-primary" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sage-light">
+          <BookOpen className="h-8 w-8 text-sage" />
         </div>
-        <p className="text-sm text-muted-foreground leading-relaxed">Войдите, чтобы сохранять<br/>книги на полки</p>
-        <Button className="rounded-xl h-11 px-8" onClick={() => navigate("/auth")}>
+        <p className="text-sm text-muted-foreground">Войдите, чтобы сохранять<br/>книги на полки</p>
+        <Button className="rounded-full h-11 px-8" onClick={() => navigate("/auth")}>
           <LogIn className="mr-2 h-4 w-4" /> Войти
         </Button>
       </div>
@@ -96,19 +87,18 @@ const ShelvesPage = () => {
 
     return (
       <div className="animate-fade-in space-y-6 px-4 pt-14">
-        <h1 className="text-[28px] font-extrabold tracking-tight text-foreground">Мои полки</h1>
-        <div className="space-y-3">
+        <h1 className="text-[26px] font-extrabold tracking-tight text-foreground">Мои полки</h1>
+        <div className="space-y-2">
           {shelves.map(({ key, count }) => {
-            const { icon: Icon, label, gradient } = SHELF_META[key];
-            const iconColor = SHELF_ICON_COLORS[key];
+            const { icon: Icon, label } = SHELF_META[key];
             return (
               <button
                 key={key}
                 onClick={() => setActiveShelf(key)}
-                className={`flex w-full items-center gap-4 rounded-2xl bg-gradient-to-r ${gradient} bg-card p-4 shadow-card transition-all tap-highlight hover:shadow-elevated`}
+                className="flex w-full items-center gap-4 rounded-2xl bg-card p-4 shadow-card transition-all tap-highlight"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-card shadow-card">
-                  <Icon className={`h-5 w-5 ${iconColor}`} />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sage-light">
+                  <Icon className="h-5 w-5 text-sage" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-semibold text-foreground">{label}</p>
@@ -123,7 +113,6 @@ const ShelvesPage = () => {
   }
 
   const { icon: ShelfIcon, label: shelfLabel } = SHELF_META[activeShelf];
-  const iconColor = SHELF_ICON_COLORS[activeShelf];
   const table = activeShelf === "downloads" ? "user_downloads" : "user_shelves";
 
   return (
@@ -141,24 +130,19 @@ const ShelvesPage = () => {
         </div>
       ) : !shelfBooks?.length ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
-            <ShelfIcon className={`h-6 w-6 ${iconColor} opacity-40`} />
-          </div>
+          <ShelfIcon className="h-10 w-10 text-muted-foreground/20" />
           <p className="text-sm text-muted-foreground">Здесь пока пусто</p>
         </div>
       ) : (
         <div className="space-y-2">
           {shelfBooks.map((book) => (
-            <div
-              key={book._join_id}
-              className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-card"
-            >
+            <div key={book._join_id} className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-card">
               <button
                 onClick={() => navigate(`/book/${book.id}`)}
                 className="flex flex-1 items-center gap-3 text-left tap-highlight"
               >
                 {book.cover_url ? (
-                  <img src={book.cover_url} alt="" className="h-16 w-12 rounded-xl object-cover shadow-card" />
+                  <img src={book.cover_url} alt="" className="h-16 w-12 rounded-xl object-cover" />
                 ) : (
                   <div className="h-16 w-12 rounded-xl bg-muted" />
                 )}
@@ -169,7 +153,7 @@ const ShelvesPage = () => {
               </button>
               <button
                 onClick={() => removeFromShelf.mutate({ joinId: book._join_id, table })}
-                className="shrink-0 rounded-xl p-2.5 text-muted-foreground/40 hover:bg-destructive/8 hover:text-destructive tap-highlight transition-colors"
+                className="shrink-0 rounded-xl p-2.5 text-muted-foreground/30 hover:text-destructive tap-highlight"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
