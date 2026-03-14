@@ -26,7 +26,7 @@ const HIGHLIGHT_COLORS = [
 const themeClasses: Record<ReaderTheme, string> = { light: "", dark: "dark", sepia: "sepia" };
 
 // Highlight text segments within a string
-function applyHighlights(text: string, highlights: Array<{ id: string; text: string; note: string | null; color?: string }>, onClickHighlight: (h: any) => void): ReactNode[] {
+function applyHighlights(text: string, highlights: Array<{ id: string; text: string; note: string | null; color?: string }>): ReactNode[] {
   if (!highlights.length) return [text];
 
   const parts: ReactNode[] = [];
