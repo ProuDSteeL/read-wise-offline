@@ -16,7 +16,6 @@ const BookPage = () => {
   const { data: keyIdeas } = useKeyIdeas(id!);
   const queryClient = useQueryClient();
 
-  // User rating
   const { data: userRating } = useQuery({
     queryKey: ["user_rating", user?.id, id],
     queryFn: async () => {
@@ -62,7 +61,7 @@ const BookPage = () => {
       }
     } catch {}
   };
-  // Bookmark (want_to_read) status
+
   const { data: isBookmarked } = useQuery({
     queryKey: ["is_bookmarked", user?.id, id],
     queryFn: async () => {
@@ -113,10 +112,7 @@ const BookPage = () => {
   });
 
   const handleBookmark = () => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
+    if (!user) { navigate("/auth"); return; }
     bookmarkMutation.mutate();
   };
 
@@ -125,8 +121,8 @@ const BookPage = () => {
       <div className="animate-fade-in space-y-4 px-4 pt-4">
         <Skeleton className="h-8 w-8 rounded-full" />
         <Skeleton className="mx-auto aspect-[3/4] w-48 rounded-2xl" />
-        <Skeleton className="mx-auto h-6 w-48" />
-        <Skeleton className="mx-auto h-4 w-32" />
+        <Skeleton className="mx-auto h-6 w-48 rounded-lg" />
+        <Skeleton className="mx-auto h-4 w-32 rounded-lg" />
       </div>
     );
   }
@@ -146,42 +142,47 @@ const BookPage = () => {
         <div className="absolute left-4 top-4 z-10 flex w-[calc(100%-2rem)] justify-between">
           <button
             onClick={() => navigate(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm tap-highlight"
+            className="flex h-10 w-10 items-center justify-center rounded-xl glass shadow-card tap-highlight"
           >
             <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
           <button
             onClick={handleShare}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm tap-highlight"
+            className="flex h-10 w-10 items-center justify-center rounded-xl glass shadow-card tap-highlight"
           >
             <Share2 className="h-5 w-5 text-foreground" />
           </button>
         </div>
 
-        <div className="flex justify-center bg-gradient-to-b from-secondary to-background px-4 pb-6 pt-16">
+        <div className="relative flex justify-center overflow-hidden px-4 pb-8 pt-16">
+          {/* Background blur of cover */}
+          <div className="absolute inset-0 overflow-hidden">
+            <img src={book.cover_url || "/placeholder.svg"} alt="" className="h-full w-full scale-150 object-cover opacity-15 blur-3xl" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
+          </div>
           <img
             src={book.cover_url || "/placeholder.svg"}
             alt={book.title}
-            className="h-56 w-auto rounded-2xl shadow-elevated object-cover"
+            className="relative h-60 w-auto rounded-2xl shadow-elevated object-cover"
           />
         </div>
       </div>
 
-      <div className="space-y-4 px-4">
+      <div className="space-y-5 px-4">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-foreground">{book.title}</h1>
+          <h1 className="text-xl font-extrabold tracking-tight text-foreground">{book.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{book.author}</p>
         </div>
 
-        <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+        <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground">
           {book.read_time_min ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
               <span>{book.read_time_min} мин</span>
             </div>
           ) : null}
           {book.listen_time_min ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Headphones className="h-3.5 w-3.5" />
               <span>{book.listen_time_min} мин</span>
             </div>
@@ -189,7 +190,7 @@ const BookPage = () => {
           {book.rating && Number(book.rating) > 0 ? (
             <div className="flex items-center gap-1">
               <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-              <span>{Number(book.rating).toFixed(1)}</span>
+              <span className="font-medium">{Number(book.rating).toFixed(1)}</span>
             </div>
           ) : null}
         </div>
@@ -197,7 +198,7 @@ const BookPage = () => {
         {book.categories && book.categories.length > 0 && (
           <div className="flex flex-wrap justify-center gap-2">
             {book.categories.map((cat) => (
-              <span key={cat} className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+              <span key={cat} className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground shadow-card">
                 {cat}
               </span>
             ))}
@@ -206,18 +207,18 @@ const BookPage = () => {
 
         {book.description && (
           <div className="space-y-2">
-            <h2 className="text-base font-semibold text-foreground">О книге</h2>
+            <h2 className="text-[15px] font-bold text-foreground">О книге</h2>
             <p className="text-sm leading-relaxed text-muted-foreground font-serif">{book.description}</p>
           </div>
         )}
 
         {book.why_read && Array.isArray(book.why_read) && (book.why_read as string[]).length > 0 && (
-          <div className="space-y-2">
-            <h2 className="text-base font-semibold text-foreground">Зачем читать</h2>
-            <ul className="space-y-1.5">
+          <div className="space-y-3">
+            <h2 className="text-[15px] font-bold text-foreground">Зачем читать</h2>
+            <ul className="space-y-2">
               {(book.why_read as string[]).map((reason, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                  <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full gradient-primary" />
                   {reason}
                 </li>
               ))}
@@ -227,15 +228,19 @@ const BookPage = () => {
 
         {keyIdeas && keyIdeas.length > 0 && (
           <div className="space-y-3">
-            <h2 className="text-base font-semibold text-foreground">
+            <h2 className="text-[15px] font-bold text-foreground">
               Ключевые идеи · {keyIdeas.length}
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {keyIdeas.map((idea, i) => (
-                <div key={idea.id} className="rounded-xl bg-card p-4 shadow-card">
-                  <p className="text-xs font-medium text-primary">Идея {i + 1}</p>
-                  <h3 className="mt-1 text-sm font-semibold text-foreground">{idea.title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground font-serif line-clamp-3">{idea.content}</p>
+                <div key={idea.id} className="rounded-2xl bg-card p-4 shadow-card">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg gradient-primary text-[11px] font-bold text-primary-foreground">
+                      {i + 1}
+                    </span>
+                    <h3 className="text-sm font-semibold text-foreground">{idea.title}</h3>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground font-serif line-clamp-3">{idea.content}</p>
                 </div>
               ))}
             </div>
@@ -244,7 +249,7 @@ const BookPage = () => {
 
         {book.about_author && (
           <div className="space-y-2">
-            <h2 className="text-base font-semibold text-foreground">Об авторе</h2>
+            <h2 className="text-[15px] font-bold text-foreground">Об авторе</h2>
             <p className="text-sm leading-relaxed text-muted-foreground font-serif">{book.about_author}</p>
           </div>
         )}
@@ -252,8 +257,8 @@ const BookPage = () => {
         {/* Rating */}
         {user && (
           <div className="space-y-2">
-            <h2 className="text-base font-semibold text-foreground">Ваша оценка</h2>
-            <div className="flex gap-1">
+            <h2 className="text-[15px] font-bold text-foreground">Ваша оценка</h2>
+            <div className="flex gap-1.5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -261,10 +266,10 @@ const BookPage = () => {
                   className="tap-highlight p-0.5"
                 >
                   <Star
-                    className={`h-7 w-7 transition-colors ${
+                    className={`h-8 w-8 transition-all duration-200 ${
                       (userRating ?? 0) >= star
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-muted-foreground/30"
+                        ? "fill-amber-400 text-amber-400 scale-100"
+                        : "text-muted-foreground/20 hover:text-amber-300/50"
                     }`}
                   />
                 </button>
@@ -275,22 +280,22 @@ const BookPage = () => {
       </div>
 
       {/* Sticky bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/90 backdrop-blur-xl safe-bottom">
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 glass safe-bottom">
         <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
           <button
             onClick={handleBookmark}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl tap-highlight transition-colors ${
-              isBookmarked ? "bg-primary/10" : "bg-secondary"
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl tap-highlight transition-all ${
+              isBookmarked ? "bg-primary/10 shadow-glow" : "bg-card shadow-card"
             }`}
           >
             <BookMarked
-              className={`h-5 w-5 transition-colors ${
+              className={`h-5 w-5 transition-all ${
                 isBookmarked ? "fill-primary text-primary" : "text-foreground"
               }`}
             />
           </button>
           <Button
-            className="h-11 flex-1 gap-2 rounded-xl text-sm font-semibold"
+            className="h-12 flex-1 gap-2 rounded-xl text-sm font-semibold gradient-primary border-0 hover:opacity-90"
             onClick={() => navigate(`/book/${id}/read`)}
           >
             <BookOpen className="h-4 w-4" />
@@ -299,7 +304,7 @@ const BookPage = () => {
           {book.listen_time_min && book.listen_time_min > 0 && (
             <Button
               variant="secondary"
-              className="h-11 flex-1 gap-2 rounded-xl text-sm font-semibold"
+              className="h-12 flex-1 gap-2 rounded-xl text-sm font-semibold shadow-card"
               onClick={() => navigate(`/book/${id}/listen`)}
             >
               <Headphones className="h-4 w-4" />
