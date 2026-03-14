@@ -215,6 +215,15 @@ const MiniAudioPlayer = ({ audioUrl, bookId, bookTitle, onClose, onExpand, initi
           if (audioRef.current) {
             setDuration(audioRef.current.duration);
             audioRef.current.playbackRate = speed;
+            // Apply initial position after metadata loads
+            if (initialPosition != null && initialPosition > 0 && !positionApplied.current) {
+              audioRef.current.currentTime = initialPosition;
+              setCurrentTime(initialPosition);
+              positionApplied.current = true;
+            }
+            if (autoPlay && !playing) {
+              audioRef.current.play().then(() => setPlaying(true)).catch(() => {});
+            }
           }
         }}
         onEnded={() => setPlaying(false)}
