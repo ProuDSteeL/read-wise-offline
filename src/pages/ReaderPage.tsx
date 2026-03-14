@@ -378,6 +378,11 @@ const ReaderPage = () => {
         </button>
         <span className="max-w-[50%] truncate text-sm font-semibold text-foreground">{book?.title}</span>
         <div className="flex items-center gap-2">
+          {summary?.audio_url && (
+            <button onClick={() => setShowAudioPlayer(!showAudioPlayer)} className="tap-highlight">
+              <Headphones className={`h-5 w-5 transition-colors ${showAudioPlayer ? "text-primary" : "text-muted-foreground"}`} />
+            </button>
+          )}
           <button onClick={() => { if (!user) navigate("/auth"); else favMutation.mutate(); }} className="tap-highlight">
             <Heart className={`h-5 w-5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
           </button>
