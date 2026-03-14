@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Play, Pause, SkipBack, SkipForward, X, Moon, Gauge } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, X, Moon, Gauge, BookOpen } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -158,7 +158,22 @@ const AudioPlayerPage = () => {
           <X className="h-5 w-5 text-foreground" />
         </button>
         <span className="text-xs font-medium text-muted-foreground">Аудио</span>
-        <div className="w-5" />
+        <button
+          onClick={() => {
+            // Save position then go to reader
+            if (audioRef.current && user) {
+              supabase.from("user_progress").upsert(
+                { user_id: user.id, book_id: id!, audio_position: audioRef.current.currentTime },
+                { onConflict: "user_id,book_id" }
+              );
+            }
+            navigate(`/book/${id}/read`);
+          }}
+          className="tap-highlight"
+          title="Читать"
+        >
+          <BookOpen className="h-5 w-5 text-foreground" />
+        </button>
       </div>
 
       {/* Cover + info */}
