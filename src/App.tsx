@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
 import AppLayout from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import SearchPage from "./pages/SearchPage";
@@ -27,6 +28,7 @@ const queryClient = new QueryClient();
 
 const AppRoutes = () => {
   const isOnline = useOnlineStatus();
+  useOfflineSync();
 
   if (!isOnline) {
     return (
