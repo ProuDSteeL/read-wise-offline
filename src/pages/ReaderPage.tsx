@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2 } from "lucide-react";
+import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
+import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -120,6 +121,7 @@ const ReaderPage = () => {
     parseInt(localStorage.getItem("reader-font-size") || "18")
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [showAudioPlayer, setShowAudioPlayer] = useState(false);
 
   // New selection state
   const [selectedText, setSelectedText] = useState("");
@@ -376,6 +378,11 @@ const ReaderPage = () => {
         </button>
         <span className="max-w-[50%] truncate text-sm font-semibold text-foreground">{book?.title}</span>
         <div className="flex items-center gap-2">
+          {summary?.audio_url && (
+            <button onClick={() => setShowAudioPlayer(!showAudioPlayer)} className="tap-highlight">
+              <Headphones className={`h-5 w-5 transition-colors ${showAudioPlayer ? "text-primary" : "text-muted-foreground"}`} />
+            </button>
+          )}
           <button onClick={() => { if (!user) navigate("/auth"); else favMutation.mutate(); }} className="tap-highlight">
             <Heart className={`h-5 w-5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
           </button>
@@ -583,6 +590,19 @@ const ReaderPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Mini audio player */}
+      {showAudioPlayer && summary?.audio_url && (
+        <>
+          <div className="h-24" /> {/* Spacer so content isn't hidden behind player */}
+          <MiniAudioPlayer
+            audioUrl={summary.audio_url}
+            bookId={id!}
+            bookTitle={book?.title}
+            onClose={() => setShowAudioPlayer(false)}
+          />
+        </>
       )}
     </div>
   );
