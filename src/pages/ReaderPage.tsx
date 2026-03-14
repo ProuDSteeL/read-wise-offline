@@ -361,8 +361,8 @@ const ReaderPage = () => {
         </button>
         <span className="max-w-[50%] truncate text-sm font-semibold text-foreground">{book?.title}</span>
         <div className="flex items-center gap-2">
-          <button onClick={() => { if (!user) navigate("/auth"); else bookmarkMutation.mutate(); }} className="tap-highlight">
-            {isBookmarked ? <BookmarkCheck className="h-5 w-5 text-primary" /> : <Bookmark className="h-5 w-5 text-muted-foreground" />}
+          <button onClick={() => { if (!user) navigate("/auth"); else favMutation.mutate(); }} className="tap-highlight">
+            <Heart className={`h-5 w-5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground"}`} />
           </button>
           <button onClick={() => setShowSettings(!showSettings)} className="tap-highlight">
             <Settings2 className={`h-5 w-5 ${showSettings ? "text-primary" : "text-muted-foreground"}`} />

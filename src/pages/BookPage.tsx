@@ -202,14 +202,14 @@ const BookPage = () => {
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/90 backdrop-blur-xl safe-bottom">
         <div className="mx-auto flex max-w-md items-center gap-3 px-4 py-3">
           <button
-            onClick={handleFavorite}
+            onClick={handleBookmark}
             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl tap-highlight transition-colors ${
-              isFavorite ? "bg-red-500/10" : "bg-secondary"
+              isBookmarked ? "bg-primary/10" : "bg-secondary"
             }`}
           >
-            <Heart
+            <BookMarked
               className={`h-5 w-5 transition-colors ${
-                isFavorite ? "fill-red-500 text-red-500" : "text-foreground"
+                isBookmarked ? "fill-primary text-primary" : "text-foreground"
               }`}
             />
           </button>
