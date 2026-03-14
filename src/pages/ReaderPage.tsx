@@ -552,6 +552,10 @@ const ReaderPage = () => {
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-foreground hover:bg-secondary tap-highlight">
                     <MessageSquare className="h-3.5 w-3.5" /> Заметка
                   </button>
+                  <button onClick={() => { handleShareText(selectedText); resetSelection(); }}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-foreground hover:bg-secondary tap-highlight">
+                    <Share2 className="h-3.5 w-3.5" /> Поделиться
+                  </button>
                 </div>
               </div>
             )}
