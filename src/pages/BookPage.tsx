@@ -9,6 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useSummary } from "@/hooks/useSummary";
+import { useDownloads } from "@/hooks/useDownloads";
+import DownloadDialog from "@/components/DownloadDialog";
 
 const BookPage = () => {
   const { id } = useParams<{ id: string }>();
