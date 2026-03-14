@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Trash2, HardDrive, Settings2 } from "lucide-react";
+import { ArrowLeft, Trash2, HardDrive, Settings2, WifiOff, BookOpen } from "lucide-react";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDownloads } from "@/hooks/useDownloads";
 import { formatBytes } from "@/lib/offlineStorage";
 import { Progress } from "@/components/ui/progress";
