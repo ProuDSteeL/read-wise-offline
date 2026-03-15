@@ -434,18 +434,28 @@ const ReaderPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
 
-  // Close edit menu on outside click
+  // Close edit menu on outside click/touch (mousedown so it fires BEFORE selection handlers)
   useEffect(() => {
     if (!editingHighlight) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest("[data-highlight-menu]")) {
+        editingHighlightRef.current = null; // immediately clear ref so selection handlers don't bail
+        autoCreatedRef.current = false;
         setEditingHighlight(null);
         setEditMenuPos(null);
+        setShowNoteInput(false);
       }
     };
-    setTimeout(() => document.addEventListener("click", handler), 0);
-    return () => document.removeEventListener("click", handler);
+    // Use mousedown/touchstart so edit menu closes BEFORE mouseup/selectionchange fire
+    setTimeout(() => {
+      document.addEventListener("mousedown", handler);
+      document.addEventListener("touchstart", handler);
+    }, 0);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, [editingHighlight]);
 
   const favMutation = useMutation({
@@ -493,7 +503,7 @@ const ReaderPage = () => {
     onError: (err: any) => { toast({ title: "Ошибка", description: err.message, variant: "destructive" }); },
   });
 
-  // Update highlight (note and/or color)
+  // Update highlight (note and/or color) — optimistic update for instant visual feedback
   const updateHighlight = useMutation({
     mutationFn: async ({ highlightId, note, color }: { highlightId: string; note?: string; color?: string }) => {
       const updates: Record<string, unknown> = {};
@@ -502,7 +512,22 @@ const ReaderPage = () => {
       const { error } = await supabase.from("user_highlights").update(updates).eq("id", highlightId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async ({ highlightId, note, color }) => {
+      await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
+      const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
+      queryClient.setQueryData<HighlightData[]>(["highlights", user?.id, id], (old) =>
+        old?.map((h) => h.id === highlightId ? {
+          ...h,
+          ...(color !== undefined && { color }),
+          ...(note !== undefined && { note: note || null }),
+        } : h) ?? []
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
     },
   });
