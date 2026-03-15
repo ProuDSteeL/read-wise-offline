@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Eye, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,30 @@ const BookPage = () => {
   const ideaScrollRef = useRef<HTMLDivElement>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [authorExpanded, setAuthorExpanded] = useState(false);
+  const viewCounted = useRef(false);
+
+  // Increment views_count once per page visit
+  useEffect(() => {
+    if (!id || viewCounted.current) return;
+    viewCounted.current = true;
+
+    supabase
+      .from("books")
+      .select("views_count")
+      .eq("id", id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          supabase
+            .from("books")
+            .update({ views_count: (data.views_count ?? 0) + 1 })
+            .eq("id", id)
+            .then(() => {
+              queryClient.invalidateQueries({ queryKey: ["book", id] });
+            });
+        }
+      });
+  }, [id]);
 
   const { data: userRating } = useQuery({
     queryKey: ["user_rating", user?.id, id],
