@@ -489,8 +489,16 @@ const ReaderPage = () => {
       {/* Content */}
       <article
         ref={contentRef}
-        className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground`}
-        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8 }}
+        className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground select-text`}
+        style={{
+          fontSize: `${fontSize}px`,
+          lineHeight: 1.8,
+          WebkitTouchCallout: "none",
+          WebkitUserSelect: "text",
+        }}
+        onCopy={(e) => {
+          // Allow copy but prevent native menu
+        }}
       >
         <ReactMarkdown
           components={{
