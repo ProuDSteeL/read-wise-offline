@@ -306,21 +306,26 @@ const ReaderPage = () => {
     localStorage.setItem("reader-line-height", String(lineHeight));
   }, [theme, fontFamily, fontSize, lineHeight]);
 
-  // Prevent native context menu on content
-  const preventContextMenu = useCallback((e: Event) => {
-    e.preventDefault();
-  }, []);
+  // Refs to avoid stale closures and unnecessary effect re-runs
+  const showNoteInputRef = useRef(showNoteInput);
+  showNoteInputRef.current = showNoteInput;
+  const editingHighlightRef = useRef(editingHighlight);
+  editingHighlightRef.current = editingHighlight;
+  const highlightsRef = useRef(highlights);
+  highlightsRef.current = highlights;
+  const lastTouchEndRef = useRef(0);
 
-  // Text selection — custom handling
+  // Text selection — custom handling (stable effect, no re-creation of listeners)
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
 
     // Prevent native context menu inside reader
-    container.addEventListener("contextmenu", preventContextMenu);
+    const preventCtx = (e: Event) => e.preventDefault();
+    container.addEventListener("contextmenu", preventCtx);
 
     const checkSelection = () => {
-      if (editingHighlight) return;
+      if (editingHighlightRef.current) return;
       setTimeout(() => {
         const sel = window.getSelection();
         const text = sel?.toString().trim();
@@ -343,10 +348,17 @@ const ReaderPage = () => {
       }, 10);
     };
 
-    const clearSelection = (e: MouseEvent | TouchEvent) => {
+    const handleTouchEnd = () => {
+      lastTouchEndRef.current = Date.now();
+      checkSelection();
+    };
+
+    const clearSelection = (e: MouseEvent) => {
+      // Skip synthetic mouse events emitted after touch
+      if (Date.now() - lastTouchEndRef.current < 400) return;
       const target = e.target as HTMLElement;
       if (target.closest("[data-highlight-menu]") || target.closest("mark")) return;
-      if (!window.getSelection()?.toString().trim() && !showNoteInput) {
+      if (!window.getSelection()?.toString().trim() && !showNoteInputRef.current) {
         setShowSelectionMenu(false);
         setSelectedText("");
         setMenuPosition(null);
@@ -357,7 +369,7 @@ const ReaderPage = () => {
       const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]");
       if (!mark) return;
       const hlId = mark.getAttribute("data-highlight-id");
-      const hl = highlights.find((h) => h.id === hlId);
+      const hl = highlightsRef.current.find((h) => h.id === hlId);
       if (!hl) return;
 
       const sel = window.getSelection();
@@ -373,18 +385,19 @@ const ReaderPage = () => {
     };
 
     document.addEventListener("mouseup", checkSelection);
-    document.addEventListener("touchend", checkSelection);
+    document.addEventListener("touchend", handleTouchEnd);
     document.addEventListener("mousedown", clearSelection);
     container.addEventListener("click", handleMarkClick);
 
     return () => {
-      container.removeEventListener("contextmenu", preventContextMenu);
+      container.removeEventListener("contextmenu", preventCtx);
       document.removeEventListener("mouseup", checkSelection);
-      document.removeEventListener("touchend", checkSelection);
+      document.removeEventListener("touchend", handleTouchEnd);
       document.removeEventListener("mousedown", clearSelection);
       container.removeEventListener("click", handleMarkClick);
     };
-  }, [showNoteInput, editingHighlight, highlights, preventContextMenu]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Close edit menu on outside click
   useEffect(() => {
