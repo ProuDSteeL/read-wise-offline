@@ -4,7 +4,8 @@ import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Eye, 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import BookCard from "@/components/BookCard";
-import { useBook, useKeyIdeas, usePopularBooks } from "@/hooks/useBooks";
+import { useBook, useKeyIdeas } from "@/hooks/useBooks";
+import { useSimilarBooks } from "@/hooks/useSimilarBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
