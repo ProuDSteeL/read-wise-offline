@@ -249,10 +249,6 @@ const ReaderPage = () => {
     };
   }, [saveProgress, user, id]);
 
-  // New selection state
-  // Text selection state machine
-  const { state: selState, dispatch: selDispatch } = useTextSelection(contentRef, highlights, !isLoading);
-
   // Favorite
   const { data: isFavorite } = useQuery({
     queryKey: ["is_favorite", user?.id, id],
@@ -281,6 +277,9 @@ const ReaderPage = () => {
     },
     enabled: !!user && !!id,
   });
+
+  // Text selection state machine — must be after highlights declaration
+  const { state: selState, dispatch: selDispatch } = useTextSelection(contentRef, highlights, !isLoading);
 
   useEffect(() => {
     localStorage.setItem("reader-theme", theme);
