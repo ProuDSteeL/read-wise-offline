@@ -315,6 +315,8 @@ const ReaderPage = () => {
   highlightsRef.current = highlights;
   const lastTouchEndRef = useRef(0);
   const autoCreateRef = useRef<((text: string) => void) | null>(null);
+  const menuPosRef = useRef<{ top: number; left: number } | null>(null);
+  const autoCreatedRef = useRef(false);
 
   // Text selection — stable effect with selectionchange for reliability
   useEffect(() => {
@@ -343,11 +345,16 @@ const ReaderPage = () => {
       const top = posAbove ? rect.top - menuH - 4 : rect.bottom + 8;
       const left = Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272));
 
+      const pos = { top, left };
+      menuPosRef.current = pos;
       setSelectedText(text);
-      setMenuPosition({ top, left });
+      setMenuPosition(pos);
       setShowSelectionMenu(true);
-      // Auto-create highlight with default color
-      autoCreateRef.current?.(text);
+      // Auto-create highlight with default color (guard against double-fire)
+      if (!autoCreatedRef.current) {
+        autoCreatedRef.current = true;
+        autoCreateRef.current?.(text);
+      }
     };
 
     const scheduleCheck = (delay: number) => {
@@ -382,6 +389,7 @@ const ReaderPage = () => {
       const target = e.target as HTMLElement;
       if (target.closest("[data-highlight-menu]") || target.closest("mark")) return;
       if (!window.getSelection()?.toString().trim() && !showNoteInputRef.current) {
+        autoCreatedRef.current = false;
         setShowSelectionMenu(false);
         setSelectedText("");
         setMenuPosition(null);
@@ -477,12 +485,10 @@ const ReaderPage = () => {
       window.getSelection()?.removeAllRanges();
       setShowSelectionMenu(false);
       setSelectedText("");
+      setMenuPosition(null);
+      setEditMenuPos(menuPosRef.current);
       setEditingHighlight(newHighlight);
       setEditNote("");
-      setMenuPosition((pos) => {
-        if (pos) setEditMenuPos(pos);
-        return null;
-      });
     },
     onError: (err: any) => { toast({ title: "Ошибка", description: err.message, variant: "destructive" }); },
   });
@@ -516,6 +522,7 @@ const ReaderPage = () => {
   });
 
   const resetSelection = () => {
+    autoCreatedRef.current = false;
     setShowSelectionMenu(false);
     setShowNoteInput(false);
     setHighlightNote("");
@@ -536,7 +543,7 @@ const ReaderPage = () => {
 
   // Auto-highlight: create highlight immediately on text selection
   autoCreateRef.current = (text: string) => {
-    if (!user || createHighlight.isPending) return;
+    if (!user) return;
     // Check if text is already highlighted
     if (highlights.some((h) => h.text === text)) return;
     if (!canHighlight(highlights.length)) return;
