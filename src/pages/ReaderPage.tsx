@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback, ReactNode } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones } from "lucide-react";
+import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
@@ -10,13 +10,41 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { useAccessControl } from "@/hooks/useAccessControl";
+import PaywallPrompt from "@/components/PaywallPrompt";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 type ReaderFont = "sans" | "serif";
 
 const FONT_SIZES = [14, 16, 18, 20, 22, 24];
+const LINE_HEIGHTS = [1.4, 1.6, 1.8, 2.0];
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^\wа-яё]+/gi, "-").replace(/^-|-$/g, "");
+}
+
+interface TocEntry {
+  level: number;
+  text: string;
+  id: string;
+}
+
+function extractToc(markdown: string): TocEntry[] {
+  const entries: TocEntry[] = [];
+  const regex = /^(#{1,3})\s+(.+)$/gm;
+  let match;
+  while ((match = regex.exec(markdown)) !== null) {
+    entries.push({
+      level: match[1].length,
+      text: match[2].trim(),
+      id: slugify(match[2].trim()),
+    });
+  }
+  return entries;
+}
 const HIGHLIGHT_COLORS = [
   { key: "yellow", bg: "bg-yellow-200/60", border: "border-yellow-400", ring: "ring-yellow-400" },
   { key: "green", bg: "bg-emerald-200/60", border: "border-emerald-400", ring: "ring-emerald-400" },
@@ -124,7 +152,15 @@ const ReaderPage = () => {
   const [fontSize, setFontSize] = useState(() =>
     parseInt(localStorage.getItem("reader-font-size") || "18")
   );
+  const [lineHeight, setLineHeight] = useState(() =>
+    parseFloat(localStorage.getItem("reader-line-height") || "1.8")
+  );
   const [showSettings, setShowSettings] = useState(false);
+  const [showToc, setShowToc] = useState(false);
+  const [scrollPercent, setScrollPercent] = useState(0);
+  const saveProgressTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const hasRestoredPosition = useRef(false);
+  const { canReadFull, canListenAudio, canHighlight, isPro, freeReadsUsed, freeReadsLimit, highlightLimit } = useAccessControl();
   const [showAudioPlayer, setShowAudioPlayer] = useState(() => {
     // Show mini-player if coming back from full player or audio is already playing for this book
     return !!locState?.autoPlayAudio || audioCtx.state.bookId === id;
@@ -144,6 +180,82 @@ const ReaderPage = () => {
       audioCtx.play(id, summary.audio_url, book?.title);
     }
   };
+
+  // Parse TOC from summary content
+  const toc = useMemo(() => summary?.content ? extractToc(summary.content) : [], [summary?.content]);
+
+  // Saved reading progress
+  const { data: savedProgress } = useQuery({
+    queryKey: ["reader_progress", user?.id, id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_progress")
+        .select("progress_percent, last_position")
+        .eq("user_id", user!.id)
+        .eq("book_id", id!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user && !!id,
+  });
+
+  // Restore scroll position once
+  useEffect(() => {
+    if (savedProgress?.last_position && !isLoading && !hasRestoredPosition.current) {
+      hasRestoredPosition.current = true;
+      setTimeout(() => window.scrollTo(0, parseInt(savedProgress.last_position)), 150);
+    }
+  }, [savedProgress, isLoading]);
+
+  // Scroll tracking + debounced progress save
+  const saveProgress = useCallback(
+    (percent: number) => {
+      if (!user || !id) return;
+      clearTimeout(saveProgressTimeout.current);
+      saveProgressTimeout.current = setTimeout(async () => {
+        await supabase.from("user_progress").upsert(
+          {
+            user_id: user.id,
+            book_id: id,
+            progress_percent: Math.round(percent),
+            last_position: String(window.scrollY),
+          },
+          { onConflict: "user_id,book_id" }
+        );
+      }, 3000);
+    },
+    [user, id]
+  );
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const percent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      setScrollPercent(percent);
+      saveProgress(percent);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      // Flush save on unmount
+      if (user && id) {
+        clearTimeout(saveProgressTimeout.current);
+        const scrollTop = window.scrollY;
+        const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+        const percent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+        supabase.from("user_progress").upsert(
+          {
+            user_id: user.id,
+            book_id: id,
+            progress_percent: Math.round(percent),
+            last_position: String(scrollTop),
+          },
+          { onConflict: "user_id,book_id" }
+        );
+      }
+    };
+  }, [saveProgress, user, id]);
 
   // New selection state
   const [selectedText, setSelectedText] = useState("");
@@ -191,7 +303,8 @@ const ReaderPage = () => {
     localStorage.setItem("reader-theme", theme);
     localStorage.setItem("reader-font", fontFamily);
     localStorage.setItem("reader-font-size", String(fontSize));
-  }, [theme, fontFamily, fontSize]);
+    localStorage.setItem("reader-line-height", String(lineHeight));
+  }, [theme, fontFamily, fontSize, lineHeight]);
 
   // Prevent native context menu on content
   const preventContextMenu = useCallback((e: Event) => {
@@ -364,6 +477,11 @@ const ReaderPage = () => {
 
   const handleSaveHighlight = () => {
     if (!user) { navigate("/auth"); return; }
+    if (!canHighlight(highlights.length)) {
+      toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
+      resetSelection();
+      return;
+    }
     createHighlight.mutate({ text: selectedText, note: highlightNote || undefined, color: selectedColor });
   };
 
@@ -405,8 +523,16 @@ const ReaderPage = () => {
 
   const fontClass = fontFamily === "serif" ? "font-serif" : "font-sans";
 
+  // Freemium: check access
+  const hasAccess = !user || canReadFull(id!);
+
   return (
     <div className={`relative min-h-screen ${themeClasses[theme]} bg-background text-foreground transition-colors duration-300`}>
+      {/* Progress bar */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-0.5 bg-muted">
+        <div className="h-full bg-primary transition-[width] duration-150" style={{ width: `${scrollPercent}%` }} />
+      </div>
+
       {/* Header */}
       <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur-xl">
         <button onClick={() => navigate(-1)} className="tap-highlight">
@@ -414,7 +540,12 @@ const ReaderPage = () => {
         </button>
         <span className="max-w-[50%] truncate text-sm font-semibold text-foreground">{book?.title}</span>
         <div className="flex items-center gap-2">
-          {summary?.audio_url && (
+          {toc.length > 0 && (
+            <button onClick={() => setShowToc(true)} className="tap-highlight">
+              <List className="h-5 w-5 text-muted-foreground" />
+            </button>
+          )}
+          {summary?.audio_url && canListenAudio && (
             <button onClick={() => {
               const next = !showAudioPlayer;
               setShowAudioPlayer(next);
@@ -467,7 +598,7 @@ const ReaderPage = () => {
               >Serif</button>
             </div>
           </div>
-          <div>
+          <div className="mb-4">
             <p className="mb-2 text-xs font-medium text-muted-foreground">Размер шрифта</p>
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground">A</span>
@@ -483,6 +614,18 @@ const ReaderPage = () => {
               <span className="text-base text-muted-foreground">A</span>
             </div>
           </div>
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Межстрочный интервал</p>
+            <div className="flex gap-2">
+              {LINE_HEIGHTS.map((lh) => (
+                <button key={lh} onClick={() => setLineHeight(lh)}
+                  className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-all ${
+                    lineHeight === lh ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                  }`}
+                >{lh}</button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -492,31 +635,40 @@ const ReaderPage = () => {
         className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground select-text`}
         style={{
           fontSize: `${fontSize}px`,
-          lineHeight: 1.8,
+          lineHeight,
           WebkitTouchCallout: "none",
           WebkitUserSelect: "text",
         }}
-        onCopy={(e) => {
+        onCopy={() => {
           // Allow copy but prevent native menu
         }}
       >
         <ReactMarkdown
           components={{
-            h1: ({ children }) => (
-              <h1 className="mb-4 mt-8 text-[1.4em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                {wrapWithHighlights(children)}
-              </h1>
-            ),
-            h2: ({ children }) => (
-              <h2 className="mb-3 mt-6 text-[1.2em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                {wrapWithHighlights(children)}
-              </h2>
-            ),
-            h3: ({ children }) => (
-              <h3 className="mb-2 mt-5 text-[1.1em] font-semibold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                {wrapWithHighlights(children)}
-              </h3>
-            ),
+            h1: ({ children }) => {
+              const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
+              return (
+                <h1 id={slugify(text)} className="mb-4 mt-8 text-[1.4em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
+                  {wrapWithHighlights(children)}
+                </h1>
+              );
+            },
+            h2: ({ children }) => {
+              const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
+              return (
+                <h2 id={slugify(text)} className="mb-3 mt-6 text-[1.2em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
+                  {wrapWithHighlights(children)}
+                </h2>
+              );
+            },
+            h3: ({ children }) => {
+              const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
+              return (
+                <h3 id={slugify(text)} className="mb-2 mt-5 text-[1.1em] font-semibold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
+                  {wrapWithHighlights(children)}
+                </h3>
+              );
+            },
             p: ({ children }) => (
               <p className="mb-4 text-muted-foreground">{wrapWithHighlights(children)}</p>
             ),
@@ -533,8 +685,16 @@ const ReaderPage = () => {
             hr: () => <hr className="my-6 border-border" />,
           }}
         >
-          {summary.content}
+          {hasAccess ? summary.content : summary.content.slice(0, Math.floor(summary.content.length * 0.2))}
         </ReactMarkdown>
+        {!hasAccess && (
+          <div className="relative -mt-16 pt-16 bg-gradient-to-t from-background via-background to-transparent">
+            <PaywallPrompt
+              message={`Вы прочитали ${freeReadsUsed} из ${freeReadsLimit} бесплатных саммари`}
+              inline
+            />
+          </div>
+        )}
       </article>
 
       {/* Highlights list */}
@@ -663,8 +823,35 @@ const ReaderPage = () => {
         </div>
       )}
 
+      {/* TOC Sheet */}
+      <Sheet open={showToc} onOpenChange={setShowToc}>
+        <SheetContent side="left" className="w-[280px] p-0">
+          <SheetHeader className="px-4 pt-4 pb-2">
+            <SheetTitle className="text-base font-bold">Оглавление</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-0.5 px-2 pb-4 overflow-y-auto max-h-[calc(100vh-80px)]">
+            {toc.map((entry, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setShowToc(false);
+                  setTimeout(() => {
+                    document.getElementById(entry.id)?.scrollIntoView({ behavior: "smooth" });
+                  }, 300);
+                }}
+                className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary tap-highlight ${
+                  entry.level === 1 ? "font-semibold text-foreground" : entry.level === 2 ? "pl-6 text-foreground" : "pl-10 text-muted-foreground"
+                }`}
+              >
+                {entry.text}
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Mini audio player */}
-      {showAudioPlayer && summary?.audio_url && (
+      {showAudioPlayer && summary?.audio_url && canListenAudio && (
         <>
           <div className="h-24" /> {/* Spacer so content isn't hidden behind player */}
           <MiniAudioPlayer

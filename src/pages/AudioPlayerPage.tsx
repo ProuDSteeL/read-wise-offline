@@ -4,6 +4,8 @@ import { Play, Pause, SkipBack, SkipForward, X, Moon, Gauge, BookOpen } from "lu
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAudio } from "@/contexts/AudioContext";
+import { useAccessControl } from "@/hooks/useAccessControl";
+import PaywallPrompt from "@/components/PaywallPrompt";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 
@@ -28,6 +30,12 @@ const AudioPlayerPage = () => {
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
   const audio = useAudio();
+  const { canListenAudio } = useAccessControl();
+
+  // Freemium guard
+  if (!canListenAudio) {
+    return <PaywallPrompt message="Аудио доступно в подписке Pro" />;
+  }
 
   // Sleep timer
   const [sleepMinutes, setSleepMinutes] = useState(0);

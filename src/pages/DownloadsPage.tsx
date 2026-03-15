@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Trash2, HardDrive, Settings2, WifiOff, BookOpen } from "lucide-react";
+import { ArrowLeft, Trash2, HardDrive, Settings2, WifiOff, BookOpen, Crown } from "lucide-react";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useDownloads } from "@/hooks/useDownloads";
+import { useAccessControl } from "@/hooks/useAccessControl";
 import { formatBytes } from "@/lib/offlineStorage";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
@@ -21,6 +22,7 @@ const DownloadsPage = () => {
   const navigate = useNavigate();
   const isOnline = useOnlineStatus();
   const { downloads, totalUsed, loading, remove, storageLimitMB, setStorageLimitMB } = useDownloads();
+  const { canDownload } = useAccessControl();
   const [showSettings, setShowSettings] = useState(false);
   const [deleteBookId, setDeleteBookId] = useState<string | null>(null);
   const [localLimit, setLocalLimit] = useState(storageLimitMB);
@@ -35,6 +37,13 @@ const DownloadsPage = () => {
         <div className="flex items-center gap-2 bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
           <WifiOff className="h-3.5 w-3.5" />
           Нет подключения — доступны только загрузки
+        </div>
+      )}
+      {/* Pro-only banner */}
+      {!canDownload && isOnline && (
+        <div className="flex items-center gap-2 bg-sage-light px-4 py-2.5 text-xs font-medium text-foreground">
+          <Crown className="h-3.5 w-3.5 text-sage" />
+          Загрузки доступны в подписке Pro
         </div>
       )}
       {/* Header */}

@@ -1,14 +1,16 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useRef, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Upload, Loader2, Music } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Upload, Loader2, Music, ChevronUp, ChevronDown, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
 
 const CATEGORIES = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы", "Наука", "Саморазвитие"];
 
@@ -39,7 +41,9 @@ const AdminBookForm = () => {
   const [summaryContent, setSummaryContent] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
-  const [publish, setPublish] = useState(false);
+  const [status, setStatus] = useState<"draft" | "published" | "archived">("draft");
+  const [readTimeAuto, setReadTimeAuto] = useState(false);
+  const mdFileRef = useRef<HTMLInputElement>(null);
 
   // Load existing book data for edit mode
   const { data: existingBook, isLoading: loadingBook } = useQuery({
@@ -85,8 +89,18 @@ const AdminBookForm = () => {
       const why = existingBook.why_read as string[] | null;
       setWhyRead(why?.length ? why : [""]);
       setCoverPreview(existingBook.cover_url || null);
+      setStatus(existingBook.status as "draft" | "published" | "archived");
     }
   }, [existingBook]);
+
+  // Auto-calculate read time from word count
+  useEffect(() => {
+    if (summaryContent.trim() && !readTimeAuto) {
+      const wordCount = summaryContent.trim().split(/\s+/).length;
+      const minutes = Math.ceil(wordCount / 200);
+      setReadTime(String(minutes));
+    }
+  }, [summaryContent, readTimeAuto]);
 
   useEffect(() => {
     if (existingIdeas?.length) {
@@ -117,6 +131,22 @@ const AdminBookForm = () => {
     setSelectedCategories((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
+  };
+
+  const moveIdea = (from: number, to: number) => {
+    const updated = [...keyIdeas];
+    [updated[from], updated[to]] = [updated[to], updated[from]];
+    setKeyIdeas(updated);
+  };
+
+  const handleMdUpload = (file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (text) setSummaryContent(text);
+    };
+    reader.readAsText(file);
   };
 
   const mutation = useMutation({
@@ -190,7 +220,7 @@ const AdminBookForm = () => {
         categories: selectedCategories,
         why_read: whyRead.filter((r) => r.trim()),
         cover_url: coverUrl,
-        status: publish ? "published" as const : "draft" as const,
+        status,
       };
 
       let bookId: string;
@@ -233,7 +263,7 @@ const AdminBookForm = () => {
           content: summaryContent || null,
           audio_url: audioUrl,
           audio_size_bytes: audioSize,
-          published_at: publish ? new Date().toISOString() : null,
+          published_at: status === "published" ? new Date().toISOString() : null,
         };
 
         if (isEditMode && existingSummary) {
@@ -252,7 +282,7 @@ const AdminBookForm = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-books"] });
       toast({
         title: isEditMode ? "Книга обновлена!" : "Книга добавлена!",
-        description: publish ? "Опубликована" : "Сохранена как черновик",
+        description: status === "published" ? "Опубликована" : status === "archived" ? "В архиве" : "Сохранена как черновик",
       });
       navigate(`/book/${bookId}`);
     },
@@ -362,7 +392,8 @@ const AdminBookForm = () => {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Чтение (мин)</label>
-            <Input type="number" value={readTime} onChange={(e) => setReadTime(e.target.value)} placeholder="15" className="rounded-xl bg-secondary border-0" />
+            <Input type="number" value={readTime} onChange={(e) => { setReadTime(e.target.value); setReadTimeAuto(true); }} placeholder="15" className="rounded-xl bg-secondary border-0" />
+            <p className="text-[10px] text-muted-foreground">Авто: ~200 слов/мин</p>
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Аудио (мин)</label>
@@ -404,15 +435,55 @@ const AdminBookForm = () => {
         </div>
 
         {/* Summary (Markdown) */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-foreground">Саммари (Markdown)</label>
-          <Textarea
-            value={summaryContent}
-            onChange={(e) => setSummaryContent(e.target.value)}
-            placeholder="# Введение&#10;&#10;Текст саммари в формате Markdown..."
-            rows={8}
-            className="rounded-xl bg-secondary border-0 resize-none font-mono text-xs"
-          />
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-foreground">Саммари (Markdown)</label>
+            <Button type="button" variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => mdFileRef.current?.click()}>
+              <FileUp className="h-3 w-3" /> Загрузить .md
+            </Button>
+            <input
+              ref={mdFileRef}
+              type="file"
+              accept=".md,.txt,.markdown"
+              className="hidden"
+              onChange={(e) => handleMdUpload(e.target.files?.[0] || null)}
+            />
+          </div>
+          <Tabs defaultValue="editor" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="editor">Редактор</TabsTrigger>
+              <TabsTrigger value="preview">Превью</TabsTrigger>
+            </TabsList>
+            <TabsContent value="editor">
+              <Textarea
+                value={summaryContent}
+                onChange={(e) => setSummaryContent(e.target.value)}
+                placeholder="# Введение&#10;&#10;Текст саммари в формате Markdown..."
+                rows={12}
+                className="rounded-xl bg-secondary border-0 resize-none font-mono text-xs"
+              />
+            </TabsContent>
+            <TabsContent value="preview">
+              <div className="min-h-[200px] rounded-xl bg-secondary p-4 text-sm leading-relaxed font-serif">
+                {summaryContent.trim() ? (
+                  <ReactMarkdown
+                    components={{
+                      h1: ({ children }) => <h1 className="mb-3 mt-6 text-xl font-bold">{children}</h1>,
+                      h2: ({ children }) => <h2 className="mb-2 mt-5 text-lg font-bold">{children}</h2>,
+                      h3: ({ children }) => <h3 className="mb-2 mt-4 text-base font-semibold">{children}</h3>,
+                      p: ({ children }) => <p className="mb-3 text-muted-foreground">{children}</p>,
+                      blockquote: ({ children }) => <blockquote className="my-3 border-l-4 border-primary/40 pl-3 italic text-muted-foreground">{children}</blockquote>,
+                      strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                    }}
+                  >
+                    {summaryContent}
+                  </ReactMarkdown>
+                ) : (
+                  <p className="text-muted-foreground italic">Введите текст саммари для предпросмотра</p>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Audio upload */}
@@ -443,11 +514,19 @@ const AdminBookForm = () => {
             <div key={i} className="space-y-2 rounded-xl bg-card p-3 shadow-card">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-primary">Идея {i + 1}</span>
-                {keyIdeas.length > 1 && (
-                  <button type="button" onClick={() => setKeyIdeas(keyIdeas.filter((_, j) => j !== i))} className="text-destructive">
-                    <Trash2 className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-1">
+                  <button type="button" disabled={i === 0} onClick={() => moveIdea(i, i - 1)} className="text-muted-foreground disabled:opacity-30">
+                    <ChevronUp className="h-3.5 w-3.5" />
                   </button>
-                )}
+                  <button type="button" disabled={i === keyIdeas.length - 1} onClick={() => moveIdea(i, i + 1)} className="text-muted-foreground disabled:opacity-30">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                  {keyIdeas.length > 1 && (
+                    <button type="button" onClick={() => setKeyIdeas(keyIdeas.filter((_, j) => j !== i))} className="text-destructive ml-1">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <Input
                 value={idea.title}
@@ -478,25 +557,28 @@ const AdminBookForm = () => {
         </div>
 
         {/* Submit */}
-        <div className="flex gap-3 pt-2">
+        <div className="space-y-3 pt-2">
+          <div className="flex gap-2">
+            {(["draft", "published", "archived"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStatus(s)}
+                className={`flex-1 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+                  status === s ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground"
+                }`}
+              >
+                {s === "draft" ? "Черновик" : s === "published" ? "Публикация" : "Архив"}
+              </button>
+            ))}
+          </div>
           <Button
             type="submit"
-            variant="secondary"
-            className="flex-1 rounded-xl"
+            className="w-full rounded-xl h-12"
             disabled={mutation.isPending}
-            onClick={() => setPublish(false)}
           >
-            {mutation.isPending && !publish ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Черновик
-          </Button>
-          <Button
-            type="submit"
-            className="flex-1 rounded-xl"
-            disabled={mutation.isPending}
-            onClick={() => setPublish(true)}
-          >
-            {mutation.isPending && publish ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Опубликовать
+            {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {isEditMode ? "Сохранить" : "Создать"}
           </Button>
         </div>
       </form>

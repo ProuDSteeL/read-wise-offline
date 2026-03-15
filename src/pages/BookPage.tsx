@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useSummary } from "@/hooks/useSummary";
 import { useDownloads } from "@/hooks/useDownloads";
+import { useAccessControl } from "@/hooks/useAccessControl";
 import DownloadDialog from "@/components/DownloadDialog";
 
 const BookPage = () => {
@@ -23,10 +24,12 @@ const BookPage = () => {
   const { data: similarBooks } = useSimilarBooks(book);
   const { data: summary } = useSummary(id!);
   const { isDownloaded, download: downloadBook, activeDownloads } = useDownloads();
+  const { canDownload, canListenAudio } = useAccessControl();
   const queryClient = useQueryClient();
   const [activeIdeaIdx, setActiveIdeaIdx] = useState(0);
   const ideaScrollRef = useRef<HTMLDivElement>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [authorExpanded, setAuthorExpanded] = useState(false);
 
   const { data: userRating } = useQuery({
     queryKey: ["user_rating", user?.id, id],
@@ -160,6 +163,7 @@ const BookPage = () => {
         <div className="flex items-center gap-3">
           <button onClick={() => {
             if (!user) { navigate("/auth"); return; }
+            if (!canDownload) { toast({ title: "Загрузки доступны в подписке Pro" }); return; }
             setShowDownloadDialog(true);
           }} className="tap-highlight">
             <Download className={`h-5 w-5 transition-colors ${isDownloaded(id!) ? "text-primary" : "text-muted-foreground"}`} />
@@ -255,9 +259,17 @@ const BookPage = () => {
         {book.about_author && (
           <section>
             <h2 className="text-lg font-bold text-foreground mb-2">Об авторе</h2>
-            <p className="text-sm leading-relaxed text-foreground line-clamp-3">
+            <p className={`text-sm leading-relaxed text-foreground ${!authorExpanded ? "line-clamp-3" : ""}`}>
               {book.about_author}
             </p>
+            {book.about_author.length > 150 && (
+              <button
+                onClick={() => setAuthorExpanded(!authorExpanded)}
+                className="mt-1 text-xs font-medium text-sage"
+              >
+                {authorExpanded ? "Свернуть" : "Читать далее"}
+              </button>
+            )}
           </section>
         )}
 
@@ -350,7 +362,7 @@ const BookPage = () => {
             <BookOpen className="h-4 w-4" />
             Читать
           </Button>
-          {book.listen_time_min && book.listen_time_min > 0 && (
+          {book.listen_time_min && book.listen_time_min > 0 && canListenAudio && (
             <Button
               className="h-12 flex-1 gap-2 rounded-full text-sm font-bold gradient-accent border-0 hover:opacity-90"
               onClick={() => navigate(`/book/${id}/listen`)}

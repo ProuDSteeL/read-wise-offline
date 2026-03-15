@@ -1,11 +1,16 @@
-import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell } from "lucide-react";
+import { useState } from "react";
+import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useProfileStats } from "@/hooks/useProfileStats";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Switch } from "@/components/ui/switch";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 
 const ProfilePage = () => {
   const { user, loading, signOut } = useAuth();
@@ -13,6 +18,8 @@ const ProfilePage = () => {
   const { data: isAdmin } = useIsAdmin();
   const { data: stats } = useProfileStats();
   const push = usePushNotifications();
+  const { isPro, subscriptionType, expiresAt } = useSubscription();
+  const [showSubDialog, setShowSubDialog] = useState(false);
 
   if (loading) {
     return (
@@ -50,16 +57,35 @@ const ProfilePage = () => {
       <h1 className="text-[26px] font-extrabold tracking-tight text-foreground">Настройки</h1>
 
       {/* Subscription */}
-      <div className="rounded-2xl bg-card p-4 shadow-card space-y-4">
+      <div className="rounded-2xl bg-card p-4 shadow-card space-y-3">
         <p className="text-sm font-bold text-foreground">Подписка</p>
-        <div className="flex items-center rounded-xl border border-border overflow-hidden">
-          <div className="flex-1 bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground">
-            Не активна
+        {isPro ? (
+          <div className="flex items-center gap-3 rounded-xl bg-sage-light p-3">
+            <Crown className="h-5 w-5 text-sage" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-foreground">
+                Pro {subscriptionType === "pro_yearly" ? "(год)" : "(месяц)"}
+              </p>
+              {expiresAt && (
+                <p className="text-[11px] text-muted-foreground">
+                  до {format(expiresAt, "d MMMM yyyy", { locale: ru })}
+                </p>
+              )}
+            </div>
           </div>
-          <button className="flex-1 flex items-center justify-center gap-1 px-4 py-2.5 text-xs font-semibold text-sage">
-            Подписаться <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        ) : (
+          <div className="flex items-center rounded-xl border border-border overflow-hidden">
+            <div className="flex-1 bg-secondary px-4 py-2.5 text-xs font-bold text-foreground">
+              Бесплатный план
+            </div>
+            <button
+              onClick={() => setShowSubDialog(true)}
+              className="flex-1 flex items-center justify-center gap-1 px-4 py-2.5 text-xs font-semibold text-sage"
+            >
+              Подписаться <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Profile info */}
@@ -134,6 +160,39 @@ const ProfilePage = () => {
         <LogOut className="h-5 w-5 text-destructive" />
         <span className="flex-1 text-left text-sm font-medium text-destructive">Выйти</span>
       </button>
+
+      {/* Subscription dialog */}
+      <Dialog open={showSubDialog} onOpenChange={setShowSubDialog}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg font-bold">Подписка Pro</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-3">
+              {[
+                { label: "Месяц", price: "299 р/мес", sub: "Отменить в любой момент" },
+                { label: "Год", price: "1 990 р/год", sub: "Экономия 60%" },
+              ].map((plan) => (
+                <div key={plan.label} className="rounded-xl border border-border p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-foreground">{plan.label}</p>
+                      <p className="text-xs text-muted-foreground">{plan.sub}</p>
+                    </div>
+                    <p className="text-sm font-bold text-foreground">{plan.price}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-xs text-muted-foreground">
+              Оплата будет доступна в следующем обновлении
+            </p>
+            <Button variant="outline" className="w-full rounded-full" onClick={() => setShowSubDialog(false)}>
+              Закрыть
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
