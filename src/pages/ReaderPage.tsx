@@ -193,20 +193,37 @@ const ReaderPage = () => {
     localStorage.setItem("reader-font-size", String(fontSize));
   }, [theme, fontFamily, fontSize]);
 
-  // Text selection — only check on mouseup/touchend so we don't interfere with dragging
+  // Prevent native context menu on content
+  const preventContextMenu = useCallback((e: Event) => {
+    e.preventDefault();
+  }, []);
+
+  // Text selection — custom handling
   useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+
+    // Prevent native context menu inside reader
+    container.addEventListener("contextmenu", preventContextMenu);
+
     const checkSelection = () => {
       if (editingHighlight) return;
-      // Small delay to let browser finalize selection
       setTimeout(() => {
         const sel = window.getSelection();
         const text = sel?.toString().trim();
         if (text && text.length > 2 && sel?.rangeCount) {
-          const rect = sel.getRangeAt(0).getBoundingClientRect();
+          const range = sel.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+          // Position menu above selection if possible, else below
+          const menuH = 120;
+          const spaceAbove = rect.top;
+          const posAbove = spaceAbove > menuH;
           setSelectedText(text);
           setMenuPosition({
-            top: rect.bottom + window.scrollY + 8,
-            left: Math.max(8, Math.min(rect.left + rect.width / 2 - 110, window.innerWidth - 230)),
+            top: posAbove
+              ? rect.top + window.scrollY - menuH - 4
+              : rect.bottom + window.scrollY + 8,
+            left: Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272)),
           });
           setShowSelectionMenu(true);
         }
@@ -215,7 +232,6 @@ const ReaderPage = () => {
 
     const clearSelection = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
-      // Don't clear if clicking on menu or mark
       if (target.closest("[data-highlight-menu]") || target.closest("mark")) return;
       if (!window.getSelection()?.toString().trim() && !showNoteInput) {
         setShowSelectionMenu(false);
@@ -224,7 +240,6 @@ const ReaderPage = () => {
       }
     };
 
-    // Handle click on existing highlight marks
     const handleMarkClick = (e: MouseEvent) => {
       const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]");
       if (!mark) return;
@@ -232,32 +247,31 @@ const ReaderPage = () => {
       const hl = highlights.find((h) => h.id === hlId);
       if (!hl) return;
 
-      // Only open edit if there's no active text selection
       const sel = window.getSelection();
       if (sel?.toString().trim()) return;
 
       const rect = mark.getBoundingClientRect();
       setEditMenuPos({
         top: rect.bottom + window.scrollY + 8,
-        left: Math.max(8, Math.min(rect.left + rect.width / 2 - 110, window.innerWidth - 230)),
+        left: Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272)),
       });
       setEditingHighlight(hl);
       setEditNote(hl.note || "");
     };
 
-    const container = contentRef.current;
     document.addEventListener("mouseup", checkSelection);
     document.addEventListener("touchend", checkSelection);
     document.addEventListener("mousedown", clearSelection);
-    container?.addEventListener("click", handleMarkClick);
+    container.addEventListener("click", handleMarkClick);
 
     return () => {
+      container.removeEventListener("contextmenu", preventContextMenu);
       document.removeEventListener("mouseup", checkSelection);
       document.removeEventListener("touchend", checkSelection);
       document.removeEventListener("mousedown", clearSelection);
-      container?.removeEventListener("click", handleMarkClick);
+      container.removeEventListener("click", handleMarkClick);
     };
-  }, [showNoteInput, editingHighlight, highlights]);
+  }, [showNoteInput, editingHighlight, highlights, preventContextMenu]);
 
   // Close edit menu on outside click
   useEffect(() => {
