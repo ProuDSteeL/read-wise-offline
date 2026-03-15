@@ -325,9 +325,10 @@ const ReaderPage = () => {
     const preventCtx = (e: Event) => e.preventDefault();
     container.addEventListener("contextmenu", preventCtx);
 
-    let selectionTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingTimer: ReturnType<typeof setTimeout> | null = null;
 
     const showMenuForSelection = () => {
+      pendingTimer = null;
       const sel = window.getSelection();
       const text = sel?.toString().trim();
       if (!text || text.length < 3 || !sel?.rangeCount) return;
@@ -339,40 +340,40 @@ const ReaderPage = () => {
       const rect = range.getBoundingClientRect();
       const menuH = 120;
       const posAbove = rect.top > menuH;
+      const top = posAbove ? rect.top - menuH - 4 : rect.bottom + 8;
+      const left = Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272));
+
       setSelectedText(text);
-      setMenuPosition({
-        top: posAbove
-          ? rect.top + window.scrollY - menuH - 4
-          : rect.bottom + window.scrollY + 8,
-        left: Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272)),
-      });
+      setMenuPosition({ top, left });
       setShowSelectionMenu(true);
       // Auto-create highlight with default color
       autoCreateRef.current?.(text);
     };
 
+    const scheduleCheck = (delay: number) => {
+      if (pendingTimer) clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(showMenuForSelection, delay);
+    };
+
     // selectionchange — reliable detection across all input methods
     const onSelectionChange = () => {
       if (editingHighlightRef.current) return;
-      if (selectionTimer) clearTimeout(selectionTimer);
       const sel = window.getSelection();
       const text = sel?.toString().trim();
       if (!text || text.length < 3) return;
-      selectionTimer = setTimeout(showMenuForSelection, 250);
+      scheduleCheck(250);
     };
 
     // mouseup/touchend — fast path for when user finishes selecting
     const onMouseUp = () => {
       if (editingHighlightRef.current) return;
-      if (selectionTimer) clearTimeout(selectionTimer);
-      setTimeout(showMenuForSelection, 50);
+      scheduleCheck(50);
     };
 
     const onTouchEnd = () => {
       lastTouchEndRef.current = Date.now();
       if (editingHighlightRef.current) return;
-      if (selectionTimer) clearTimeout(selectionTimer);
-      setTimeout(showMenuForSelection, 100);
+      scheduleCheck(100);
     };
 
     const clearSelection = (e: MouseEvent) => {
@@ -399,7 +400,7 @@ const ReaderPage = () => {
 
       const rect = mark.getBoundingClientRect();
       setEditMenuPos({
-        top: rect.bottom + window.scrollY + 8,
+        top: rect.bottom + 8,
         left: Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272)),
       });
       setEditingHighlight(hl);
@@ -413,7 +414,7 @@ const ReaderPage = () => {
     container.addEventListener("click", handleMarkClick);
 
     return () => {
-      if (selectionTimer) clearTimeout(selectionTimer);
+      if (pendingTimer) clearTimeout(pendingTimer);
       container.removeEventListener("contextmenu", preventCtx);
       document.removeEventListener("selectionchange", onSelectionChange);
       document.removeEventListener("mouseup", onMouseUp);
@@ -795,7 +796,7 @@ const ReaderPage = () => {
 
       {/* Selection saving indicator */}
       {showSelectionMenu && menuPosition && !editingHighlight && createHighlight.isPending && (
-        <div className="absolute z-50" style={{ top: menuPosition.top, left: menuPosition.left }}>
+        <div className="fixed z-50" style={{ top: menuPosition.top, left: menuPosition.left }}>
           <div className="w-[140px] animate-fade-in rounded-2xl border border-border/60 bg-card p-3 shadow-elevated flex items-center justify-center gap-2" data-highlight-menu>
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <span className="text-xs text-muted-foreground">Сохраняю...</span>
@@ -805,7 +806,7 @@ const ReaderPage = () => {
 
       {/* Edit existing highlight popup */}
       {editingHighlight && editMenuPos && (
-        <div className="absolute z-50" style={{ top: editMenuPos.top, left: editMenuPos.left }}>
+        <div className="fixed z-50" style={{ top: editMenuPos.top, left: editMenuPos.left }}>
           <div className="w-[260px] animate-fade-in rounded-2xl border border-border/60 bg-card shadow-elevated overflow-hidden" data-highlight-menu>
             {/* Color picker row */}
             <div className="flex justify-center gap-2.5 px-4 pt-3 pb-2">
