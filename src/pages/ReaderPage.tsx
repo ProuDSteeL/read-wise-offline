@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones, List } from "lucide-react";
+import { X, Settings2, Heart, MessageSquare, Pencil, Trash2, Share2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
@@ -314,8 +314,9 @@ const ReaderPage = () => {
   const highlightsRef = useRef(highlights);
   highlightsRef.current = highlights;
   const lastTouchEndRef = useRef(0);
+  const autoCreateRef = useRef<((text: string) => void) | null>(null);
 
-  // Text selection — custom handling (stable effect, no re-creation of listeners)
+  // Text selection — stable effect with selectionchange for reliability
   useEffect(() => {
     const container = contentRef.current;
     if (!container) return;
@@ -324,33 +325,54 @@ const ReaderPage = () => {
     const preventCtx = (e: Event) => e.preventDefault();
     container.addEventListener("contextmenu", preventCtx);
 
-    const checkSelection = () => {
-      if (editingHighlightRef.current) return;
-      setTimeout(() => {
-        const sel = window.getSelection();
-        const text = sel?.toString().trim();
-        if (text && text.length > 2 && sel?.rangeCount) {
-          const range = sel.getRangeAt(0);
-          const rect = range.getBoundingClientRect();
-          // Position menu above selection if possible, else below
-          const menuH = 120;
-          const spaceAbove = rect.top;
-          const posAbove = spaceAbove > menuH;
-          setSelectedText(text);
-          setMenuPosition({
-            top: posAbove
-              ? rect.top + window.scrollY - menuH - 4
-              : rect.bottom + window.scrollY + 8,
-            left: Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272)),
-          });
-          setShowSelectionMenu(true);
-        }
-      }, 10);
+    let selectionTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const showMenuForSelection = () => {
+      const sel = window.getSelection();
+      const text = sel?.toString().trim();
+      if (!text || text.length < 3 || !sel?.rangeCount) return;
+
+      const range = sel.getRangeAt(0);
+      // Only handle selections within reader content
+      if (!container.contains(range.commonAncestorContainer)) return;
+
+      const rect = range.getBoundingClientRect();
+      const menuH = 120;
+      const posAbove = rect.top > menuH;
+      setSelectedText(text);
+      setMenuPosition({
+        top: posAbove
+          ? rect.top + window.scrollY - menuH - 4
+          : rect.bottom + window.scrollY + 8,
+        left: Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272)),
+      });
+      setShowSelectionMenu(true);
+      // Auto-create highlight with default color
+      autoCreateRef.current?.(text);
     };
 
-    const handleTouchEnd = () => {
+    // selectionchange — reliable detection across all input methods
+    const onSelectionChange = () => {
+      if (editingHighlightRef.current) return;
+      if (selectionTimer) clearTimeout(selectionTimer);
+      const sel = window.getSelection();
+      const text = sel?.toString().trim();
+      if (!text || text.length < 3) return;
+      selectionTimer = setTimeout(showMenuForSelection, 250);
+    };
+
+    // mouseup/touchend — fast path for when user finishes selecting
+    const onMouseUp = () => {
+      if (editingHighlightRef.current) return;
+      if (selectionTimer) clearTimeout(selectionTimer);
+      setTimeout(showMenuForSelection, 50);
+    };
+
+    const onTouchEnd = () => {
       lastTouchEndRef.current = Date.now();
-      checkSelection();
+      if (editingHighlightRef.current) return;
+      if (selectionTimer) clearTimeout(selectionTimer);
+      setTimeout(showMenuForSelection, 100);
     };
 
     const clearSelection = (e: MouseEvent) => {
@@ -384,20 +406,24 @@ const ReaderPage = () => {
       setEditNote(hl.note || "");
     };
 
-    document.addEventListener("mouseup", checkSelection);
-    document.addEventListener("touchend", handleTouchEnd);
+    document.addEventListener("selectionchange", onSelectionChange);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("touchend", onTouchEnd);
     document.addEventListener("mousedown", clearSelection);
     container.addEventListener("click", handleMarkClick);
 
     return () => {
+      if (selectionTimer) clearTimeout(selectionTimer);
       container.removeEventListener("contextmenu", preventCtx);
-      document.removeEventListener("mouseup", checkSelection);
-      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("selectionchange", onSelectionChange);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("touchend", onTouchEnd);
       document.removeEventListener("mousedown", clearSelection);
       container.removeEventListener("click", handleMarkClick);
     };
+  // Re-run once when content mounts (isLoading: true → false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isLoading]);
 
   // Close edit menu on outside click
   useEffect(() => {
@@ -435,33 +461,42 @@ const ReaderPage = () => {
     },
   });
 
-  // Create highlight
+  // Create highlight — returns created row for immediate editing
   const createHighlight = useMutation({
     mutationFn: async ({ text, note, color }: { text: string; note?: string; color: string }) => {
-      const { error } = await supabase.from("user_highlights").insert({
+      const { data, error } = await supabase.from("user_highlights").insert({
         user_id: user!.id, book_id: id!, text, note: note || null, color,
-      } as any);
+      } as any).select().single();
       if (error) throw error;
+      return data as HighlightData;
     },
-    onSuccess: () => {
+    onSuccess: (newHighlight) => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      toast({ title: "Выделение сохранено" });
-      resetSelection();
+      // Switch to edit mode for the new highlight so user can change color / add note
+      window.getSelection()?.removeAllRanges();
+      setShowSelectionMenu(false);
+      setSelectedText("");
+      setEditingHighlight(newHighlight);
+      setEditNote("");
+      setMenuPosition((pos) => {
+        if (pos) setEditMenuPos(pos);
+        return null;
+      });
     },
     onError: (err: any) => { toast({ title: "Ошибка", description: err.message, variant: "destructive" }); },
   });
 
-  // Update highlight note
+  // Update highlight (note and/or color)
   const updateHighlight = useMutation({
-    mutationFn: async ({ highlightId, note }: { highlightId: string; note: string }) => {
-      const { error } = await supabase.from("user_highlights").update({ note: note || null }).eq("id", highlightId);
+    mutationFn: async ({ highlightId, note, color }: { highlightId: string; note?: string; color?: string }) => {
+      const updates: Record<string, unknown> = {};
+      if (note !== undefined) updates.note = note || null;
+      if (color !== undefined) updates.color = color;
+      const { error } = await supabase.from("user_highlights").update(updates).eq("id", highlightId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      toast({ title: "Заметка обновлена" });
-      setEditingHighlight(null);
-      setEditMenuPos(null);
     },
   });
 
@@ -496,6 +531,15 @@ const ReaderPage = () => {
       return;
     }
     createHighlight.mutate({ text: selectedText, note: highlightNote || undefined, color: selectedColor });
+  };
+
+  // Auto-highlight: create highlight immediately on text selection
+  autoCreateRef.current = (text: string) => {
+    if (!user || createHighlight.isPending) return;
+    // Check if text is already highlighted
+    if (highlights.some((h) => h.text === text)) return;
+    if (!canHighlight(highlights.length)) return;
+    createHighlight.mutate({ text, color: "yellow" });
   };
 
   const handleShareText = async (text: string) => {
@@ -749,67 +793,12 @@ const ReaderPage = () => {
         </div>
       )}
 
-      {/* Custom selection popup — ReadEra style */}
-      {showSelectionMenu && menuPosition && !editingHighlight && (
+      {/* Selection saving indicator */}
+      {showSelectionMenu && menuPosition && !editingHighlight && createHighlight.isPending && (
         <div className="absolute z-50" style={{ top: menuPosition.top, left: menuPosition.left }}>
-          <div className="w-[260px] animate-fade-in rounded-2xl border border-border/60 bg-card shadow-elevated overflow-hidden" data-highlight-menu>
-            {showNoteInput ? (
-              <div className="p-3 space-y-2">
-                <Input value={highlightNote} onChange={(e) => setHighlightNote(e.target.value)}
-                  placeholder="Добавить заметку..." className="h-9 rounded-xl bg-secondary border-0 text-sm" autoFocus />
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 flex-1 text-xs rounded-xl"
-                    onClick={() => { setShowNoteInput(false); setHighlightNote(""); }}>Отмена</Button>
-                  <Button size="sm" className="h-8 flex-1 rounded-xl text-xs"
-                    onClick={handleSaveHighlight} disabled={createHighlight.isPending}>Сохранить</Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Color picker row */}
-                <div className="flex justify-center gap-2.5 px-4 pt-3 pb-2">
-                  {HIGHLIGHT_COLORS.map((c) => (
-                    <button key={c.key} onClick={() => setSelectedColor(c.key)}
-                      className={`h-7 w-7 rounded-full ${c.bg} border-2 transition-all ${
-                        selectedColor === c.key ? `${c.border} scale-110 ring-2 ${c.ring} ring-offset-1` : "border-transparent"
-                      }`}
-                    />
-                  ))}
-                </div>
-                {/* Action buttons — grid like ReadEra */}
-                <div className="grid grid-cols-4 border-t border-border/40">
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(selectedText);
-                      toast({ title: "Скопировано" });
-                      resetSelection();
-                    }}
-                    className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                    <span className="text-[10px] font-medium">Копировать</span>
-                  </button>
-                  <button onClick={handleSaveHighlight}
-                    className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-                  >
-                    <Highlighter className="h-[18px] w-[18px]" />
-                    <span className="text-[10px] font-medium">Цитата</span>
-                  </button>
-                  <button onClick={() => setShowNoteInput(true)}
-                    className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-                  >
-                    <MessageSquare className="h-[18px] w-[18px]" />
-                    <span className="text-[10px] font-medium">Заметка</span>
-                  </button>
-                  <button onClick={() => { handleShareText(selectedText); resetSelection(); }}
-                    className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-                  >
-                    <Share2 className="h-[18px] w-[18px]" />
-                    <span className="text-[10px] font-medium">Поделиться</span>
-                  </button>
-                </div>
-              </>
-            )}
+          <div className="w-[140px] animate-fade-in rounded-2xl border border-border/60 bg-card p-3 shadow-elevated flex items-center justify-center gap-2" data-highlight-menu>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span className="text-xs text-muted-foreground">Сохраняю...</span>
           </div>
         </div>
       )}
@@ -817,21 +806,74 @@ const ReaderPage = () => {
       {/* Edit existing highlight popup */}
       {editingHighlight && editMenuPos && (
         <div className="absolute z-50" style={{ top: editMenuPos.top, left: editMenuPos.left }}>
-          <div className="w-[260px] animate-fade-in rounded-2xl border border-border/60 bg-card p-3 shadow-elevated" data-highlight-menu>
-            <p className="mb-2 line-clamp-2 text-xs italic text-muted-foreground">«{editingHighlight.text}»</p>
-            <Input value={editNote} onChange={(e) => setEditNote(e.target.value)}
-              placeholder="Заметка..." className="mb-2 h-9 rounded-xl bg-secondary border-0 text-sm" autoFocus />
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" className="h-8 flex-1 text-xs text-destructive rounded-xl"
-                onClick={() => deleteHighlight.mutate(editingHighlight.id)}>
-                <Trash2 className="mr-1 h-3.5 w-3.5" /> Удалить
-              </Button>
-              <Button size="sm" className="h-8 flex-1 rounded-xl text-xs"
-                onClick={() => updateHighlight.mutate({ highlightId: editingHighlight.id, note: editNote })}
-                disabled={updateHighlight.isPending}>
-                Сохранить
-              </Button>
+          <div className="w-[260px] animate-fade-in rounded-2xl border border-border/60 bg-card shadow-elevated overflow-hidden" data-highlight-menu>
+            {/* Color picker row */}
+            <div className="flex justify-center gap-2.5 px-4 pt-3 pb-2">
+              {HIGHLIGHT_COLORS.map((c) => (
+                <button key={c.key}
+                  onClick={() => {
+                    updateHighlight.mutate({ highlightId: editingHighlight.id, color: c.key });
+                    setEditingHighlight({ ...editingHighlight, color: c.key });
+                  }}
+                  className={`h-7 w-7 rounded-full ${c.bg} border-2 transition-all ${
+                    (editingHighlight.color || "yellow") === c.key
+                      ? `${c.border} scale-110 ring-2 ${c.ring} ring-offset-1`
+                      : "border-transparent"
+                  }`}
+                />
+              ))}
             </div>
+            {/* Action buttons */}
+            <div className="grid grid-cols-4 border-t border-border/40">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(editingHighlight.text);
+                  toast({ title: "Скопировано" });
+                }}
+                className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span className="text-[10px] font-medium">Копировать</span>
+              </button>
+              <button onClick={() => setShowNoteInput(true)}
+                className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
+              >
+                <MessageSquare className="h-[18px] w-[18px]" />
+                <span className="text-[10px] font-medium">Заметка</span>
+              </button>
+              <button onClick={() => { handleShareText(editingHighlight.text); }}
+                className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
+              >
+                <Share2 className="h-[18px] w-[18px]" />
+                <span className="text-[10px] font-medium">Поделиться</span>
+              </button>
+              <button
+                onClick={() => deleteHighlight.mutate(editingHighlight.id)}
+                className="flex flex-col items-center gap-1 py-3 text-destructive hover:bg-secondary/60 tap-highlight transition-colors"
+              >
+                <Trash2 className="h-[18px] w-[18px]" />
+                <span className="text-[10px] font-medium">Удалить</span>
+              </button>
+            </div>
+            {/* Note input (expandable) */}
+            {showNoteInput && (
+              <div className="border-t border-border/40 p-3 space-y-2">
+                <Input value={editNote} onChange={(e) => setEditNote(e.target.value)}
+                  placeholder="Добавить заметку..." className="h-9 rounded-xl bg-secondary border-0 text-sm" autoFocus />
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" className="h-8 flex-1 text-xs rounded-xl"
+                    onClick={() => { setShowNoteInput(false); setEditNote(""); }}>Отмена</Button>
+                  <Button size="sm" className="h-8 flex-1 rounded-xl text-xs"
+                    onClick={() => {
+                      updateHighlight.mutate({ highlightId: editingHighlight.id, note: editNote });
+                      setShowNoteInput(false);
+                      setEditingHighlight(null);
+                      setEditMenuPos(null);
+                    }}
+                    disabled={updateHighlight.isPending}>Сохранить</Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
