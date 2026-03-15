@@ -91,7 +91,7 @@ export const useSearchBooks = (query: string) => {
         .from("books")
         .select("*")
         .eq("status", "published")
-        .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
+        .or(`title.ilike.%${query}%,author.ilike.%${query}%,categories.cs.{"${query}"}`)
         .limit(20);
       if (error) throw error;
       return data as Book[];

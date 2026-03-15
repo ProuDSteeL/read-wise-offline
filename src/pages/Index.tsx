@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sparkles, ChevronRight } from "lucide-react";
@@ -40,32 +41,6 @@ const useCollectionBooks = (bookIds: string[] | null) => {
     },
     enabled: !!bookIds?.length,
   });
-};
-
-const CollectionSection = ({ collection }: { collection: { id: string; title: string; description: string | null; book_ids: string[] | null } }) => {
-  const navigate = useNavigate();
-  const { data: books, isLoading } = useCollectionBooks(collection.book_ids);
-
-  if (isLoading) return <BookRowSkeleton />;
-  if (!books?.length) return null;
-
-  return (
-    <section className="space-y-3">
-      <SectionHeader title={collection.title} subtitle={collection.description ?? undefined} />
-      <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
-        {books.map((book) => (
-          <BookCard
-            key={book.id}
-            title={book.title}
-            author={book.author}
-            coverUrl={book.cover_url || "/placeholder.svg"}
-            readTimeMin={book.read_time_min ?? undefined}
-            onClick={() => navigate(`/book/${book.id}`)}
-          />
-        ))}
-      </div>
-    </section>
-  );
 };
 
 const Index = () => {
@@ -113,9 +88,9 @@ const Index = () => {
         </section>
       )}
 
-      {/* Featured collection banner */}
-      {collections && collections.length > 0 && collections[0] && (
-        <FeaturedBanner collection={collections[0]} />
+      {/* Featured collection banners — swipeable carousel */}
+      {collections && collections.length > 0 && (
+        <BannerCarousel collections={collections} />
       )}
 
       {/* Category chips */}
@@ -156,11 +131,6 @@ const Index = () => {
           </div>
         )}
       </section>
-
-      {/* Remaining collections */}
-      {collections && collections.slice(1).map((col) => (
-        <CollectionSection key={col.id} collection={col} />
-      ))}
 
       {/* Recommendations */}
       {user && recommendations && recommendations.length > 0 && (
@@ -213,8 +183,52 @@ const Index = () => {
   );
 };
 
+/* Banner carousel — swipeable with CSS scroll-snap */
+type CollectionItem = { id: string; title: string; description: string | null; book_ids: string[] | null };
+
+const BannerCarousel = ({ collections }: { collections: CollectionItem[] }) => {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const el = scrollRef.current;
+    const cardWidth = el.firstElementChild?.clientWidth ?? el.clientWidth;
+    const idx = Math.round(el.scrollLeft / cardWidth);
+    setActiveIdx(idx);
+  }, []);
+
+  return (
+    <div className="space-y-2">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 gap-3"
+      >
+        {collections.map((col) => (
+          <div key={col.id} className="w-full shrink-0 snap-center">
+            <FeaturedBanner collection={col} />
+          </div>
+        ))}
+      </div>
+      {collections.length > 1 && (
+        <div className="flex justify-center gap-1.5">
+          {collections.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${
+                i === activeIdx ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/20"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* Featured banner like SmartReading promo cards */
-const FeaturedBanner = ({ collection }: { collection: { id: string; title: string; description: string | null; book_ids: string[] | null } }) => {
+const FeaturedBanner = ({ collection }: { collection: CollectionItem }) => {
   const navigate = useNavigate();
   const { data: books } = useCollectionBooks(collection.book_ids);
   const firstBook = books?.[0];
@@ -222,7 +236,7 @@ const FeaturedBanner = ({ collection }: { collection: { id: string; title: strin
   return (
     <button
       onClick={() => firstBook ? navigate(`/book/${firstBook.id}`) : undefined}
-      className="mx-4 flex items-center gap-4 rounded-2xl bg-sage-light p-4 shadow-card tap-highlight text-left"
+      className="flex w-full items-center gap-4 rounded-2xl bg-sage-light p-4 shadow-card tap-highlight text-left"
     >
       <div className="flex-1 space-y-1">
         <p className="text-xs font-medium text-sage">Подборка</p>
