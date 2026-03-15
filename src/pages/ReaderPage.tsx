@@ -57,15 +57,18 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
   let remaining = text;
   let keyIdx = 0;
 
-  // Sort highlights by position in text (first occurrence)
+  // Sort highlights by position in text (first occurrence), normalize whitespace for matching
   const sorted = highlights
-    .map((h) => ({ ...h, idx: remaining.indexOf(h.text) }))
+    .map((h) => {
+      const norm = h.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
+      return { ...h, _norm: norm, idx: remaining.indexOf(norm) };
+    })
     .filter((h) => h.idx !== -1)
     .sort((a, b) => a.idx - b.idx);
 
   let offset = 0;
   for (const hl of sorted) {
-    const pos = text.indexOf(hl.text, offset);
+    const pos = text.indexOf(hl._norm, offset);
     if (pos === -1) continue;
 
     if (pos > offset) {
@@ -73,6 +76,8 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
     }
 
     const color = getColor(hl.color);
+    // Normalize stored text in case it was saved with newlines (legacy or mobile quirk)
+    const normalizedHl = hl.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
 
     parts.push(
       <mark
@@ -86,11 +91,11 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
         }}
         data-highlight-id={hl.id}
       >
-        {hl.text}
+        {normalizedHl}
       </mark>
     );
 
-    offset = pos + hl.text.length;
+    offset = pos + normalizedHl.length;
   }
 
   if (offset < text.length) {
