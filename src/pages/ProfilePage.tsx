@@ -2,6 +2,7 @@ import { useState } from "react";
 import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -9,6 +10,8 @@ import { useProfileStats } from "@/hooks/useProfileStats";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useSubscription } from "@/hooks/useSubscription";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -20,6 +23,52 @@ const ProfilePage = () => {
   const push = usePushNotifications();
   const { isPro, subscriptionType, expiresAt } = useSubscription();
   const [showSubDialog, setShowSubDialog] = useState(false);
+  const [editField, setEditField] = useState<"name" | "email" | "password" | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [editPassword, setEditPassword] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  const openEdit = (field: "name" | "email" | "password") => {
+    setEditField(field);
+    setEditValue(field === "name" ? (user?.user_metadata?.name || "") : field === "email" ? (user?.email || "") : "");
+    setEditPassword("");
+    setEditSaving(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editField) return;
+    setEditSaving(true);
+    try {
+      if (editField === "name") {
+        const { error } = await supabase.auth.updateUser({ data: { name: editValue.trim() } });
+        if (error) throw error;
+        toast({ title: "Имя обновлено" });
+      } else if (editField === "email") {
+        const { error } = await supabase.auth.updateUser({ email: editValue.trim() });
+        if (error) throw error;
+        toast({ title: "Письмо для подтверждения отправлено", description: "Проверьте новую почту" });
+      } else if (editField === "password") {
+        if (editValue.length < 6) {
+          toast({ title: "Минимум 6 символов", variant: "destructive" });
+          setEditSaving(false);
+          return;
+        }
+        if (editValue !== editPassword) {
+          toast({ title: "Пароли не совпадают", variant: "destructive" });
+          setEditSaving(false);
+          return;
+        }
+        const { error } = await supabase.auth.updateUser({ password: editValue });
+        if (error) throw error;
+        toast({ title: "Пароль обновлён" });
+      }
+      setEditField(null);
+    } catch (err: any) {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -90,26 +139,27 @@ const ProfilePage = () => {
 
       {/* Profile info */}
       <div className="rounded-2xl bg-card shadow-card divide-y divide-border">
-        <div className="flex items-center justify-between px-4 py-3.5">
+        <button onClick={() => openEdit("name")} className="flex w-full items-center justify-between px-4 py-3.5 tap-highlight text-left">
           <div>
             <p className="text-xs text-muted-foreground">Имя</p>
             <p className="text-sm font-medium text-foreground">{user.user_metadata?.name || "—"}</p>
           </div>
           <Pencil className="h-4 w-4 text-sage" />
-        </div>
-        <div className="flex items-center justify-between px-4 py-3.5">
+        </button>
+        <button onClick={() => openEdit("email")} className="flex w-full items-center justify-between px-4 py-3.5 tap-highlight text-left">
           <div>
             <p className="text-xs text-muted-foreground">Почта</p>
             <p className="text-sm font-medium text-foreground">{user.email}</p>
           </div>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3.5">
+          <Pencil className="h-4 w-4 text-sage" />
+        </button>
+        <button onClick={() => openEdit("password")} className="flex w-full items-center justify-between px-4 py-3.5 tap-highlight text-left">
           <div>
             <p className="text-xs text-muted-foreground">Пароль</p>
             <p className="text-sm font-medium text-foreground">●●●●●●</p>
           </div>
           <Pencil className="h-4 w-4 text-sage" />
-        </div>
+        </button>
       </div>
 
       {/* Stats */}
@@ -160,6 +210,57 @@ const ProfilePage = () => {
         <LogOut className="h-5 w-5 text-destructive" />
         <span className="flex-1 text-left text-sm font-medium text-destructive">Выйти</span>
       </button>
+
+      {/* Edit profile dialog */}
+      <Dialog open={!!editField} onOpenChange={(open) => { if (!open) setEditField(null); }}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg font-bold">
+              {editField === "name" ? "Изменить имя" : editField === "email" ? "Изменить почту" : "Изменить пароль"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {editField === "password" ? (
+              <>
+                <Input
+                  type="password"
+                  placeholder="Новый пароль"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  autoFocus
+                />
+                <Input
+                  type="password"
+                  placeholder="Повторите пароль"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                />
+              </>
+            ) : (
+              <Input
+                type={editField === "email" ? "email" : "text"}
+                placeholder={editField === "name" ? "Ваше имя" : "Новая почта"}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                autoFocus
+              />
+            )}
+            {editField === "email" && (
+              <p className="text-xs text-muted-foreground">
+                На новую почту придёт письмо для подтверждения
+              </p>
+            )}
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1 rounded-full" onClick={() => setEditField(null)}>
+                Отмена
+              </Button>
+              <Button className="flex-1 rounded-full" onClick={handleSaveEdit} disabled={editSaving || !editValue.trim()}>
+                {editSaving ? "Сохранение..." : "Сохранить"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Subscription dialog */}
       <Dialog open={showSubDialog} onOpenChange={setShowSubDialog}>
