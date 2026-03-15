@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, ChevronRight } from "lucide-react";
+import { Sparkles, ChevronRight, Download, X } from "lucide-react";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import BookCard from "@/components/BookCard";
 import ContinueCard from "@/components/ContinueCard";
 import SectionHeader from "@/components/SectionHeader";
@@ -51,6 +52,7 @@ const Index = () => {
   const { user } = useAuth();
   const { data: progress } = useUserProgress();
   const { data: recommendations } = useRecommendations();
+  const { canInstall, promptInstall, dismiss: dismissInstall } = useInstallPrompt();
   const continueBooks = progress?.filter(
     (p) => p.progress_percent && p.progress_percent > 0 && p.progress_percent < 100
   );
@@ -68,6 +70,23 @@ const Index = () => {
       <div className="flex items-center justify-between px-4 pt-14">
         <h1 className="text-[26px] font-extrabold tracking-tight text-foreground">Главная</h1>
       </div>
+
+      {/* Install prompt */}
+      {canInstall && (
+        <div className="mx-4 flex items-center gap-3 rounded-2xl bg-sage-light p-3 shadow-card animate-fade-in">
+          <Download className="h-5 w-5 shrink-0 text-sage" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-foreground">Установите приложение</p>
+            <p className="text-xs text-muted-foreground">Быстрый доступ и чтение офлайн</p>
+          </div>
+          <button onClick={promptInstall} className="shrink-0 rounded-full gradient-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground tap-highlight">
+            Установить
+          </button>
+          <button onClick={dismissInstall} className="shrink-0 tap-highlight p-1">
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+      )}
 
       {/* Continue reading — SmartReading-style horizontal cards */}
       {user && continueBooks && continueBooks.length > 0 && (
