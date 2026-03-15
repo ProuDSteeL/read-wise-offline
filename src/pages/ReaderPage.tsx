@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, ReactNode } from "react";
+import React, { useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Highlighter, MessageSquare, Pencil, Trash2, Share2, Headphones } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
