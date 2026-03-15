@@ -293,8 +293,8 @@ const ReaderPage = () => {
     localStorage.setItem("reader-line-height", String(lineHeight));
   }, [theme, fontFamily, fontSize, lineHeight]);
 
-  // Explicit save when user taps "Цитата"
-  const handleSaveNew = () => {
+  // Save highlight with user-chosen color
+  const handleSaveNew = (color: string) => {
     if (selState.phase !== "selected") return;
     if (!user) { navigate("/auth"); return; }
     if (highlights.some((h) => h.text === selState.text)) {
@@ -306,7 +306,7 @@ const ReaderPage = () => {
       return;
     }
     selDispatch({ type: "SAVE_STARTED" });
-    createHighlight.mutate({ text: selState.text, color: "yellow" });
+    createHighlight.mutate({ text: selState.text, color });
   };
 
   const favMutation = useMutation({
