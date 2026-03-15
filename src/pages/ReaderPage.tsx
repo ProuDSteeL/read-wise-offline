@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, MessageSquare, Pencil, Trash2, Share2, Headphones, List } from "lucide-react";
+import { X, Settings2, Heart, Pencil, Trash2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
@@ -9,12 +9,13 @@ import { useAudio } from "@/contexts/AudioContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
+import { useTextSelection, type HighlightData } from "@/hooks/useTextSelection";
+import HighlightEditMenu from "@/components/reader/HighlightEditMenu";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 type ReaderFont = "sans" | "serif";
@@ -122,13 +123,6 @@ function highlightChildren(
   }
 
   return children;
-}
-
-interface HighlightData {
-  id: string;
-  text: string;
-  note: string | null;
-  color?: string;
 }
 
 const ReaderPage = () => {
@@ -258,17 +252,8 @@ const ReaderPage = () => {
   }, [saveProgress, user, id]);
 
   // New selection state
-  const [selectedText, setSelectedText] = useState("");
-  const [showSelectionMenu, setShowSelectionMenu] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  const [highlightNote, setHighlightNote] = useState("");
-  const [showNoteInput, setShowNoteInput] = useState(false);
-  const [selectedColor, setSelectedColor] = useState("yellow");
-
-  // Existing highlight editing
-  const [editingHighlight, setEditingHighlight] = useState<HighlightData | null>(null);
-  const [editNote, setEditNote] = useState("");
-  const [editMenuPos, setEditMenuPos] = useState<{ top: number; left: number } | null>(null);
+  // Text selection state machine
+  const { state: selState, dispatch: selDispatch } = useTextSelection(contentRef, highlights);
 
   // Favorite
   const { data: isFavorite } = useQuery({
@@ -306,157 +291,24 @@ const ReaderPage = () => {
     localStorage.setItem("reader-line-height", String(lineHeight));
   }, [theme, fontFamily, fontSize, lineHeight]);
 
-  // Refs to avoid stale closures and unnecessary effect re-runs
-  const showNoteInputRef = useRef(showNoteInput);
-  showNoteInputRef.current = showNoteInput;
-  const editingHighlightRef = useRef(editingHighlight);
-  editingHighlightRef.current = editingHighlight;
-  const highlightsRef = useRef(highlights);
-  highlightsRef.current = highlights;
-  const lastTouchEndRef = useRef(0);
-  const autoCreateRef = useRef<((text: string) => void) | null>(null);
-  const menuPosRef = useRef<{ top: number; left: number } | null>(null);
-  const autoCreatedRef = useRef(false);
-
-  // Text selection — stable effect with selectionchange for reliability
+  // Auto-save highlight when text is selected
+  const lastAutoSavedText = useRef<string | null>(null);
   useEffect(() => {
-    const container = contentRef.current;
-    if (!container) return;
-
-    // Prevent native context menu inside reader
-    const preventCtx = (e: Event) => e.preventDefault();
-    container.addEventListener("contextmenu", preventCtx);
-
-    let pendingTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const showMenuForSelection = () => {
-      pendingTimer = null;
-      const sel = window.getSelection();
-      const text = sel?.toString().trim();
-      if (!text || text.length < 3 || !sel?.rangeCount) return;
-
-      const range = sel.getRangeAt(0);
-      // Only handle selections within reader content
-      if (!container.contains(range.commonAncestorContainer)) return;
-
-      const rect = range.getBoundingClientRect();
-      const menuH = 120;
-      const posAbove = rect.top > menuH;
-      const top = posAbove ? rect.top - menuH - 4 : rect.bottom + 8;
-      const left = Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272));
-
-      const pos = { top, left };
-      menuPosRef.current = pos;
-      setSelectedText(text);
-      setMenuPosition(pos);
-      setShowSelectionMenu(true);
-      // Auto-create highlight with default color (guard against double-fire)
-      if (!autoCreatedRef.current) {
-        autoCreatedRef.current = true;
-        autoCreateRef.current?.(text);
-      }
-    };
-
-    const scheduleCheck = (delay: number) => {
-      if (pendingTimer) clearTimeout(pendingTimer);
-      pendingTimer = setTimeout(showMenuForSelection, delay);
-    };
-
-    // selectionchange — reliable detection across all input methods
-    const onSelectionChange = () => {
-      if (editingHighlightRef.current) return;
-      const sel = window.getSelection();
-      const text = sel?.toString().trim();
-      if (!text || text.length < 3) return;
-      scheduleCheck(250);
-    };
-
-    // mouseup/touchend — fast path for when user finishes selecting
-    const onMouseUp = () => {
-      if (editingHighlightRef.current) return;
-      scheduleCheck(50);
-    };
-
-    const onTouchEnd = () => {
-      lastTouchEndRef.current = Date.now();
-      if (editingHighlightRef.current) return;
-      scheduleCheck(100);
-    };
-
-    const clearSelection = (e: MouseEvent) => {
-      // Skip synthetic mouse events emitted after touch
-      if (Date.now() - lastTouchEndRef.current < 400) return;
-      const target = e.target as HTMLElement;
-      if (target.closest("[data-highlight-menu]") || target.closest("mark")) return;
-      if (!window.getSelection()?.toString().trim() && !showNoteInputRef.current) {
-        autoCreatedRef.current = false;
-        setShowSelectionMenu(false);
-        setSelectedText("");
-        setMenuPosition(null);
-      }
-    };
-
-    const handleMarkClick = (e: MouseEvent) => {
-      const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]");
-      if (!mark) return;
-      const hlId = mark.getAttribute("data-highlight-id");
-      const hl = highlightsRef.current.find((h) => h.id === hlId);
-      if (!hl) return;
-
-      const sel = window.getSelection();
-      if (sel?.toString().trim()) return;
-
-      const rect = mark.getBoundingClientRect();
-      setEditMenuPos({
-        top: rect.bottom + 8,
-        left: Math.max(12, Math.min(rect.left + rect.width / 2 - 130, window.innerWidth - 272)),
-      });
-      setEditingHighlight(hl);
-      setEditNote(hl.note || "");
-    };
-
-    document.addEventListener("selectionchange", onSelectionChange);
-    document.addEventListener("mouseup", onMouseUp);
-    document.addEventListener("touchend", onTouchEnd);
-    document.addEventListener("mousedown", clearSelection);
-    container.addEventListener("click", handleMarkClick);
-
-    return () => {
-      if (pendingTimer) clearTimeout(pendingTimer);
-      container.removeEventListener("contextmenu", preventCtx);
-      document.removeEventListener("selectionchange", onSelectionChange);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.removeEventListener("touchend", onTouchEnd);
-      document.removeEventListener("mousedown", clearSelection);
-      container.removeEventListener("click", handleMarkClick);
-    };
-  // Re-run once when content mounts (isLoading: true → false)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading]);
-
-  // Close edit menu on outside click/touch (mousedown so it fires BEFORE selection handlers)
-  useEffect(() => {
-    if (!editingHighlight) return;
-    const handler = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest("[data-highlight-menu]")) {
-        editingHighlightRef.current = null; // immediately clear ref so selection handlers don't bail
-        autoCreatedRef.current = false;
-        setEditingHighlight(null);
-        setEditMenuPos(null);
-        setShowNoteInput(false);
-      }
-    };
-    // Use mousedown/touchstart so edit menu closes BEFORE mouseup/selectionchange fire
-    setTimeout(() => {
-      document.addEventListener("mousedown", handler);
-      document.addEventListener("touchstart", handler);
-    }, 0);
-    return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("touchstart", handler);
-    };
-  }, [editingHighlight]);
+    if (selState.phase !== "selected") {
+      lastAutoSavedText.current = null;
+      return;
+    }
+    if (!user) return;
+    if (selState.text === lastAutoSavedText.current) return;
+    if (highlights.some((h) => h.text === selState.text)) return;
+    if (!canHighlight(highlights.length)) {
+      toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
+      return;
+    }
+    lastAutoSavedText.current = selState.text;
+    selDispatch({ type: "SAVE_STARTED" });
+    createHighlight.mutate({ text: selState.text, color: "yellow" });
+  }, [selState.phase, selState.phase === "selected" ? selState.text : null]);
 
   const favMutation = useMutation({
     mutationFn: async () => {
@@ -491,16 +343,13 @@ const ReaderPage = () => {
     },
     onSuccess: (newHighlight) => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      // Switch to edit mode for the new highlight so user can change color / add note
       window.getSelection()?.removeAllRanges();
-      setShowSelectionMenu(false);
-      setSelectedText("");
-      setMenuPosition(null);
-      setEditMenuPos(menuPosRef.current);
-      setEditingHighlight(newHighlight);
-      setEditNote("");
+      selDispatch({ type: "SAVE_COMPLETED", highlight: newHighlight });
     },
-    onError: (err: any) => { toast({ title: "Ошибка", description: err.message, variant: "destructive" }); },
+    onError: (err: any) => {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+      selDispatch({ type: "SAVE_FAILED" });
+    },
   });
 
   // Update highlight (note and/or color) — optimistic update for instant visual feedback
@@ -515,6 +364,7 @@ const ReaderPage = () => {
     onMutate: async ({ highlightId, note, color }) => {
       await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
       const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
+      const updated = prev?.find((h) => h.id === highlightId);
       queryClient.setQueryData<HighlightData[]>(["highlights", user?.id, id], (old) =>
         old?.map((h) => h.id === highlightId ? {
           ...h,
@@ -522,6 +372,13 @@ const ReaderPage = () => {
           ...(note !== undefined && { note: note || null }),
         } : h) ?? []
       );
+      // Update the editing highlight in state machine for instant menu feedback
+      if (updated) {
+        selDispatch({
+          type: "UPDATE_EDITING",
+          highlight: { ...updated, ...(color !== undefined && { color }), ...(note !== undefined && { note: note || null }) },
+        });
+      }
       return { prev };
     },
     onError: (_e, _v, ctx) => {
@@ -541,39 +398,9 @@ const ReaderPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
       toast({ title: "Выделение удалено" });
-      setEditingHighlight(null);
-      setEditMenuPos(null);
+      selDispatch({ type: "DISMISS" });
     },
   });
-
-  const resetSelection = () => {
-    autoCreatedRef.current = false;
-    setShowSelectionMenu(false);
-    setShowNoteInput(false);
-    setHighlightNote("");
-    setSelectedText("");
-    setSelectedColor("yellow");
-    window.getSelection()?.removeAllRanges();
-  };
-
-  const handleSaveHighlight = () => {
-    if (!user) { navigate("/auth"); return; }
-    if (!canHighlight(highlights.length)) {
-      toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
-      resetSelection();
-      return;
-    }
-    createHighlight.mutate({ text: selectedText, note: highlightNote || undefined, color: selectedColor });
-  };
-
-  // Auto-highlight: create highlight immediately on text selection
-  autoCreateRef.current = (text: string) => {
-    if (!user) return;
-    // Check if text is already highlighted
-    if (highlights.some((h) => h.text === text)) return;
-    if (!canHighlight(highlights.length)) return;
-    createHighlight.mutate({ text, color: "yellow" });
-  };
 
   const handleShareText = async (text: string) => {
     const shareData = {
@@ -801,10 +628,9 @@ const ReaderPage = () => {
                     <p className="flex-1 text-sm italic text-muted-foreground">«{h.text}»</p>
                     <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
-                        onClick={() => {
-                          setEditingHighlight(h);
-                          setEditNote(h.note || "");
-                          setEditMenuPos(null); // show inline below the list item
+                        onClick={(e) => {
+                          const rect = (e.target as HTMLElement).getBoundingClientRect();
+                          selDispatch({ type: "OPEN_EDIT", highlight: h, menuPos: { top: rect.bottom + 8, left: Math.max(12, Math.min(rect.left - 120, window.innerWidth - 272)) } });
                         }}
                         className="rounded-lg p-1 text-muted-foreground hover:bg-secondary"
                       >
@@ -826,9 +652,9 @@ const ReaderPage = () => {
         </div>
       )}
 
-      {/* Selection saving indicator */}
-      {showSelectionMenu && menuPosition && !editingHighlight && createHighlight.isPending && (
-        <div className="fixed z-50" style={{ top: menuPosition.top, left: menuPosition.left }}>
+      {/* Saving indicator */}
+      {selState.phase === "saving" && (
+        <div className="fixed z-50" style={{ top: selState.menuPos.top, left: selState.menuPos.left }}>
           <div className="w-[140px] animate-fade-in rounded-2xl border border-border/60 bg-card p-3 shadow-elevated flex items-center justify-center gap-2" data-highlight-menu>
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <span className="text-xs text-muted-foreground">Сохраняю...</span>
@@ -836,79 +662,20 @@ const ReaderPage = () => {
         </div>
       )}
 
-      {/* Edit existing highlight popup */}
-      {editingHighlight && editMenuPos && (
-        <div className="fixed z-50" style={{ top: editMenuPos.top, left: editMenuPos.left }}>
-          <div className="w-[260px] animate-fade-in rounded-2xl border border-border/60 bg-card shadow-elevated overflow-hidden" data-highlight-menu>
-            {/* Color picker row */}
-            <div className="flex justify-center gap-2.5 px-4 pt-3 pb-2">
-              {HIGHLIGHT_COLORS.map((c) => (
-                <button key={c.key}
-                  onClick={() => {
-                    updateHighlight.mutate({ highlightId: editingHighlight.id, color: c.key });
-                    setEditingHighlight({ ...editingHighlight, color: c.key });
-                  }}
-                  className={`h-7 w-7 rounded-full ${c.bg} border-2 transition-all ${
-                    (editingHighlight.color || "yellow") === c.key
-                      ? `${c.border} scale-110 ring-2 ${c.ring} ring-offset-1`
-                      : "border-transparent"
-                  }`}
-                />
-              ))}
-            </div>
-            {/* Action buttons */}
-            <div className="grid grid-cols-4 border-t border-border/40">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(editingHighlight.text);
-                  toast({ title: "Скопировано" });
-                }}
-                className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                <span className="text-[10px] font-medium">Копировать</span>
-              </button>
-              <button onClick={() => setShowNoteInput(true)}
-                className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-              >
-                <MessageSquare className="h-[18px] w-[18px]" />
-                <span className="text-[10px] font-medium">Заметка</span>
-              </button>
-              <button onClick={() => { handleShareText(editingHighlight.text); }}
-                className="flex flex-col items-center gap-1 py-3 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-              >
-                <Share2 className="h-[18px] w-[18px]" />
-                <span className="text-[10px] font-medium">Поделиться</span>
-              </button>
-              <button
-                onClick={() => deleteHighlight.mutate(editingHighlight.id)}
-                className="flex flex-col items-center gap-1 py-3 text-destructive hover:bg-secondary/60 tap-highlight transition-colors"
-              >
-                <Trash2 className="h-[18px] w-[18px]" />
-                <span className="text-[10px] font-medium">Удалить</span>
-              </button>
-            </div>
-            {/* Note input (expandable) */}
-            {showNoteInput && (
-              <div className="border-t border-border/40 p-3 space-y-2">
-                <Input value={editNote} onChange={(e) => setEditNote(e.target.value)}
-                  placeholder="Добавить заметку..." className="h-9 rounded-xl bg-secondary border-0 text-sm" autoFocus />
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 flex-1 text-xs rounded-xl"
-                    onClick={() => { setShowNoteInput(false); setEditNote(""); }}>Отмена</Button>
-                  <Button size="sm" className="h-8 flex-1 rounded-xl text-xs"
-                    onClick={() => {
-                      updateHighlight.mutate({ highlightId: editingHighlight.id, note: editNote });
-                      setShowNoteInput(false);
-                      setEditingHighlight(null);
-                      setEditMenuPos(null);
-                    }}
-                    disabled={updateHighlight.isPending}>Сохранить</Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Edit highlight menu */}
+      {selState.phase === "editing" && (
+        <HighlightEditMenu
+          highlight={selState.highlight}
+          menuPos={selState.menuPos}
+          onColorChange={(color) => updateHighlight.mutate({ highlightId: selState.highlight.id, color })}
+          onCopy={() => { navigator.clipboard.writeText(selState.highlight.text); toast({ title: "Скопировано" }); }}
+          onShare={() => handleShareText(selState.highlight.text)}
+          onDelete={() => deleteHighlight.mutate(selState.highlight.id)}
+          onNoteSave={(note) => {
+            updateHighlight.mutate({ highlightId: selState.highlight.id, note });
+            selDispatch({ type: "DISMISS" });
+          }}
+        />
       )}
 
       {/* TOC Sheet */}
