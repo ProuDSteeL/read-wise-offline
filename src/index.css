@@ -207,3 +207,14 @@
     color: hsl(350 78% 21%);
   }
 }
+
+/* Reader custom selection styling */
+article ::selection {
+  background-color: hsl(157 30% 80% / 0.5);
+  color: inherit;
+}
+
+article ::-moz-selection {
+  background-color: hsl(157 30% 80% / 0.5);
+  color: inherit;
+}
