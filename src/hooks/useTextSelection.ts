@@ -18,14 +18,12 @@ export interface MenuPos {
 export type SelectionState =
   | { phase: "idle" }
   | { phase: "selected";      text: string;             menuPos: MenuPos }
-  | { phase: "selected-more"; text: string;             menuPos: MenuPos }
   | { phase: "saving";        text: string;             menuPos: MenuPos }
   | { phase: "editing";       highlight: HighlightData; menuPos: MenuPos }
   | { phase: "editing-note";  highlight: HighlightData; menuPos: MenuPos };
 
 export type SelectionAction =
   | { type: "TEXT_SELECTED"; text: string; menuPos: MenuPos }
-  | { type: "SHOW_MORE" }
   | { type: "SHOW_BACK" }
   | { type: "OPEN_NOTE" }
   | { type: "SAVE_STARTED" }
@@ -43,12 +41,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction): Selec
       if (state.phase !== "idle" && state.phase !== "selected") return state;
       return { phase: "selected", text: action.text, menuPos: action.menuPos };
 
-    case "SHOW_MORE":
-      if (state.phase === "selected") return { phase: "selected-more", text: state.text, menuPos: state.menuPos };
-      return state;
-
     case "SHOW_BACK":
-      if (state.phase === "selected-more") return { phase: "selected", text: state.text, menuPos: state.menuPos };
       if (state.phase === "editing-note") return { phase: "editing", highlight: state.highlight, menuPos: state.menuPos };
       return state;
 
@@ -86,7 +79,7 @@ function selectionReducer(state: SelectionState, action: SelectionAction): Selec
 
 // ── Menu positioning ──
 
-export function computeMenuPos(rect: DOMRect, menuH = 160, menuW = 280): MenuPos {
+export function computeMenuPos(rect: DOMRect, menuH = 64, menuW = 310): MenuPos {
   const above = rect.top > menuH + 16;
   return {
     top: above ? rect.top - menuH - 8 : rect.bottom + 12,
@@ -106,33 +99,58 @@ export function useTextSelection(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const highlightsRef = useRef(highlights);
   highlightsRef.current = highlights;
+  const isTouchActiveRef = useRef(false);
 
   useEffect(() => {
     if (!enabled) return;
     const container = containerRef.current;
     if (!container) return;
 
-    const onSelectionChange = () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+    const readAndDispatchSelection = () => {
+      const sel = window.getSelection();
+      const text = sel?.toString()
+        .replace(/[\r\n]+/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      if (!text || text.length < 3 || text.length > 400 || !sel?.rangeCount) return;
 
+      const range = sel.getRangeAt(0);
+      if (!container.contains(range.commonAncestorContainer)) return;
+
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return;
+
+      const menuPos = computeMenuPos(rect);
+      dispatch({ type: "TEXT_SELECTED", text, menuPos });
+    };
+
+    const onSelectionChange = () => {
+      // On touch: suppress menu during active drag — touchend will trigger it
+      if (isTouchActiveRef.current) return;
+
+      // Desktop/mouse: debounce at 100ms
+      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
-        const sel = window.getSelection();
-        const text = sel?.toString()
-          .replace(/[\r\n]+/g, " ")
-          .replace(/\s{2,}/g, " ")
-          .trim();
-        if (!text || text.length < 3 || text.length > 400 || !sel?.rangeCount) return;
+        readAndDispatchSelection();
+      }, 100);
+    };
 
-        const range = sel.getRangeAt(0);
-        if (!container.contains(range.commonAncestorContainer)) return;
+    const onTouchStart = () => {
+      isTouchActiveRef.current = true;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
 
-        const rect = range.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) return;
-
-        const menuPos = computeMenuPos(rect);
-        dispatch({ type: "TEXT_SELECTED", text, menuPos });
-      }, 200);
+    const onTouchEnd = () => {
+      isTouchActiveRef.current = false;
+      // Small delay so browser finalizes the selection range after finger lift
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        readAndDispatchSelection();
+      }, 50);
     };
 
     const onPointerDown = (e: PointerEvent) => {
@@ -158,11 +176,15 @@ export function useTextSelection(
 
     document.addEventListener("selectionchange", onSelectionChange);
     document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       document.removeEventListener("selectionchange", onSelectionChange);
       document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
     };
   }, [containerRef, enabled]);
 

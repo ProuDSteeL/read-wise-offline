@@ -1,13 +1,10 @@
 import { useState, type Dispatch, type ReactNode } from "react";
 import {
   Copy,
-  Bookmark,
-  Languages,
-  MoreHorizontal,
-  ArrowLeft,
-  MessageSquare,
   Globe,
   Share2,
+  ArrowLeft,
+  MessageSquare,
   Trash2,
 } from "lucide-react";
 import { HIGHLIGHT_COLORS, getColor } from "@/lib/highlightColors";
@@ -16,7 +13,7 @@ import type { SelectionState, SelectionAction } from "@/hooks/useTextSelection";
 interface Props {
   state: SelectionState;
   dispatch: Dispatch<SelectionAction>;
-  onSaveNew: () => void;
+  onSaveNew: (color: string) => void;
   onColorChange: (color: string) => void;
   onCopy: (text: string) => void;
   onShare: (text: string) => void;
@@ -49,10 +46,6 @@ function Caret({ arrowBelow }: { arrowBelow: boolean }) {
   );
 }
 
-function Divider() {
-  return <div className="h-px bg-border/40" />;
-}
-
 export default function HighlightMenu({
   state,
   dispatch,
@@ -68,11 +61,10 @@ export default function HighlightMenu({
   if (state.phase === "idle") return null;
 
   const menuPos = state.menuPos;
-  const text = state.phase === "selected" || state.phase === "selected-more" || state.phase === "saving"
+  const text = state.phase === "selected" || state.phase === "saving"
     ? state.text
     : state.highlight.text;
 
-  // Sync note value when entering editing-note
   const currentNote = (state.phase === "editing" || state.phase === "editing-note")
     ? state.highlight.note ?? ""
     : "";
@@ -88,96 +80,102 @@ export default function HighlightMenu({
       );
     }
 
-    // ── Selected: primary toolbar ──
+    // ── Selected: color swatches + quick actions ──
     if (state.phase === "selected") {
       return (
-        <div className="grid grid-cols-4">
-          <ToolbarBtn icon={<Copy size={20} />} label="Копировать" onClick={() => { onCopy(text); dispatch({ type: "DISMISS" }); }} />
-          <ToolbarBtn
-            icon={<Bookmark size={20} />}
-            label="Цитата"
-            onClick={onSaveNew}
-            accent
-          />
-          <ToolbarBtn
-            icon={<Languages size={20} />}
-            label="Перевод"
-            onClick={() => {
-              window.open(`https://translate.google.com/?sl=auto&tl=ru&text=${encodeURIComponent(text)}`, "_blank");
-              dispatch({ type: "DISMISS" });
-            }}
-          />
-          <ToolbarBtn icon={<MoreHorizontal size={20} />} label="Ещё" onClick={() => dispatch({ type: "SHOW_MORE" })} />
+        <div className="flex items-center px-1 py-2">
+          {/* Color swatches */}
+          <div className="flex items-center gap-1.5 px-2.5">
+            {HIGHLIGHT_COLORS.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => onSaveNew(c.key)}
+                className="h-7 w-7 rounded-full border-2 border-transparent transition-transform duration-150 hover:scale-110 active:scale-95"
+                style={{ backgroundColor: c.hex }}
+              />
+            ))}
+          </div>
+          {/* Vertical divider */}
+          <div className="mx-1 h-6 w-px shrink-0 bg-border/50" />
+          {/* Quick actions */}
+          <div className="flex items-center">
+            <ActionBtn
+              icon={<Copy size={18} />}
+              label="Копировать"
+              onClick={() => { onCopy(text); dispatch({ type: "DISMISS" }); }}
+            />
+            <ActionBtn
+              icon={<Globe size={18} />}
+              label="Поиск"
+              onClick={() => {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(text)}`, "_blank");
+                dispatch({ type: "DISMISS" });
+              }}
+            />
+            <ActionBtn
+              icon={<Share2 size={18} />}
+              label="Поделиться"
+              onClick={() => { onShare(text); dispatch({ type: "DISMISS" }); }}
+            />
+          </div>
         </div>
       );
     }
 
-    // ── Selected-more: submenu ──
-    if (state.phase === "selected-more") {
-      return (
-        <div>
-          <button
-            onClick={() => dispatch({ type: "SHOW_BACK" })}
-            className="flex w-full items-center gap-2 px-4 py-3.5 text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <Divider />
-          <SubMenuItem
-            label="ЗАМЕТКА"
-            onClick={() => {
-              onSaveNew();
-            }}
-          />
-          <Divider />
-          <SubMenuItem
-            label="ВЕБ ПОИСК"
-            onClick={() => {
-              window.open(`https://www.google.com/search?q=${encodeURIComponent(text)}`, "_blank");
-              dispatch({ type: "DISMISS" });
-            }}
-          />
-          <Divider />
-          <SubMenuItem
-            label="ПОДЕЛИТЬСЯ"
-            onClick={() => { onShare(text); dispatch({ type: "DISMISS" }); }}
-          />
-        </div>
-      );
-    }
-
-    // ── Editing: edit toolbar ──
+    // ── Editing: color swatches (with active) + edit actions ──
     if (state.phase === "editing") {
       const currentColor = state.highlight.color ?? "yellow";
+      const activeColor = getColor(currentColor);
       return (
-        <>
-          {/* Color picker row */}
-          <div className="flex items-center justify-center gap-3 px-4 py-3">
+        <div className="flex items-center px-1 py-2">
+          {/* Color swatches with active indicator */}
+          <div className="flex items-center gap-1.5 px-2.5">
             {HIGHLIGHT_COLORS.map((c) => (
               <button
                 key={c.key}
                 onClick={() => onColorChange(c.key)}
                 className={`h-7 w-7 rounded-full border-2 transition-all duration-150 ${
                   currentColor === c.key
-                    ? `border-white/80 scale-125 ring-2 ${c.ring} ring-offset-2`
-                    : "border-transparent hover:scale-110"
+                    ? "border-white/80 scale-125"
+                    : "border-transparent hover:scale-110 active:scale-95"
                 }`}
-                style={{ backgroundColor: c.hex }}
+                style={{
+                  backgroundColor: c.hex,
+                  boxShadow: currentColor === c.key ? `0 0 0 2.5px ${activeColor.hex}` : undefined,
+                }}
               />
             ))}
           </div>
-          <Divider />
-          {/* Action buttons */}
-          <div className="grid grid-cols-4">
-            <ToolbarBtn icon={<Copy size={20} />} label="Копировать" onClick={() => { onCopy(state.highlight.text); dispatch({ type: "DISMISS" }); }} />
-            <ToolbarBtn icon={<MessageSquare size={20} />} label="Заметка" onClick={() => {
-              setNoteValue(state.highlight.note ?? "");
-              dispatch({ type: "OPEN_NOTE" });
-            }} />
-            <ToolbarBtn icon={<Share2 size={20} />} label="Поделиться" onClick={() => { onShare(state.highlight.text); dispatch({ type: "DISMISS" }); }} />
-            <ToolbarBtn icon={<Trash2 size={20} />} label="Удалить" onClick={onDelete} danger />
+          {/* Vertical divider */}
+          <div className="mx-1 h-6 w-px shrink-0 bg-border/50" />
+          {/* Edit actions */}
+          <div className="flex items-center">
+            <ActionBtn
+              icon={<Copy size={18} />}
+              label="Копировать"
+              onClick={() => { onCopy(state.highlight.text); dispatch({ type: "DISMISS" }); }}
+            />
+            <ActionBtn
+              icon={<MessageSquare size={18} />}
+              label="Заметка"
+              onClick={() => {
+                setNoteValue(state.highlight.note ?? "");
+                dispatch({ type: "OPEN_NOTE" });
+              }}
+            />
+            <ActionBtn
+              icon={<Share2 size={18} />}
+              label="Поделиться"
+              onClick={() => { onShare(state.highlight.text); dispatch({ type: "DISMISS" }); }}
+            />
+            <ActionBtn
+              icon={<Trash2 size={18} />}
+              label="Удалить"
+              onClick={onDelete}
+              danger
+            />
           </div>
-        </>
+        </div>
       );
     }
 
@@ -207,7 +205,6 @@ export default function HighlightMenu({
               className="w-full min-h-[80px] resize-none rounded-xl bg-secondary/60 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground border-0 outline-none focus:ring-1 focus:ring-primary/40"
               autoFocus
               onFocus={(e) => {
-                // Move cursor to end
                 const len = e.target.value.length;
                 e.target.setSelectionRange(len, len);
               }}
@@ -225,9 +222,7 @@ export default function HighlightMenu({
               Отмена
             </button>
             <button
-              onClick={() => {
-                onNoteSave(noteValue);
-              }}
+              onClick={() => onNoteSave(noteValue)}
               className="flex-1 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
             >
               Сохранить
@@ -240,9 +235,8 @@ export default function HighlightMenu({
     return null;
   };
 
-  // For editing-note, use a wider menu
   const isNoteEditor = state.phase === "editing-note";
-  const menuWidth = isNoteEditor ? 300 : 280;
+  const menuWidth = isNoteEditor ? 300 : 310;
 
   return (
     <div
@@ -265,39 +259,28 @@ export default function HighlightMenu({
 
 // ── Sub-components ──
 
-function ToolbarBtn({
+function ActionBtn({
   icon,
   label,
   onClick,
-  accent,
   danger,
 }: {
   icon: ReactNode;
   label: string;
   onClick: () => void;
-  accent?: boolean;
   danger?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-1.5 py-3.5 px-1 transition-colors hover:bg-secondary/60 tap-highlight ${
-        danger ? "text-destructive" : accent ? "text-primary" : "text-foreground"
+      className={`flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl transition-colors hover:bg-secondary/60 tap-highlight ${
+        danger ? "text-destructive" : "text-foreground"
       }`}
     >
       {icon}
-      <span className="text-[10px] font-semibold uppercase tracking-wide leading-none">{label}</span>
-    </button>
-  );
-}
-
-function SubMenuItem({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full px-5 py-3.5 text-left text-[13px] font-bold tracking-widest text-foreground hover:bg-secondary/60 tap-highlight transition-colors"
-    >
-      {label}
+      <span className="text-[9px] font-semibold uppercase tracking-wide leading-none text-muted-foreground">
+        {label}
+      </span>
     </button>
   );
 }
