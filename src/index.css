@@ -208,6 +208,12 @@
   }
 }
 
+/* Reset browser default mark element yellow background */
+mark {
+  background: none;
+  color: inherit;
+}
+
 /* Reader custom selection styling */
 article ::selection {
   background-color: hsl(157 30% 80% / 0.5);
