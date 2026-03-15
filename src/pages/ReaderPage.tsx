@@ -14,8 +14,9 @@ import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
-import { useTextSelection, type HighlightData } from "@/hooks/useTextSelection";
-import HighlightEditMenu from "@/components/reader/HighlightEditMenu";
+import { useTextSelection, computeMenuPos, type HighlightData } from "@/hooks/useTextSelection";
+import HighlightMenu from "@/components/reader/HighlightMenu";
+import { HIGHLIGHT_COLORS, getColor } from "@/lib/highlightColors";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 type ReaderFont = "sans" | "serif";
@@ -46,14 +47,6 @@ function extractToc(markdown: string): TocEntry[] {
   }
   return entries;
 }
-const HIGHLIGHT_COLORS = [
-  { key: "yellow", bg: "bg-yellow-200/60", border: "border-yellow-400", ring: "ring-yellow-400" },
-  { key: "green", bg: "bg-emerald-200/60", border: "border-emerald-400", ring: "ring-emerald-400" },
-  { key: "blue", bg: "bg-blue-200/60", border: "border-blue-400", ring: "ring-blue-400" },
-  { key: "pink", bg: "bg-pink-200/60", border: "border-pink-400", ring: "ring-pink-400" },
-  { key: "purple", bg: "bg-violet-200/60", border: "border-violet-400", ring: "ring-violet-400" },
-];
-
 const themeClasses: Record<ReaderTheme, string> = { light: "", dark: "dark", sepia: "sepia" };
 
 // Highlight text segments within a string
@@ -79,13 +72,18 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
       parts.push(text.slice(offset, pos));
     }
 
-    const colorKey = hl.color || "yellow";
-    const color = HIGHLIGHT_COLORS.find((c) => c.key === colorKey) || HIGHLIGHT_COLORS[0];
+    const color = getColor(hl.color);
 
     parts.push(
       <mark
         key={`hl-${keyIdx++}`}
-        className={`${color.bg} rounded-sm px-0.5`}
+        className="bg-transparent"
+        style={{
+          backgroundColor: `${color.hex}18`,
+          borderBottom: `2.5px solid ${color.hex}`,
+          borderRadius: "1px",
+          padding: "0 1px",
+        }}
         data-highlight-id={hl.id}
       >
         {hl.text}
@@ -291,24 +289,21 @@ const ReaderPage = () => {
     localStorage.setItem("reader-line-height", String(lineHeight));
   }, [theme, fontFamily, fontSize, lineHeight]);
 
-  // Auto-save highlight when text is selected
-  const lastAutoSavedText = useRef<string | null>(null);
-  useEffect(() => {
-    if (selState.phase !== "selected") {
-      lastAutoSavedText.current = null;
+  // Explicit save when user taps "Цитата"
+  const handleSaveNew = () => {
+    if (selState.phase !== "selected") return;
+    if (!user) { navigate("/auth"); return; }
+    if (highlights.some((h) => h.text === selState.text)) {
+      selDispatch({ type: "DISMISS" });
       return;
     }
-    if (!user) return;
-    if (selState.text === lastAutoSavedText.current) return;
-    if (highlights.some((h) => h.text === selState.text)) return;
     if (!canHighlight(highlights.length)) {
       toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
       return;
     }
-    lastAutoSavedText.current = selState.text;
     selDispatch({ type: "SAVE_STARTED" });
     createHighlight.mutate({ text: selState.text, color: "yellow" });
-  }, [selState.phase, selState.phase === "selected" ? selState.text : null]);
+  };
 
   const favMutation = useMutation({
     mutationFn: async () => {
@@ -609,34 +604,39 @@ const ReaderPage = () => {
       {/* Highlights list */}
       {highlights.length > 0 && (
         <div className="mx-auto max-w-md border-t px-5 py-6">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Мои выделения · {highlights.length}</h3>
+          <h3 className="mb-4 text-sm font-semibold text-foreground">Мои выделения · {highlights.length}</h3>
           <div className="space-y-3">
             {highlights.map((h) => {
-              const color = HIGHLIGHT_COLORS.find((c) => c.key === (h.color || "yellow")) || HIGHLIGHT_COLORS[0];
+              const color = getColor(h.color);
               return (
-                <div key={h.id} className="group rounded-xl bg-card p-3 shadow-card">
-                  <div className="flex items-start gap-2">
-                    <div className={`mt-1 h-2 w-2 shrink-0 rounded-full ${color.bg}`} />
-                    <p className="flex-1 text-sm italic text-muted-foreground">«{h.text}»</p>
-                    <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div
+                  key={h.id}
+                  className="rounded-2xl bg-card p-4 shadow-card"
+                  style={{ borderLeft: `3px solid ${color.hex}` }}
+                >
+                  <div className="flex items-start gap-3">
+                    <p className="flex-1 text-sm leading-relaxed text-foreground">«{h.text}»</p>
+                    <div className="flex shrink-0 gap-1">
                       <button
                         onClick={(e) => {
                           const rect = (e.target as HTMLElement).getBoundingClientRect();
-                          selDispatch({ type: "OPEN_EDIT", highlight: h, menuPos: { top: rect.bottom + 8, left: Math.max(12, Math.min(rect.left - 120, window.innerWidth - 272)) } });
+                          selDispatch({ type: "OPEN_EDIT", highlight: h, menuPos: computeMenuPos(rect) });
                         }}
-                        className="rounded-lg p-1 text-muted-foreground hover:bg-secondary"
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary transition-colors"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => deleteHighlight.mutate(h.id)}
-                        className="rounded-lg p-1 text-destructive hover:bg-destructive/10"
+                        className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
-                  {h.note && <p className="mt-1.5 pl-4 text-xs text-foreground">{h.note}</p>}
+                  {h.note && (
+                    <p className="mt-2 text-xs text-muted-foreground border-t border-border/40 pt-2">{h.note}</p>
+                  )}
                 </div>
               );
             })}
@@ -644,28 +644,29 @@ const ReaderPage = () => {
         </div>
       )}
 
-      {/* Saving indicator */}
-      {selState.phase === "saving" && (
-        <div className="fixed z-50" style={{ top: selState.menuPos.top, left: selState.menuPos.left }}>
-          <div className="w-[140px] animate-fade-in rounded-2xl border border-border/60 bg-card p-3 shadow-elevated flex items-center justify-center gap-2" data-highlight-menu>
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-xs text-muted-foreground">Сохраняю...</span>
-          </div>
-        </div>
-      )}
-
-      {/* Edit highlight menu */}
-      {selState.phase === "editing" && (
-        <HighlightEditMenu
-          highlight={selState.highlight}
-          menuPos={selState.menuPos}
-          onColorChange={(color) => updateHighlight.mutate({ highlightId: selState.highlight.id, color })}
-          onCopy={() => { navigator.clipboard.writeText(selState.highlight.text); toast({ title: "Скопировано" }); }}
-          onShare={() => handleShareText(selState.highlight.text)}
-          onDelete={() => deleteHighlight.mutate(selState.highlight.id)}
+      {/* Highlight menu (handles all phases: selected, selected-more, saving, editing, editing-note) */}
+      {selState.phase !== "idle" && (
+        <HighlightMenu
+          state={selState}
+          dispatch={selDispatch}
+          onSaveNew={handleSaveNew}
+          onColorChange={(color) => {
+            if (selState.phase === "editing" || selState.phase === "editing-note") {
+              updateHighlight.mutate({ highlightId: selState.highlight.id, color });
+            }
+          }}
+          onCopy={(text) => { navigator.clipboard.writeText(text); toast({ title: "Скопировано" }); }}
+          onShare={(text) => handleShareText(text)}
+          onDelete={() => {
+            if (selState.phase === "editing" || selState.phase === "editing-note") {
+              deleteHighlight.mutate(selState.highlight.id);
+            }
+          }}
           onNoteSave={(note) => {
-            updateHighlight.mutate({ highlightId: selState.highlight.id, note });
-            selDispatch({ type: "DISMISS" });
+            if (selState.phase === "editing-note") {
+              updateHighlight.mutate({ highlightId: selState.highlight.id, note });
+              selDispatch({ type: "DISMISS" });
+            }
           }}
         />
       )}
