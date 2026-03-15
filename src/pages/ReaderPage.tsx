@@ -396,8 +396,9 @@ const ReaderPage = () => {
       document.removeEventListener("mousedown", clearSelection);
       container.removeEventListener("click", handleMarkClick);
     };
+  // Re-run once when content mounts (isLoading: true → false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isLoading]);
 
   // Close edit menu on outside click
   useEffect(() => {
