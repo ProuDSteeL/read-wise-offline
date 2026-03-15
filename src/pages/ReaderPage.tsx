@@ -551,9 +551,6 @@ const ReaderPage = () => {
         ref={contentRef}
         className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground select-text`}
         style={{ fontSize: `${fontSize}px`, lineHeight }}
-        onCopy={() => {
-          // Allow copy but prevent native menu
-        }}
       >
         <ReactMarkdown
           components={{
