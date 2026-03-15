@@ -118,7 +118,10 @@ export function useTextSelection(
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
         const sel = window.getSelection();
-        const text = sel?.toString().trim();
+        const text = sel?.toString()
+          .replace(/[\r\n]+/g, " ")
+          .replace(/\s{2,}/g, " ")
+          .trim();
         if (!text || text.length < 3 || !sel?.rangeCount) return;
 
         const range = sel.getRangeAt(0);
