@@ -148,7 +148,7 @@ const BookPage = () => {
     );
   }
 
-  const filteredRelated = relatedBooks?.filter(b => b.id !== id).slice(0, 6);
+  const filteredRelated = similarBooks;
 
   return (
     <div className="animate-fade-in pb-28">
