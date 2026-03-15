@@ -19,6 +19,24 @@ const SHELF_META: Record<ShelfKey, { icon: typeof Heart; label: string }> = {
   highlights: { icon: Highlighter, label: "Заметки и цитаты" },
 };
 
+const HIGHLIGHT_COLORS: Record<string, string> = {
+  yellow: "bg-yellow-200/60 border-yellow-400",
+  green: "bg-emerald-200/60 border-emerald-400",
+  blue: "bg-blue-200/60 border-blue-400",
+  pink: "bg-pink-200/60 border-pink-400",
+  purple: "bg-violet-200/60 border-violet-400",
+};
+
+interface HighlightWithBook {
+  id: string;
+  text: string;
+  note: string | null;
+  color: string | null;
+  created_at: string;
+  book_id: string;
+  books: Book;
+}
+
 const ShelvesPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -26,6 +44,19 @@ const ShelvesPage = () => {
   const { data: counts } = useShelfCounts();
   const { data: downloadCount } = useDownloadCount();
   const [activeShelf, setActiveShelf] = useState<ShelfKey | null>(null);
+
+  const { data: highlightCount } = useQuery({
+    queryKey: ["highlight_count", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_highlights")
+        .select("id", { count: "exact" })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return data?.length ?? 0;
+    },
+    enabled: !!user,
+  });
 
   const { data: shelfBooks, isLoading: loadingBooks } = useQuery({
     queryKey: ["shelf_books", user?.id, activeShelf],
@@ -39,6 +70,7 @@ const ShelvesPage = () => {
         if (error) throw error;
         return data.map((d: any) => ({ ...d.books, _join_id: d.id })) as (Book & { _join_id: string })[];
       }
+      if (activeShelf === "highlights") return [] as (Book & { _join_id: string })[];
       const { data, error } = await supabase
         .from("user_shelves")
         .select("*, books(*)")
@@ -48,11 +80,25 @@ const ShelvesPage = () => {
       if (error) throw error;
       return data.map((d: any) => ({ ...d.books, _join_id: d.id })) as (Book & { _join_id: string })[];
     },
-    enabled: !!user && !!activeShelf,
+    enabled: !!user && !!activeShelf && activeShelf !== "highlights",
+  });
+
+  const { data: highlights, isLoading: loadingHighlights } = useQuery({
+    queryKey: ["all_highlights", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_highlights")
+        .select("*, books(*)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as unknown as HighlightWithBook[];
+    },
+    enabled: !!user && activeShelf === "highlights",
   });
 
   const removeFromShelf = useMutation({
-    mutationFn: async ({ joinId, table }: { joinId: string; table: "user_downloads" | "user_shelves" }) => {
+    mutationFn: async ({ joinId, table }: { joinId: string; table: "user_downloads" | "user_shelves" | "user_highlights" }) => {
       const { error } = await supabase.from(table).delete().eq("id", joinId);
       if (error) throw error;
     },
@@ -60,7 +106,10 @@ const ShelvesPage = () => {
       queryClient.invalidateQueries({ queryKey: ["shelf_books", user?.id, activeShelf] });
       queryClient.invalidateQueries({ queryKey: ["shelf_counts"] });
       queryClient.invalidateQueries({ queryKey: ["download_count"] });
-      toast({ title: "Удалено с полки" });
+      queryClient.invalidateQueries({ queryKey: ["highlight_count"] });
+      queryClient.invalidateQueries({ queryKey: ["all_highlights"] });
+      queryClient.invalidateQueries({ queryKey: ["user_highlights"] });
+      toast({ title: "Удалено" });
     },
   });
 
@@ -84,6 +133,7 @@ const ShelvesPage = () => {
       { key: "read" as const, count: counts?.read ?? 0 },
       { key: "want_to_read" as const, count: counts?.want_to_read ?? 0 },
       { key: "downloads" as const, count: downloadCount ?? 0 },
+      { key: "highlights" as const, count: highlightCount ?? 0 },
     ];
 
     return (
@@ -103,7 +153,7 @@ const ShelvesPage = () => {
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-semibold text-foreground">{label}</p>
-                  <p className="text-xs text-muted-foreground">{count} книг</p>
+                  <p className="text-xs text-muted-foreground">{count} {key === "highlights" ? "цитат" : "книг"}</p>
                 </div>
               </button>
             );
@@ -113,11 +163,106 @@ const ShelvesPage = () => {
     );
   }
 
+  // Highlights detail view
+  if (activeShelf === "highlights") {
+    // Group highlights by book
+    const groupedByBook = (highlights ?? []).reduce<Record<string, { book: Book; items: HighlightWithBook[] }>>((acc, h) => {
+      if (!acc[h.book_id]) {
+        acc[h.book_id] = { book: h.books, items: [] };
+      }
+      acc[h.book_id].items.push(h);
+      return acc;
+    }, {});
+
+    return (
+      <div className="animate-fade-in space-y-4 px-4 pt-14 pb-28">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setActiveShelf(null)} className="flex h-9 w-9 items-center justify-center rounded-xl bg-card shadow-card tap-highlight">
+            <ArrowLeft className="h-4 w-4 text-foreground" />
+          </button>
+          <h1 className="text-xl font-bold text-foreground">Заметки и цитаты</h1>
+        </div>
+
+        {loadingHighlights ? (
+          <div className="flex justify-center py-12">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        ) : !highlights?.length ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <Highlighter className="h-10 w-10 text-muted-foreground/20" />
+            <p className="text-sm text-muted-foreground">Выделяйте текст при чтении,<br/>чтобы сохранить цитаты</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {Object.entries(groupedByBook).map(([bookId, { book, items }]) => (
+              <div key={bookId} className="space-y-2">
+                {/* Book header */}
+                <button
+                  onClick={() => navigate(`/book/${bookId}`)}
+                  className="flex items-center gap-3 tap-highlight w-full text-left"
+                >
+                  {book.cover_url ? (
+                    <img src={book.cover_url} alt="" className="h-12 w-9 rounded-lg object-cover" />
+                  ) : (
+                    <div className="h-12 w-9 rounded-lg bg-muted" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-foreground">{book.title}</p>
+                    <p className="truncate text-xs text-muted-foreground">{book.author} · {items.length} цитат</p>
+                  </div>
+                </button>
+
+                {/* Highlights list */}
+                <div className="space-y-2 pl-1">
+                  {items.map((h) => {
+                    const colorClass = HIGHLIGHT_COLORS[h.color || "yellow"] || HIGHLIGHT_COLORS.yellow;
+                    return (
+                      <div
+                        key={h.id}
+                        className={`relative rounded-xl border-l-4 ${colorClass} p-3`}
+                      >
+                        <button
+                          onClick={() => navigate(`/book/${bookId}/read`)}
+                          className="text-left w-full tap-highlight"
+                        >
+                          <p className="text-sm text-foreground leading-relaxed line-clamp-4">
+                            {h.text}
+                          </p>
+                        </button>
+                        {h.note && (
+                          <div className="mt-2 flex items-start gap-1.5">
+                            <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                            <p className="text-xs text-muted-foreground italic">{h.note}</p>
+                          </div>
+                        )}
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-[10px] text-muted-foreground/60">
+                            {new Date(h.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                          </span>
+                          <button
+                            onClick={() => removeFromShelf.mutate({ joinId: h.id, table: "user_highlights" })}
+                            className="rounded-lg p-1.5 text-muted-foreground/30 hover:text-destructive tap-highlight"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const { icon: ShelfIcon, label: shelfLabel } = SHELF_META[activeShelf];
   const table = activeShelf === "downloads" ? "user_downloads" : "user_shelves";
 
   return (
-    <div className="animate-fade-in space-y-4 px-4 pt-14">
+    <div className="animate-fade-in space-y-4 px-4 pt-14 pb-28">
       <div className="flex items-center gap-3">
         <button onClick={() => setActiveShelf(null)} className="flex h-9 w-9 items-center justify-center rounded-xl bg-card shadow-card tap-highlight">
           <ArrowLeft className="h-4 w-4 text-foreground" />
