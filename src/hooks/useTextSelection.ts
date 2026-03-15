@@ -122,7 +122,7 @@ export function useTextSelection(
           .replace(/[\r\n]+/g, " ")
           .replace(/\s{2,}/g, " ")
           .trim();
-        if (!text || text.length < 3 || !sel?.rangeCount) return;
+        if (!text || text.length < 3 || text.length > 400 || !sel?.rangeCount) return;
 
         const range = sel.getRangeAt(0);
         if (!container.contains(range.commonAncestorContainer)) return;
