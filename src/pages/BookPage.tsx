@@ -4,7 +4,8 @@ import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Eye, 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import BookCard from "@/components/BookCard";
-import { useBook, useKeyIdeas, usePopularBooks } from "@/hooks/useBooks";
+import { useBook, useKeyIdeas } from "@/hooks/useBooks";
+import { useSimilarBooks } from "@/hooks/useSimilarBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +20,7 @@ const BookPage = () => {
   const { user } = useAuth();
   const { data: book, isLoading } = useBook(id!);
   const { data: keyIdeas } = useKeyIdeas(id!);
-  const { data: relatedBooks } = usePopularBooks();
+  const { data: similarBooks } = useSimilarBooks(book);
   const { data: summary } = useSummary(id!);
   const { isDownloaded, download: downloadBook, activeDownloads } = useDownloads();
   const queryClient = useQueryClient();
@@ -147,7 +148,7 @@ const BookPage = () => {
     );
   }
 
-  const filteredRelated = relatedBooks?.filter(b => b.id !== id).slice(0, 6);
+  const filteredRelated = similarBooks;
 
   return (
     <div className="animate-fade-in pb-28">
