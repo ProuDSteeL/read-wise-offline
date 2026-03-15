@@ -32,8 +32,8 @@ export type SelectionAction =
 function selectionReducer(state: SelectionState, action: SelectionAction): SelectionState {
   switch (action.type) {
     case "TEXT_SELECTED":
-      // Only transition from idle
-      if (state.phase !== "idle") return state;
+      // Allow from idle or selected (new selection replaces old)
+      if (state.phase !== "idle" && state.phase !== "selected") return state;
       return { phase: "selected", text: action.text, menuPos: action.menuPos };
 
     case "SAVE_STARTED":
@@ -91,10 +91,6 @@ export function useTextSelection(
     const container = containerRef.current;
     if (!container) return;
 
-    // Prevent native context menu inside reader
-    const onContextMenu = (e: Event) => e.preventDefault();
-    container.addEventListener("contextmenu", onContextMenu);
-
     // 1. selectionchange — single, debounced detector for all input methods
     const onSelectionChange = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -147,7 +143,6 @@ export function useTextSelection(
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      container.removeEventListener("contextmenu", onContextMenu);
       document.removeEventListener("selectionchange", onSelectionChange);
       document.removeEventListener("pointerdown", onPointerDown);
     };
