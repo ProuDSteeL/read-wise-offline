@@ -78,6 +78,7 @@ function computeMenuPos(rect: DOMRect, menuH = 160, menuW = 260): MenuPos {
 export function useTextSelection(
   containerRef: RefObject<HTMLElement | null>,
   highlights: HighlightData[],
+  enabled = true,
 ) {
   const [state, dispatch] = useReducer(selectionReducer, { phase: "idle" });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,6 +87,7 @@ export function useTextSelection(
   highlightsRef.current = highlights;
 
   useEffect(() => {
+    if (!enabled) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -149,7 +151,7 @@ export function useTextSelection(
       document.removeEventListener("selectionchange", onSelectionChange);
       document.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [containerRef]);
+  }, [containerRef, enabled]);
 
   return { state, dispatch };
 }

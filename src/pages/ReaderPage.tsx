@@ -253,7 +253,7 @@ const ReaderPage = () => {
 
   // New selection state
   // Text selection state machine
-  const { state: selState, dispatch: selDispatch } = useTextSelection(contentRef, highlights);
+  const { state: selState, dispatch: selDispatch } = useTextSelection(contentRef, highlights, !isLoading);
 
   // Favorite
   const { data: isFavorite } = useQuery({
@@ -550,12 +550,7 @@ const ReaderPage = () => {
       <article
         ref={contentRef}
         className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground select-text`}
-        style={{
-          fontSize: `${fontSize}px`,
-          lineHeight,
-          WebkitTouchCallout: "none",
-          WebkitUserSelect: "text",
-        }}
+        style={{ fontSize: `${fontSize}px`, lineHeight }}
         onCopy={() => {
           // Allow copy but prevent native menu
         }}
