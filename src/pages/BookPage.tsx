@@ -20,7 +20,7 @@ const BookPage = () => {
   const { user } = useAuth();
   const { data: book, isLoading } = useBook(id!);
   const { data: keyIdeas } = useKeyIdeas(id!);
-  const { data: relatedBooks } = usePopularBooks();
+  const { data: similarBooks } = useSimilarBooks(book);
   const { data: summary } = useSummary(id!);
   const { isDownloaded, download: downloadBook, activeDownloads } = useDownloads();
   const queryClient = useQueryClient();
