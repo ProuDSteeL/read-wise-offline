@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Heart, BookMarked, Download, LogIn, ArrowLeft, Trash2 } from "lucide-react";
+import { BookOpen, Heart, BookMarked, Download, LogIn, ArrowLeft, Trash2, Highlighter, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShelfCounts, useDownloadCount } from "@/hooks/useUserData";
@@ -9,13 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { Book } from "@/hooks/useBooks";
 
-type ShelfKey = "favorite" | "read" | "want_to_read" | "downloads";
+type ShelfKey = "favorite" | "read" | "want_to_read" | "downloads" | "highlights";
 
 const SHELF_META: Record<ShelfKey, { icon: typeof Heart; label: string }> = {
   favorite: { icon: Heart, label: "Избранное" },
   read: { icon: BookOpen, label: "Прочитано" },
   want_to_read: { icon: BookMarked, label: "Хочу прочитать" },
   downloads: { icon: Download, label: "Мои загрузки" },
+  highlights: { icon: Highlighter, label: "Заметки и цитаты" },
 };
 
 const ShelvesPage = () => {
