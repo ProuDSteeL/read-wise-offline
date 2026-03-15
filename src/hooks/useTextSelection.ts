@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useRef, type RefObject } from "react";
+import { useReducer, useEffect, useRef, type RefObject, type Dispatch } from "react";
 
 export interface HighlightData {
   id: string;
@@ -7,21 +7,27 @@ export interface HighlightData {
   color?: string;
 }
 
-interface MenuPos {
+export interface MenuPos {
   top: number;
   left: number;
+  arrowBelow: boolean;
 }
 
 // ── State machine ──
 
 export type SelectionState =
   | { phase: "idle" }
-  | { phase: "selected"; text: string; menuPos: MenuPos }
-  | { phase: "saving"; text: string; menuPos: MenuPos }
-  | { phase: "editing"; highlight: HighlightData; menuPos: MenuPos };
+  | { phase: "selected";      text: string;             menuPos: MenuPos }
+  | { phase: "selected-more"; text: string;             menuPos: MenuPos }
+  | { phase: "saving";        text: string;             menuPos: MenuPos }
+  | { phase: "editing";       highlight: HighlightData; menuPos: MenuPos }
+  | { phase: "editing-note";  highlight: HighlightData; menuPos: MenuPos };
 
 export type SelectionAction =
   | { type: "TEXT_SELECTED"; text: string; menuPos: MenuPos }
+  | { type: "SHOW_MORE" }
+  | { type: "SHOW_BACK" }
+  | { type: "OPEN_NOTE" }
   | { type: "SAVE_STARTED" }
   | { type: "SAVE_COMPLETED"; highlight: HighlightData }
   | { type: "SAVE_FAILED" }
@@ -29,12 +35,26 @@ export type SelectionAction =
   | { type: "UPDATE_EDITING"; highlight: HighlightData }
   | { type: "DISMISS" };
 
+export type { Dispatch };
+
 function selectionReducer(state: SelectionState, action: SelectionAction): SelectionState {
   switch (action.type) {
     case "TEXT_SELECTED":
-      // Allow from idle or selected (new selection replaces old)
       if (state.phase !== "idle" && state.phase !== "selected") return state;
       return { phase: "selected", text: action.text, menuPos: action.menuPos };
+
+    case "SHOW_MORE":
+      if (state.phase === "selected") return { phase: "selected-more", text: state.text, menuPos: state.menuPos };
+      return state;
+
+    case "SHOW_BACK":
+      if (state.phase === "selected-more") return { phase: "selected", text: state.text, menuPos: state.menuPos };
+      if (state.phase === "editing-note") return { phase: "editing", highlight: state.highlight, menuPos: state.menuPos };
+      return state;
+
+    case "OPEN_NOTE":
+      if (state.phase === "editing") return { phase: "editing-note", highlight: state.highlight, menuPos: state.menuPos };
+      return state;
 
     case "SAVE_STARTED":
       if (state.phase !== "selected") return state;
@@ -52,8 +72,9 @@ function selectionReducer(state: SelectionState, action: SelectionAction): Selec
       return { phase: "editing", highlight: action.highlight, menuPos: action.menuPos };
 
     case "UPDATE_EDITING":
-      if (state.phase !== "editing") return state;
-      return { ...state, highlight: action.highlight };
+      if (state.phase === "editing") return { ...state, highlight: action.highlight };
+      if (state.phase === "editing-note") return { ...state, highlight: action.highlight };
+      return state;
 
     case "DISMISS":
       return { phase: "idle" };
@@ -65,11 +86,12 @@ function selectionReducer(state: SelectionState, action: SelectionAction): Selec
 
 // ── Menu positioning ──
 
-function computeMenuPos(rect: DOMRect, menuH = 160, menuW = 260): MenuPos {
-  const above = rect.top > menuH;
+export function computeMenuPos(rect: DOMRect, menuH = 160, menuW = 280): MenuPos {
+  const above = rect.top > menuH + 16;
   return {
-    top: above ? rect.top - menuH - 4 : rect.bottom + 8,
+    top: above ? rect.top - menuH - 8 : rect.bottom + 12,
     left: Math.max(12, Math.min(rect.left + rect.width / 2 - menuW / 2, window.innerWidth - menuW - 12)),
+    arrowBelow: !above,
   };
 }
 
@@ -82,7 +104,6 @@ export function useTextSelection(
 ) {
   const [state, dispatch] = useReducer(selectionReducer, { phase: "idle" });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Keep highlights in a ref so pointerdown handler can read latest without re-registering
   const highlightsRef = useRef(highlights);
   highlightsRef.current = highlights;
 
@@ -91,7 +112,6 @@ export function useTextSelection(
     const container = containerRef.current;
     if (!container) return;
 
-    // 1. selectionchange — single, debounced detector for all input methods
     const onSelectionChange = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
 
@@ -112,29 +132,24 @@ export function useTextSelection(
       }, 200);
     };
 
-    // 2. pointerdown — unified dismiss / mark-click handler
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
 
-      // Clicking inside the menu — do nothing
       if (target.closest("[data-highlight-menu]")) return;
 
-      // Clicking on an existing highlight mark — open edit
       const mark = target.closest("mark[data-highlight-id]");
       if (mark) {
         const hlId = mark.getAttribute("data-highlight-id");
         const hl = highlightsRef.current.find((h) => h.id === hlId);
         if (hl) {
-          // Don't open edit if user is selecting text
           const sel = window.getSelection();
           if (sel?.toString().trim()) return;
-          const rect = mark.getBoundingClientRect();
+          const rect = (mark as HTMLElement).getBoundingClientRect();
           dispatch({ type: "OPEN_EDIT", highlight: hl, menuPos: computeMenuPos(rect) });
           return;
         }
       }
 
-      // Clicking anywhere else — dismiss
       dispatch({ type: "DISMISS" });
     };
 
