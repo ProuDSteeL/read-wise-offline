@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Trash2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
 import { useNativeSelection } from "@/hooks/useNativeSelection";
@@ -56,102 +57,39 @@ function extractToc(markdown: string): TocEntry[] {
 }
 const themeClasses: Record<ReaderTheme, string> = { light: "", dark: "dark", sepia: "sepia" };
 
+/** Escape HTML special chars to prevent XSS when injecting into markdown */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 /**
- * Apply highlights via DOM manipulation.
- * Walks text nodes inside `container`, finds matching highlight text, wraps in <mark>.
+ * Inject <mark> tags into markdown string for each highlight.
+ * The modified string is passed to ReactMarkdown + rehype-raw,
+ * so highlights are part of React's rendering — no DOM hacks.
  */
-function applyDomHighlights(
-  container: HTMLElement,
+function injectHighlightsIntoMarkdown(
+  markdown: string,
   highlights: Array<{ id: string; text: string; note: string | null; color?: string }>,
-) {
-  // 1. Remove existing marks
-  container.querySelectorAll("mark[data-hl]").forEach((mark) => {
-    const parent = mark.parentNode!;
-    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-    parent.removeChild(mark);
-    parent.normalize(); // merge adjacent text nodes
-  });
+): string {
+  if (!highlights.length) return markdown;
 
-  if (!highlights.length) return;
+  let result = markdown;
+  // Sort longest first to avoid partial matches
+  const sorted = [...highlights].sort((a, b) => b.text.length - a.text.length);
 
-  // 2. Collect all text nodes
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-  const textNodes: Text[] = [];
-  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
-
-  // 3. For each highlight, find and wrap
-  for (const hl of highlights) {
+  for (const hl of sorted) {
     const norm = hl.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
     if (!norm) continue;
 
     const color = getColor(hl.color);
+    const idx = result.indexOf(norm);
+    if (idx === -1) continue;
 
-    // Build full text map to find position across nodes
-    let fullText = "";
-    const nodeMap: Array<{ node: Text; start: number }> = [];
-    for (const node of textNodes) {
-      nodeMap.push({ node, start: fullText.length });
-      fullText += node.textContent ?? "";
-    }
-
-    const matchIdx = fullText.indexOf(norm);
-    if (matchIdx === -1) continue;
-    const matchEnd = matchIdx + norm.length;
-
-    // Find which text nodes are involved
-    const affectedNodes: Array<{ node: Text; localStart: number; localEnd: number }> = [];
-    for (const { node, start } of nodeMap) {
-      const nodeEnd = start + (node.textContent?.length ?? 0);
-      if (nodeEnd <= matchIdx || start >= matchEnd) continue;
-      affectedNodes.push({
-        node,
-        localStart: Math.max(0, matchIdx - start),
-        localEnd: Math.min(node.textContent?.length ?? 0, matchEnd - start),
-      });
-    }
-
-    // Wrap matched portions in <mark>
-    for (const { node, localStart, localEnd } of affectedNodes) {
-      const text = node.textContent ?? "";
-      if (localStart === 0 && localEnd === text.length) {
-        // Wrap entire node
-        const mark = document.createElement("mark");
-        mark.setAttribute("data-hl", hl.id);
-        mark.className = "bg-transparent cursor-pointer";
-        mark.style.backgroundColor = `${color.hex}18`;
-        mark.style.borderBottom = `2.5px solid ${color.hex}`;
-        mark.style.borderRadius = "1px";
-        mark.style.padding = "0 1px";
-        node.parentNode!.insertBefore(mark, node);
-        mark.appendChild(node);
-      } else {
-        // Split node and wrap the middle part
-        const before = text.slice(0, localStart);
-        const match = text.slice(localStart, localEnd);
-        const after = text.slice(localEnd);
-
-        const mark = document.createElement("mark");
-        mark.setAttribute("data-hl", hl.id);
-        mark.className = "bg-transparent cursor-pointer";
-        mark.style.backgroundColor = `${color.hex}18`;
-        mark.style.borderBottom = `2.5px solid ${color.hex}`;
-        mark.style.borderRadius = "1px";
-        mark.style.padding = "0 1px";
-        mark.textContent = match;
-
-        const parent = node.parentNode!;
-        if (after) parent.insertBefore(document.createTextNode(after), node.nextSibling);
-        parent.insertBefore(mark, node.nextSibling);
-        node.textContent = before;
-        if (!before) parent.removeChild(node);
-      }
-    }
-
-    // Rebuild textNodes list after DOM modification
-    textNodes.length = 0;
-    const w2 = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-    while (w2.nextNode()) textNodes.push(w2.currentNode as Text);
+    const tag = `<mark data-hl="${escapeHtml(hl.id)}" style="background-color:${color.hex}18;border-bottom:2.5px solid ${color.hex};border-radius:1px;padding:0 1px;cursor:pointer">`;
+    result = result.slice(0, idx) + tag + norm + "</mark>" + result.slice(idx + norm.length);
   }
+
+  return result;
 }
 
 const ReaderPage = () => {
@@ -408,13 +346,6 @@ const ReaderPage = () => {
     },
   });
 
-  // Apply highlights via DOM after EVERY render (before browser paint).
-  // Must run on every render because React reconciliation can overwrite our <mark> nodes.
-  useLayoutEffect(() => {
-    if (!contentRef.current) return;
-    applyDomHighlights(contentRef.current, highlights);
-  });
-
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -548,6 +479,7 @@ const ReaderPage = () => {
         }}
       >
         <ReactMarkdown
+          rehypePlugins={[rehypeRaw]}
           components={{
             h1: ({ children }) => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
@@ -589,7 +521,10 @@ const ReaderPage = () => {
             hr: () => <hr className="my-6 border-border" />,
           }}
         >
-          {hasAccess ? summary.content : summary.content.slice(0, Math.floor(summary.content.length * 0.2))}
+          {injectHighlightsIntoMarkdown(
+            hasAccess ? summary.content : summary.content.slice(0, Math.floor(summary.content.length * 0.2)),
+            highlights,
+          )}
         </ReactMarkdown>
         {!hasAccess && (
           <div className="relative -mt-16 pt-16 bg-gradient-to-t from-background via-background to-transparent">
