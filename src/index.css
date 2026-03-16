@@ -214,7 +214,6 @@ mark {
   color: inherit;
 }
 
-/* Native selection is disabled on the reader article (user-select: none in JS).
-   Custom selection is rendered via SelectionOverlay.tsx using getClientRects(). */
-article ::selection     { background-color: rgba(59, 130, 246, 0.22); color: inherit; }
-article ::-moz-selection { background-color: rgba(59, 130, 246, 0.22); color: inherit; }
+/* Reader text selection highlight color */
+article ::selection     { background-color: rgba(59, 130, 246, 0.25); color: inherit; }
+article ::-moz-selection { background-color: rgba(59, 130, 246, 0.25); color: inherit; }
