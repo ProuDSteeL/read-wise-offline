@@ -177,6 +177,22 @@ const ReaderPage = () => {
   // Native selection
   const { selection, clearSelection: clearNativeSelection } = useNativeSelection(contentRef, !isLoading);
 
+  // Highlights query (must be before useEffects that reference it)
+  const { data: highlights = [] } = useQuery({
+    queryKey: ["highlights", user?.id, id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_highlights")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("book_id", id!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as HighlightData[];
+    },
+    enabled: !!user && !!id,
+  });
+
   // When native selection changes, show/hide new-selection toolbar
   useEffect(() => {
     if (selection && selection.text.length > 0) {
