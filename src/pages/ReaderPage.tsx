@@ -521,6 +521,7 @@ const ReaderPage = () => {
         }}
       >
         <ReactMarkdown
+          key={highlights.map(h => h.id).join(",")}
           components={{
             h1: ({ children }) => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
