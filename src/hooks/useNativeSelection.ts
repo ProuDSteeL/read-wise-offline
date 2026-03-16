@@ -6,20 +6,21 @@ export interface SelectionInfo {
 }
 
 /**
- * Listens to native browser `selectionchange` events and reports
- * the selected text + bounding rect when the selection is within
- * the given container element.
+ * Tracks native browser text selection within a container.
+ * Shows selection only after the user lifts their finger/mouse (pointerup).
  */
 export function useNativeSelection(
   containerRef: RefObject<HTMLElement | null>,
   enabled = true,
 ) {
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
-  const selRef = useRef(selection);
-  selRef.current = selection;
+
+  // Track pending selection during drag (not yet committed)
+  const pendingRef = useRef<SelectionInfo | null>(null);
 
   const clearSelection = useCallback(() => {
     window.getSelection()?.removeAllRanges();
+    pendingRef.current = null;
     setSelection(null);
   }, []);
 
@@ -29,8 +30,7 @@ export function useNativeSelection(
     const onSelectionChange = () => {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !sel.rangeCount) {
-        // Only clear if we had a selection before
-        if (selRef.current) setSelection(null);
+        pendingRef.current = null;
         return;
       }
 
@@ -38,26 +38,24 @@ export function useNativeSelection(
       const container = containerRef.current;
       if (!container) return;
 
-      // Check if selection is within our container
       if (
         !container.contains(range.startContainer) ||
         !container.contains(range.endContainer)
       ) {
-        if (selRef.current) setSelection(null);
+        pendingRef.current = null;
         return;
       }
 
       const text = sel.toString().trim();
       if (!text) {
-        if (selRef.current) setSelection(null);
+        pendingRef.current = null;
         return;
       }
 
-      // Get the bounding rect of the selection
+      // Compute bounding rect from all client rects
       const rects = range.getClientRects();
       if (!rects.length) return;
 
-      // Use the union of all rects
       let top = Infinity, left = Infinity, bottom = -Infinity, right = -Infinity;
       for (let i = 0; i < rects.length; i++) {
         const r = rects[i];
@@ -68,12 +66,29 @@ export function useNativeSelection(
         right = Math.max(right, r.right);
       }
 
-      const rect = new DOMRect(left, top, right - left, bottom - top);
-      setSelection({ text, rect });
+      pendingRef.current = { text, rect: new DOMRect(left, top, right - left, bottom - top) };
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      // Don't dismiss when tapping the quote menu
+      if ((e.target as HTMLElement).closest("[data-highlight-menu]")) return;
+
+      if (pendingRef.current) {
+        // User finished selecting — show the toolbar
+        setSelection({ ...pendingRef.current });
+      } else {
+        // Tap with no selection — clear
+        setSelection(null);
+      }
     };
 
     document.addEventListener("selectionchange", onSelectionChange);
-    return () => document.removeEventListener("selectionchange", onSelectionChange);
+    document.addEventListener("pointerup", onPointerUp);
+
+    return () => {
+      document.removeEventListener("selectionchange", onSelectionChange);
+      document.removeEventListener("pointerup", onPointerUp);
+    };
   }, [containerRef, enabled]);
 
   return { selection, clearSelection };
