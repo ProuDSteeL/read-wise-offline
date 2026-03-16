@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Pencil, Trash2, Headphones, List } from "lucide-react";
+import { X, Settings2, Heart, Trash2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
@@ -16,7 +16,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
 import { useNativeSelection } from "@/hooks/useNativeSelection";
 import SelectionToolbar from "@/components/reader/SelectionToolbar";
-import { HIGHLIGHT_COLORS, getColor } from "@/lib/highlightColors";
+import { getColor } from "@/lib/highlightColors";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 type ReaderFont = "sans" | "serif";
@@ -132,11 +132,6 @@ function highlightChildren(
   return children;
 }
 
-type ToolbarMode =
-  | { type: "new-selection"; selection: { text: string; rect: DOMRect } }
-  | { type: "edit-highlight"; highlight: HighlightData; rect: DOMRect }
-  | { type: "note-editor"; highlight: HighlightData; rect: DOMRect };
-
 const ReaderPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -171,11 +166,8 @@ const ReaderPage = () => {
     return !!locState?.autoPlayAudio || audioCtx.state.bookId === id;
   });
 
-  // Toolbar state
-  const [toolbarMode, setToolbarMode] = useState<ToolbarMode | null>(null);
-
   // Native selection
-  const { selection, clearSelection: clearNativeSelection } = useNativeSelection(contentRef, !isLoading);
+  const { selection, clearSelection } = useNativeSelection(contentRef, !isLoading);
 
   // Highlights query (must be before useEffects that reference it)
   const { data: highlights = [] } = useQuery({
@@ -192,52 +184,6 @@ const ReaderPage = () => {
     },
     enabled: !!user && !!id,
   });
-
-  // When native selection changes, show/hide new-selection toolbar
-  useEffect(() => {
-    if (selection && selection.text.length > 0) {
-      // Only show new-selection toolbar if we're not editing a highlight
-      if (!toolbarMode || toolbarMode.type === "new-selection") {
-        setToolbarMode({ type: "new-selection", selection });
-      }
-    } else {
-      // Selection cleared — dismiss new-selection toolbar only
-      if (toolbarMode?.type === "new-selection") {
-        setToolbarMode(null);
-      }
-    }
-  }, [selection]);
-
-  // Handle tapping on existing highlight marks
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const onClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Don't interfere with toolbar clicks
-      if (target.closest("[data-highlight-menu]")) return;
-
-      const mark = target.closest("mark[data-highlight-id]");
-      if (mark) {
-        const hlId = mark.getAttribute("data-highlight-id");
-        const hl = highlights.find((h) => h.id === hlId);
-        if (hl) {
-          e.preventDefault();
-          clearNativeSelection();
-          const rect = mark.getBoundingClientRect();
-          setToolbarMode({ type: "edit-highlight", highlight: hl, rect });
-        }
-        return;
-      }
-
-      // Tap outside highlight and outside toolbar → dismiss edit toolbar
-      if (toolbarMode && toolbarMode.type !== "new-selection" && !target.closest("[data-highlight-menu]")) {
-        setToolbarMode(null);
-      }
-    };
-    el.addEventListener("click", onClick);
-    return () => el.removeEventListener("click", onClick);
-  }, [highlights, toolbarMode, clearNativeSelection]);
 
   // Start audio when mini-player is shown
   useEffect(() => {
@@ -338,21 +284,20 @@ const ReaderPage = () => {
   });
 
 
-  // Save highlight
-  const handleSaveNew = (color: string) => {
-    if (!toolbarMode || toolbarMode.type !== "new-selection") return;
+  // Save quote
+  const handleQuote = () => {
+    if (!selection) return;
     if (!user) { navigate("/auth"); return; }
-    const text = toolbarMode.selection.text;
+    const text = selection.text;
     if (highlights.some((h) => h.text === text)) {
-      clearNativeSelection();
-      setToolbarMode(null);
+      clearSelection();
       return;
     }
     if (!canHighlight(highlights.length)) {
       toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
       return;
     }
-    createHighlight.mutate({ text, color });
+    createHighlight.mutate({ text, color: "yellow" });
   };
 
   useEffect(() => {
@@ -392,56 +337,13 @@ const ReaderPage = () => {
       if (error) throw error;
       return data as HighlightData;
     },
-    onSuccess: (newHighlight) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      clearNativeSelection();
-      setToolbarMode({ type: "edit-highlight", highlight: newHighlight, rect: toolbarMode?.type === "new-selection" ? toolbarMode.selection.rect : new DOMRect() });
+      clearSelection();
+      toast({ title: "Цитата сохранена" });
     },
     onError: (err: any) => {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
-      setToolbarMode(null);
-    },
-  });
-
-  const updateHighlight = useMutation({
-    mutationFn: async ({ highlightId, note, color }: { highlightId: string; note?: string; color?: string }) => {
-      const updates: Record<string, unknown> = {};
-      if (note !== undefined) updates.note = note || null;
-      if (color !== undefined) updates.color = color;
-      const { error } = await supabase.from("user_highlights").update(updates).eq("id", highlightId);
-      if (error) throw error;
-    },
-    onMutate: async ({ highlightId, note, color }) => {
-      await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
-      const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
-      queryClient.setQueryData<HighlightData[]>(["highlights", user?.id, id], (old) =>
-        old?.map((h) => h.id === highlightId ? {
-          ...h,
-          ...(color !== undefined && { color }),
-          ...(note !== undefined && { note: note || null }),
-        } : h) ?? []
-      );
-      // Update toolbar state for instant feedback
-      if (toolbarMode && (toolbarMode.type === "edit-highlight" || toolbarMode.type === "note-editor")) {
-        const updated = prev?.find((h) => h.id === highlightId);
-        if (updated) {
-          setToolbarMode({
-            ...toolbarMode,
-            highlight: {
-              ...updated,
-              ...(color !== undefined && { color }),
-              ...(note !== undefined && { note: note || null }),
-            },
-          });
-        }
-      }
-      return { prev };
-    },
-    onError: (_e, _v, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
     },
   });
 
@@ -452,25 +354,9 @@ const ReaderPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      toast({ title: "Выделение удалено" });
-      setToolbarMode(null);
+      toast({ title: "Цитата удалена" });
     },
   });
-
-  const handleShareText = async (text: string) => {
-    const shareData = {
-      text: `«${text}»\n— ${book?.title}, ${book?.author}`,
-      url: window.location.href,
-    };
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        await navigator.clipboard.writeText(shareData.text);
-        toast({ title: "Цитата скопирована" });
-      }
-    } catch {}
-  };
 
   const wrapWithHighlights = (children: ReactNode) =>
     highlightChildren(children, highlights);
@@ -676,23 +562,12 @@ const ReaderPage = () => {
                 >
                   <div className="flex items-start gap-3">
                     <p className="flex-1 text-sm leading-relaxed text-foreground">«{h.text}»</p>
-                    <div className="flex shrink-0 gap-1">
-                      <button
-                        onClick={(e) => {
-                          const rect = (e.target as HTMLElement).getBoundingClientRect();
-                          setToolbarMode({ type: "edit-highlight", highlight: h, rect });
-                        }}
-                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary transition-colors"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => deleteHighlight.mutate(h.id)}
-                        className="rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => deleteHighlight.mutate(h.id)}
+                      className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                   {h.note && (
                     <p className="mt-2 text-xs text-muted-foreground border-t border-border/40 pt-2">{h.note}</p>
@@ -705,37 +580,10 @@ const ReaderPage = () => {
       )}
 
       {/* Selection toolbar */}
-      {toolbarMode && (
+      {selection && (
         <SelectionToolbar
-          mode={toolbarMode}
-          onSaveNew={handleSaveNew}
-          onColorChange={(color) => {
-            if (toolbarMode.type === "edit-highlight" || toolbarMode.type === "note-editor") {
-              updateHighlight.mutate({ highlightId: toolbarMode.highlight.id, color });
-            }
-          }}
-          onCopy={(text) => { navigator.clipboard.writeText(text); toast({ title: "Скопировано" }); }}
-          onShare={(text) => handleShareText(text)}
-          onDelete={() => {
-            if (toolbarMode.type === "edit-highlight" || toolbarMode.type === "note-editor") {
-              deleteHighlight.mutate(toolbarMode.highlight.id);
-            }
-          }}
-          onNoteOpen={() => {
-            if (toolbarMode.type === "edit-highlight") {
-              setToolbarMode({ type: "note-editor", highlight: toolbarMode.highlight, rect: toolbarMode.rect });
-            }
-          }}
-          onNoteSave={(note) => {
-            if (toolbarMode.type === "note-editor") {
-              updateHighlight.mutate({ highlightId: toolbarMode.highlight.id, note });
-              setToolbarMode(null);
-            }
-          }}
-          onDismiss={() => {
-            clearNativeSelection();
-            setToolbarMode(null);
-          }}
+          rect={selection.rect}
+          onQuote={handleQuote}
         />
       )}
 
