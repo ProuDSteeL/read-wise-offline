@@ -337,20 +337,6 @@ const ReaderPage = () => {
     enabled: !!user && !!id,
   });
 
-  const { data: highlights = [] } = useQuery({
-    queryKey: ["highlights", user?.id, id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_highlights")
-        .select("*")
-        .eq("user_id", user!.id)
-        .eq("book_id", id!)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data as HighlightData[];
-    },
-    enabled: !!user && !!id,
-  });
 
   // Save highlight
   const handleSaveNew = (color: string) => {
