@@ -14,14 +14,19 @@ import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
-import { useTextSelection, computeMenuPos, type HighlightData } from "@/hooks/useTextSelection";
-import { useCustomSelection } from "@/hooks/useCustomSelection";
-import HighlightMenu from "@/components/reader/HighlightMenu";
-import SelectionOverlay from "@/components/reader/SelectionOverlay";
+import { useNativeSelection } from "@/hooks/useNativeSelection";
+import SelectionToolbar from "@/components/reader/SelectionToolbar";
 import { HIGHLIGHT_COLORS, getColor } from "@/lib/highlightColors";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 type ReaderFont = "sans" | "serif";
+
+interface HighlightData {
+  id: string;
+  text: string;
+  note: string | null;
+  color?: string;
+}
 
 const FONT_SIZES = [14, 16, 18, 20, 22, 24];
 const LINE_HEIGHTS = [1.4, 1.6, 1.8, 2.0];
@@ -59,7 +64,6 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
   let remaining = text;
   let keyIdx = 0;
 
-  // Sort highlights by position in text (first occurrence), normalize whitespace for matching
   const sorted = highlights
     .map((h) => {
       const norm = h.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
@@ -78,13 +82,12 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
     }
 
     const color = getColor(hl.color);
-    // Normalize stored text in case it was saved with newlines (legacy or mobile quirk)
     const normalizedHl = hl.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
 
     parts.push(
       <mark
         key={`hl-${keyIdx++}`}
-        className="bg-transparent"
+        className="bg-transparent cursor-pointer"
         style={{
           backgroundColor: `${color.hex}18`,
           borderBottom: `2.5px solid ${color.hex}`,
@@ -107,7 +110,6 @@ function applyHighlights(text: string, highlights: Array<{ id: string; text: str
   return parts.length ? parts : [text];
 }
 
-// Recursively process React children to highlight text nodes
 function highlightChildren(
   children: ReactNode,
   highlights: Array<{ id: string; text: string; note: string | null; color?: string }>,
@@ -129,6 +131,11 @@ function highlightChildren(
 
   return children;
 }
+
+type ToolbarMode =
+  | { type: "new-selection"; selection: { text: string; rect: DOMRect } }
+  | { type: "edit-highlight"; highlight: HighlightData; rect: DOMRect }
+  | { type: "note-editor"; highlight: HighlightData; rect: DOMRect };
 
 const ReaderPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -161,9 +168,60 @@ const ReaderPage = () => {
   const hasRestoredPosition = useRef(false);
   const { canReadFull, canListenAudio, canHighlight, isPro, freeReadsUsed, freeReadsLimit, highlightLimit } = useAccessControl();
   const [showAudioPlayer, setShowAudioPlayer] = useState(() => {
-    // Show mini-player if coming back from full player or audio is already playing for this book
     return !!locState?.autoPlayAudio || audioCtx.state.bookId === id;
   });
+
+  // Toolbar state
+  const [toolbarMode, setToolbarMode] = useState<ToolbarMode | null>(null);
+
+  // Native selection
+  const { selection, clearSelection: clearNativeSelection } = useNativeSelection(contentRef, !isLoading);
+
+  // When native selection changes, show/hide new-selection toolbar
+  useEffect(() => {
+    if (selection && selection.text.length > 0) {
+      // Only show new-selection toolbar if we're not editing a highlight
+      if (!toolbarMode || toolbarMode.type === "new-selection") {
+        setToolbarMode({ type: "new-selection", selection });
+      }
+    } else {
+      // Selection cleared — dismiss new-selection toolbar only
+      if (toolbarMode?.type === "new-selection") {
+        setToolbarMode(null);
+      }
+    }
+  }, [selection]);
+
+  // Handle tapping on existing highlight marks
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't interfere with toolbar clicks
+      if (target.closest("[data-highlight-menu]")) return;
+
+      const mark = target.closest("mark[data-highlight-id]");
+      if (mark) {
+        const hlId = mark.getAttribute("data-highlight-id");
+        const hl = highlights.find((h) => h.id === hlId);
+        if (hl) {
+          e.preventDefault();
+          clearNativeSelection();
+          const rect = mark.getBoundingClientRect();
+          setToolbarMode({ type: "edit-highlight", highlight: hl, rect });
+        }
+        return;
+      }
+
+      // Tap outside highlight and outside toolbar → dismiss edit toolbar
+      if (toolbarMode && toolbarMode.type !== "new-selection" && !target.closest("[data-highlight-menu]")) {
+        setToolbarMode(null);
+      }
+    };
+    el.addEventListener("click", onClick);
+    return () => el.removeEventListener("click", onClick);
+  }, [highlights, toolbarMode, clearNativeSelection]);
 
   // Start audio when mini-player is shown
   useEffect(() => {
@@ -180,10 +238,8 @@ const ReaderPage = () => {
     }
   };
 
-  // Parse TOC from summary content
   const toc = useMemo(() => summary?.content ? extractToc(summary.content) : [], [summary?.content]);
 
-  // Saved reading progress
   const { data: savedProgress } = useQuery({
     queryKey: ["reader_progress", user?.id, id],
     queryFn: async () => {
@@ -198,7 +254,6 @@ const ReaderPage = () => {
     enabled: !!user && !!id,
   });
 
-  // Restore scroll position once
   useEffect(() => {
     if (savedProgress?.last_position && !isLoading && !hasRestoredPosition.current) {
       hasRestoredPosition.current = true;
@@ -206,7 +261,6 @@ const ReaderPage = () => {
     }
   }, [savedProgress, isLoading]);
 
-  // Scroll tracking + debounced progress save
   const saveProgress = useCallback(
     (percent: number) => {
       if (!user || !id) return;
@@ -237,7 +291,6 @@ const ReaderPage = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      // Flush save on unmount
       if (user && id) {
         clearTimeout(saveProgressTimeout.current);
         const scrollTop = window.scrollY;
@@ -256,7 +309,6 @@ const ReaderPage = () => {
     };
   }, [saveProgress, user, id]);
 
-  // Favorite
   const { data: isFavorite } = useQuery({
     queryKey: ["is_favorite", user?.id, id],
     queryFn: async () => {
@@ -269,7 +321,6 @@ const ReaderPage = () => {
     enabled: !!user && !!id,
   });
 
-  // Highlights
   const { data: highlights = [] } = useQuery({
     queryKey: ["highlights", user?.id, id],
     queryFn: async () => {
@@ -285,32 +336,22 @@ const ReaderPage = () => {
     enabled: !!user && !!id,
   });
 
-  // ── State machine (menu phases) ──────────────────────────────────────────
-  const [selState, selDispatch] = useTextSelection();
-
-  // ── Custom pointer-based selection (replaces native browser selection) ───
-  const { rangeState, draggingHandle, startHandleDrag, clearSelection } = useCustomSelection(
-    contentRef,
-    {
-      enabled: !isLoading,
-      onSelected: useCallback((rs) => {
-        // Compute menu position from the first rect of the selection range
-        const rects = [...rs.range.getClientRects()];
-        if (!rects.length) return;
-        const menuPos = computeMenuPos(rects[0]);
-        selDispatch({ type: "TEXT_SELECTED", text: rs.text, menuPos });
-      }, [selDispatch]),
-      onCleared: useCallback(() => {
-        selDispatch({ type: "DISMISS" });
-      }, [selDispatch]),
-      onHighlightTap: useCallback((hlId, element) => {
-        const hl = highlights.find((h) => h.id === hlId);
-        if (!hl) return;
-        const rect = element.getBoundingClientRect();
-        selDispatch({ type: "OPEN_EDIT", highlight: hl, menuPos: computeMenuPos(rect) });
-      }, [highlights, selDispatch]),
-    },
-  );
+  // Save highlight
+  const handleSaveNew = (color: string) => {
+    if (!toolbarMode || toolbarMode.type !== "new-selection") return;
+    if (!user) { navigate("/auth"); return; }
+    const text = toolbarMode.selection.text;
+    if (highlights.some((h) => h.text === text)) {
+      clearNativeSelection();
+      setToolbarMode(null);
+      return;
+    }
+    if (!canHighlight(highlights.length)) {
+      toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
+      return;
+    }
+    createHighlight.mutate({ text, color });
+  };
 
   useEffect(() => {
     localStorage.setItem("reader-theme", theme);
@@ -318,22 +359,6 @@ const ReaderPage = () => {
     localStorage.setItem("reader-font-size", String(fontSize));
     localStorage.setItem("reader-line-height", String(lineHeight));
   }, [theme, fontFamily, fontSize, lineHeight]);
-
-  // Save highlight with user-chosen color
-  const handleSaveNew = (color: string) => {
-    if (selState.phase !== "selected") return;
-    if (!user) { navigate("/auth"); return; }
-    if (highlights.some((h) => h.text === selState.text)) {
-      selDispatch({ type: "DISMISS" });
-      return;
-    }
-    if (!canHighlight(highlights.length)) {
-      toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
-      return;
-    }
-    selDispatch({ type: "SAVE_STARTED" });
-    createHighlight.mutate({ text: selState.text, color });
-  };
 
   const favMutation = useMutation({
     mutationFn: async () => {
@@ -357,7 +382,6 @@ const ReaderPage = () => {
     },
   });
 
-  // Create highlight — returns created row for immediate editing
   const createHighlight = useMutation({
     mutationFn: async ({ text, note, color }: { text: string; note?: string; color: string }) => {
       const { data, error } = await supabase.from("user_highlights").insert({
@@ -368,16 +392,15 @@ const ReaderPage = () => {
     },
     onSuccess: (newHighlight) => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      clearSelection(); // dismiss custom overlay
-      selDispatch({ type: "SAVE_COMPLETED", highlight: newHighlight });
+      clearNativeSelection();
+      setToolbarMode({ type: "edit-highlight", highlight: newHighlight, rect: toolbarMode?.type === "new-selection" ? toolbarMode.selection.rect : new DOMRect() });
     },
     onError: (err: any) => {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
-      selDispatch({ type: "SAVE_FAILED" });
+      setToolbarMode(null);
     },
   });
 
-  // Update highlight (note and/or color) — optimistic update for instant visual feedback
   const updateHighlight = useMutation({
     mutationFn: async ({ highlightId, note, color }: { highlightId: string; note?: string; color?: string }) => {
       const updates: Record<string, unknown> = {};
@@ -389,7 +412,6 @@ const ReaderPage = () => {
     onMutate: async ({ highlightId, note, color }) => {
       await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
       const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
-      const updated = prev?.find((h) => h.id === highlightId);
       queryClient.setQueryData<HighlightData[]>(["highlights", user?.id, id], (old) =>
         old?.map((h) => h.id === highlightId ? {
           ...h,
@@ -397,12 +419,19 @@ const ReaderPage = () => {
           ...(note !== undefined && { note: note || null }),
         } : h) ?? []
       );
-      // Update the editing highlight in state machine for instant menu feedback
-      if (updated) {
-        selDispatch({
-          type: "UPDATE_EDITING",
-          highlight: { ...updated, ...(color !== undefined && { color }), ...(note !== undefined && { note: note || null }) },
-        });
+      // Update toolbar state for instant feedback
+      if (toolbarMode && (toolbarMode.type === "edit-highlight" || toolbarMode.type === "note-editor")) {
+        const updated = prev?.find((h) => h.id === highlightId);
+        if (updated) {
+          setToolbarMode({
+            ...toolbarMode,
+            highlight: {
+              ...updated,
+              ...(color !== undefined && { color }),
+              ...(note !== undefined && { note: note || null }),
+            },
+          });
+        }
       }
       return { prev };
     },
@@ -414,7 +443,6 @@ const ReaderPage = () => {
     },
   });
 
-  // Delete highlight
   const deleteHighlight = useMutation({
     mutationFn: async (highlightId: string) => {
       const { error } = await supabase.from("user_highlights").delete().eq("id", highlightId);
@@ -423,7 +451,7 @@ const ReaderPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
       toast({ title: "Выделение удалено" });
-      selDispatch({ type: "DISMISS" });
+      setToolbarMode(null);
     },
   });
 
@@ -442,7 +470,6 @@ const ReaderPage = () => {
     } catch {}
   };
 
-  // Wrapper to inject highlights into markdown text nodes
   const wrapWithHighlights = (children: ReactNode) =>
     highlightChildren(children, highlights);
 
@@ -464,8 +491,6 @@ const ReaderPage = () => {
   }
 
   const fontClass = fontFamily === "serif" ? "font-serif" : "font-sans";
-
-  // Freemium: check access
   const hasAccess = !user || canReadFull(id!);
 
   return (
@@ -578,10 +603,6 @@ const ReaderPage = () => {
         style={{
           fontSize: `${fontSize}px`,
           lineHeight,
-          userSelect: "none",
-          WebkitUserSelect: "none",
-          // @ts-ignore — vendor prefix not in CSSProperties types
-          WebkitTouchCallout: "none",
         }}
       >
         <ReactMarkdown
@@ -657,7 +678,7 @@ const ReaderPage = () => {
                       <button
                         onClick={(e) => {
                           const rect = (e.target as HTMLElement).getBoundingClientRect();
-                          selDispatch({ type: "OPEN_EDIT", highlight: h, menuPos: computeMenuPos(rect) });
+                          setToolbarMode({ type: "edit-highlight", highlight: h, rect });
                         }}
                         className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary transition-colors"
                       >
@@ -681,39 +702,32 @@ const ReaderPage = () => {
         </div>
       )}
 
-      {/* Custom selection overlay + drag handles (visible during "selected" / "saving") */}
-      {rangeState && (selState.phase === "selected" || selState.phase === "saving") && (
-        <SelectionOverlay
-          rangeState={rangeState}
-          dragging={draggingHandle}
-          onStartHandleDrag={startHandleDrag("start")}
-          onEndHandleDrag={startHandleDrag("end")}
-        />
-      )}
-
-      {/* Highlight menu (handles all phases: selected, saving, editing, editing-note) */}
-      {selState.phase !== "idle" && (
-        <HighlightMenu
-          state={selState}
-          dispatch={selDispatch}
+      {/* Selection toolbar */}
+      {toolbarMode && (
+        <SelectionToolbar
+          mode={toolbarMode}
           onSaveNew={handleSaveNew}
           onColorChange={(color) => {
-            if (selState.phase === "editing" || selState.phase === "editing-note") {
-              updateHighlight.mutate({ highlightId: selState.highlight.id, color });
+            if (toolbarMode.type === "edit-highlight" || toolbarMode.type === "note-editor") {
+              updateHighlight.mutate({ highlightId: toolbarMode.highlight.id, color });
             }
           }}
           onCopy={(text) => { navigator.clipboard.writeText(text); toast({ title: "Скопировано" }); }}
           onShare={(text) => handleShareText(text)}
           onDelete={() => {
-            if (selState.phase === "editing" || selState.phase === "editing-note") {
-              deleteHighlight.mutate(selState.highlight.id);
+            if (toolbarMode.type === "edit-highlight" || toolbarMode.type === "note-editor") {
+              deleteHighlight.mutate(toolbarMode.highlight.id);
             }
           }}
           onNoteSave={(note) => {
-            if (selState.phase === "editing-note") {
-              updateHighlight.mutate({ highlightId: selState.highlight.id, note });
-              selDispatch({ type: "DISMISS" });
+            if (toolbarMode.type === "note-editor") {
+              updateHighlight.mutate({ highlightId: toolbarMode.highlight.id, note });
+              setToolbarMode(null);
             }
+          }}
+          onDismiss={() => {
+            clearNativeSelection();
+            setToolbarMode(null);
           }}
         />
       )}
@@ -748,7 +762,7 @@ const ReaderPage = () => {
       {/* Mini audio player */}
       {showAudioPlayer && summary?.audio_url && canListenAudio && (
         <>
-          <div className="h-24" /> {/* Spacer so content isn't hidden behind player */}
+          <div className="h-24" />
           <MiniAudioPlayer
             onClose={() => setShowAudioPlayer(false)}
             onExpand={() => navigate(`/book/${id}/listen`)}
