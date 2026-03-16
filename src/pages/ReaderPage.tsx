@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Trash2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
@@ -408,11 +408,12 @@ const ReaderPage = () => {
     },
   });
 
-  // Apply highlights via DOM after every render / highlights change
-  useEffect(() => {
+  // Apply highlights via DOM after EVERY render (before browser paint).
+  // Must run on every render because React reconciliation can overwrite our <mark> nodes.
+  useLayoutEffect(() => {
     if (!contentRef.current) return;
     applyDomHighlights(contentRef.current, highlights);
-  }, [highlights]);
+  });
 
   if (isLoading) {
     return (
