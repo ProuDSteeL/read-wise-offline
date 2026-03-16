@@ -337,13 +337,28 @@ const ReaderPage = () => {
       if (error) throw error;
       return data as HighlightData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
+    onMutate: async ({ text, note, color }) => {
+      await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
+      const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
+      const optimistic: HighlightData = {
+        id: `temp-${Date.now()}`,
+        text,
+        note: note || null,
+        color,
+      };
+      queryClient.setQueryData<HighlightData[]>(
+        ["highlights", user?.id, id],
+        (old) => [...(old ?? []), optimistic],
+      );
       clearSelection();
-      toast({ title: "Цитата сохранена" });
+      return { prev };
     },
-    onError: (err: any) => {
-      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
+      toast({ title: "Ошибка", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
     },
   });
 
@@ -352,9 +367,21 @@ const ReaderPage = () => {
       const { error } = await supabase.from("user_highlights").delete().eq("id", highlightId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (highlightId) => {
+      await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
+      const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
+      queryClient.setQueryData<HighlightData[]>(
+        ["highlights", user?.id, id],
+        (old) => old?.filter((h) => h.id !== highlightId) ?? [],
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
+      toast({ title: "Ошибка", variant: "destructive" });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      toast({ title: "Цитата удалена" });
     },
   });
 
