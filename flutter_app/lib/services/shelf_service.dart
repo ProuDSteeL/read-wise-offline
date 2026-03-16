@@ -3,7 +3,7 @@ import '../models/enums.dart';
 import 'supabase_service.dart';
 
 class ShelfService {
-  static final _client = SupabaseService.client;
+  static get _client => SupabaseService.client;
 
   static Future<List<UserShelf>> getUserShelves(String userId) async {
     final data = await _client

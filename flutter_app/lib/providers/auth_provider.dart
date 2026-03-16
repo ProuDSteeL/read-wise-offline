@@ -1,21 +1,21 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../services/supabase_service.dart';
 
-class AuthState {
-  final User? user;
-  final Session? session;
+class AppAuthState {
+  final supabase.User? user;
+  final supabase.Session? session;
   final bool loading;
 
-  const AuthState({
+  const AppAuthState({
     this.user,
     this.session,
     this.loading = true,
   });
 
-  AuthState copyWith({User? user, Session? session, bool? loading}) {
-    return AuthState(
+  AppAuthState copyWith({supabase.User? user, supabase.Session? session, bool? loading}) {
+    return AppAuthState(
       user: user ?? this.user,
       session: session ?? this.session,
       loading: loading ?? this.loading,
@@ -23,17 +23,19 @@ class AuthState {
   }
 }
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  StreamSubscription<AuthState>? _subscription;
+class AuthNotifier extends StateNotifier<AppAuthState> {
+  StreamSubscription<supabase.AuthState>? _subscription;
 
-  AuthNotifier() : super(const AuthState()) {
+  AuthNotifier() : super(const AppAuthState()) {
     _init();
   }
 
   void _init() {
+    final client = SupabaseService.client;
+
     // Listen to auth state changes
-    _subscription = AuthService.onAuthStateChange.listen((authState) {
-      state = AuthState(
+    _subscription = client.auth.onAuthStateChange.listen((authState) {
+      state = AppAuthState(
         user: authState.session?.user,
         session: authState.session,
         loading: false,
@@ -41,8 +43,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     });
 
     // Get initial session
-    final session = AuthService.currentSession;
-    state = AuthState(
+    final session = client.auth.currentSession;
+    state = AppAuthState(
       user: session?.user,
       session: session,
       loading: false,
@@ -55,13 +57,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String? name,
   }) async {
     try {
-      await AuthService.signUp(
+      final client = SupabaseService.client;
+      await client.auth.signUp(
         email: email,
         password: password,
-        name: name,
+        data: name != null ? {'full_name': name} : null,
       );
       return null;
-    } on AuthException catch (e) {
+    } on supabase.AuthException catch (e) {
       return e.message;
     } catch (e) {
       return e.toString();
@@ -73,9 +76,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String password,
   }) async {
     try {
-      await AuthService.signIn(email: email, password: password);
+      final client = SupabaseService.client;
+      await client.auth.signInWithPassword(email: email, password: password);
       return null;
-    } on AuthException catch (e) {
+    } on supabase.AuthException catch (e) {
       return e.message;
     } catch (e) {
       return e.toString();
@@ -83,14 +87,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
-    await AuthService.signOut();
+    await SupabaseService.client.auth.signOut();
   }
 
   Future<String?> resetPassword(String email) async {
     try {
-      await AuthService.resetPassword(email);
+      await SupabaseService.client.auth.resetPasswordForEmail(email);
       return null;
-    } on AuthException catch (e) {
+    } on supabase.AuthException catch (e) {
       return e.message;
     } catch (e) {
       return e.toString();
@@ -104,12 +108,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+final authProvider = StateNotifierProvider<AuthNotifier, AppAuthState>((ref) {
   return AuthNotifier();
 });
 
 // Convenience providers
-final currentUserProvider = Provider<User?>((ref) {
+final currentUserProvider = Provider<supabase.User?>((ref) {
   return ref.watch(authProvider).user;
 });
 

@@ -2,7 +2,7 @@ import '../models/user_progress.dart';
 import 'supabase_service.dart';
 
 class ProgressService {
-  static final _client = SupabaseService.client;
+  static get _client => SupabaseService.client;
 
   static Future<List<UserProgress>> getUserProgress(String userId) async {
     final data = await _client
