@@ -52,8 +52,8 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         type: BottomNavigationBarType.fixed,
         showUnselectedLabels: true,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
+        selectedLabelStyle: TextStyle(fontSize: 12),
+        unselectedLabelStyle: TextStyle(fontSize: 12),
       ),
     );
   }
