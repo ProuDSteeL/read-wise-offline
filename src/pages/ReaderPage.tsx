@@ -183,6 +183,7 @@ const ReaderPage = () => {
       return data as HighlightData[];
     },
     enabled: !!user && !!id,
+    staleTime: Infinity,
   });
 
   // Start audio when mini-player is shown
