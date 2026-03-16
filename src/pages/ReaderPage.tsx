@@ -353,12 +353,15 @@ const ReaderPage = () => {
       clearSelection();
       return { prev };
     },
+    onSuccess: (data) => {
+      queryClient.setQueryData<HighlightData[]>(
+        ["highlights", user?.id, id],
+        (old) => old?.map((h) => h.id.startsWith("temp-") ? data : h) ?? [data],
+      );
+    },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
       toast({ title: "Ошибка", variant: "destructive" });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
     },
   });
 
@@ -379,9 +382,6 @@ const ReaderPage = () => {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
       toast({ title: "Ошибка", variant: "destructive" });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
     },
   });
 
