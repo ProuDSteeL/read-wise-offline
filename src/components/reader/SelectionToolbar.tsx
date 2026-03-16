@@ -34,6 +34,7 @@ interface Props {
   onShare: (text: string) => void;
   onDelete: () => void;
   onNoteSave: (note: string) => void;
+  onNoteOpen?: () => void;
   onDismiss: () => void;
 }
 
