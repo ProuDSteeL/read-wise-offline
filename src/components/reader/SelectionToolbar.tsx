@@ -61,6 +61,7 @@ export default function SelectionToolbar({
   onShare,
   onDelete,
   onNoteSave,
+  onNoteOpen,
   onDismiss,
 }: Props) {
   const [noteValue, setNoteValue] = useState("");
