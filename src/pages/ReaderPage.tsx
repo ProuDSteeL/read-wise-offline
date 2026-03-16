@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Trash2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
@@ -56,80 +56,102 @@ function extractToc(markdown: string): TocEntry[] {
 }
 const themeClasses: Record<ReaderTheme, string> = { light: "", dark: "dark", sepia: "sepia" };
 
-// Highlight text segments within a string
-function applyHighlights(text: string, highlights: Array<{ id: string; text: string; note: string | null; color?: string }>): ReactNode[] {
-  if (!highlights.length) return [text];
+/**
+ * Apply highlights via DOM manipulation.
+ * Walks text nodes inside `container`, finds matching highlight text, wraps in <mark>.
+ */
+function applyDomHighlights(
+  container: HTMLElement,
+  highlights: Array<{ id: string; text: string; note: string | null; color?: string }>,
+) {
+  // 1. Remove existing marks
+  container.querySelectorAll("mark[data-hl]").forEach((mark) => {
+    const parent = mark.parentNode!;
+    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+    parent.removeChild(mark);
+    parent.normalize(); // merge adjacent text nodes
+  });
 
-  const parts: ReactNode[] = [];
-  let remaining = text;
-  let keyIdx = 0;
+  if (!highlights.length) return;
 
-  const sorted = highlights
-    .map((h) => {
-      const norm = h.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
-      return { ...h, _norm: norm, idx: remaining.indexOf(norm) };
-    })
-    .filter((h) => h.idx !== -1)
-    .sort((a, b) => a.idx - b.idx);
+  // 2. Collect all text nodes
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
 
-  let offset = 0;
-  for (const hl of sorted) {
-    const pos = text.indexOf(hl._norm, offset);
-    if (pos === -1) continue;
-
-    if (pos > offset) {
-      parts.push(text.slice(offset, pos));
-    }
+  // 3. For each highlight, find and wrap
+  for (const hl of highlights) {
+    const norm = hl.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
+    if (!norm) continue;
 
     const color = getColor(hl.color);
-    const normalizedHl = hl.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
 
-    parts.push(
-      <mark
-        key={`hl-${keyIdx++}`}
-        className="bg-transparent cursor-pointer"
-        style={{
-          backgroundColor: `${color.hex}18`,
-          borderBottom: `2.5px solid ${color.hex}`,
-          borderRadius: "1px",
-          padding: "0 1px",
-        }}
-        data-highlight-id={hl.id}
-      >
-        {normalizedHl}
-      </mark>
-    );
+    // Build full text map to find position across nodes
+    let fullText = "";
+    const nodeMap: Array<{ node: Text; start: number }> = [];
+    for (const node of textNodes) {
+      nodeMap.push({ node, start: fullText.length });
+      fullText += node.textContent ?? "";
+    }
 
-    offset = pos + normalizedHl.length;
-  }
+    const matchIdx = fullText.indexOf(norm);
+    if (matchIdx === -1) continue;
+    const matchEnd = matchIdx + norm.length;
 
-  if (offset < text.length) {
-    parts.push(text.slice(offset));
-  }
+    // Find which text nodes are involved
+    const affectedNodes: Array<{ node: Text; localStart: number; localEnd: number }> = [];
+    for (const { node, start } of nodeMap) {
+      const nodeEnd = start + (node.textContent?.length ?? 0);
+      if (nodeEnd <= matchIdx || start >= matchEnd) continue;
+      affectedNodes.push({
+        node,
+        localStart: Math.max(0, matchIdx - start),
+        localEnd: Math.min(node.textContent?.length ?? 0, matchEnd - start),
+      });
+    }
 
-  return parts.length ? parts : [text];
-}
+    // Wrap matched portions in <mark>
+    for (const { node, localStart, localEnd } of affectedNodes) {
+      const text = node.textContent ?? "";
+      if (localStart === 0 && localEnd === text.length) {
+        // Wrap entire node
+        const mark = document.createElement("mark");
+        mark.setAttribute("data-hl", hl.id);
+        mark.className = "bg-transparent cursor-pointer";
+        mark.style.backgroundColor = `${color.hex}18`;
+        mark.style.borderBottom = `2.5px solid ${color.hex}`;
+        mark.style.borderRadius = "1px";
+        mark.style.padding = "0 1px";
+        node.parentNode!.insertBefore(mark, node);
+        mark.appendChild(node);
+      } else {
+        // Split node and wrap the middle part
+        const before = text.slice(0, localStart);
+        const match = text.slice(localStart, localEnd);
+        const after = text.slice(localEnd);
 
-function highlightChildren(
-  children: ReactNode,
-  highlights: Array<{ id: string; text: string; note: string | null; color?: string }>,
-): ReactNode {
-  if (!highlights.length) return children;
+        const mark = document.createElement("mark");
+        mark.setAttribute("data-hl", hl.id);
+        mark.className = "bg-transparent cursor-pointer";
+        mark.style.backgroundColor = `${color.hex}18`;
+        mark.style.borderBottom = `2.5px solid ${color.hex}`;
+        mark.style.borderRadius = "1px";
+        mark.style.padding = "0 1px";
+        mark.textContent = match;
 
-  if (typeof children === "string") {
-    return <>{applyHighlights(children, highlights)}</>;
-  }
-
-  if (Array.isArray(children)) {
-    return <>{children.map((child, i) => {
-      if (typeof child === "string") {
-        return <React.Fragment key={i}>{applyHighlights(child, highlights)}</React.Fragment>;
+        const parent = node.parentNode!;
+        if (after) parent.insertBefore(document.createTextNode(after), node.nextSibling);
+        parent.insertBefore(mark, node.nextSibling);
+        node.textContent = before;
+        if (!before) parent.removeChild(node);
       }
-      return child;
-    })}</>;
-  }
+    }
 
-  return children;
+    // Rebuild textNodes list after DOM modification
+    textNodes.length = 0;
+    const w2 = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    while (w2.nextNode()) textNodes.push(w2.currentNode as Text);
+  }
 }
 
 const ReaderPage = () => {
@@ -386,8 +408,11 @@ const ReaderPage = () => {
     },
   });
 
-  const wrapWithHighlights = (children: ReactNode) =>
-    highlightChildren(children, highlights);
+  // Apply highlights via DOM after every render / highlights change
+  useEffect(() => {
+    if (!contentRef.current) return;
+    applyDomHighlights(contentRef.current, highlights);
+  }, [highlights]);
 
   if (isLoading) {
     return (
@@ -522,13 +547,12 @@ const ReaderPage = () => {
         }}
       >
         <ReactMarkdown
-          key={highlights.length}
           components={{
             h1: ({ children }) => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
               return (
                 <h1 id={slugify(text)} className="mb-4 mt-8 text-[1.4em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                  {wrapWithHighlights(children)}
+                  {children}
                 </h1>
               );
             },
@@ -536,7 +560,7 @@ const ReaderPage = () => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
               return (
                 <h2 id={slugify(text)} className="mb-3 mt-6 text-[1.2em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                  {wrapWithHighlights(children)}
+                  {children}
                 </h2>
               );
             },
@@ -544,12 +568,12 @@ const ReaderPage = () => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
               return (
                 <h3 id={slugify(text)} className="mb-2 mt-5 text-[1.1em] font-semibold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                  {wrapWithHighlights(children)}
+                  {children}
                 </h3>
               );
             },
             p: ({ children }) => (
-              <p className="mb-4 text-muted-foreground">{wrapWithHighlights(children)}</p>
+              <p className="mb-4 text-muted-foreground">{children}</p>
             ),
             blockquote: ({ children }) => (
               <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
@@ -557,7 +581,7 @@ const ReaderPage = () => {
               </blockquote>
             ),
             li: ({ children }) => (
-              <li className="mb-1 text-muted-foreground">{wrapWithHighlights(children)}</li>
+              <li className="mb-1 text-muted-foreground">{children}</li>
             ),
             strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
             em: ({ children }) => <em className="italic">{children}</em>,
