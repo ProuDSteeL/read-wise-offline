@@ -1,0 +1,51 @@
+name: readwise_offline
+description: ReadWise Offline — book summaries with offline mode
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Routing
+  go_router: ^14.2.0
+
+  # Supabase
+  supabase_flutter: ^2.5.0
+
+  # Offline storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Audio
+  just_audio: ^0.9.37
+
+  # Markdown rendering
+  flutter_markdown: ^0.7.1
+
+  # Network monitoring
+  connectivity_plus: ^6.0.3
+
+  # UI utilities
+  cached_network_image: ^3.3.1
+  google_fonts: ^6.2.1
+
+  # Functional utilities
+  uuid: ^4.3.3
+  intl: ^0.19.0
+  url_launcher: ^6.2.5
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
