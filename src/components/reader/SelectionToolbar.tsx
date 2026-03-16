@@ -177,6 +177,8 @@ export default function SelectionToolbar({
                 label="Заметка"
                 onClick={() => {
                   setNoteValue(mode.highlight.note ?? "");
+                  // Parent should switch to note-editor mode
+                  onNoteOpen?.();
                 }}
               />
               <ActionBtn icon={<Share2 size={18} />} label="Поделиться" onClick={() => { onShare(text); onDismiss(); }} />
