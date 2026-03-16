@@ -15,7 +15,9 @@ import ReactMarkdown from "react-markdown";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
 import { useTextSelection, computeMenuPos, type HighlightData } from "@/hooks/useTextSelection";
+import { useCustomSelection } from "@/hooks/useCustomSelection";
 import HighlightMenu from "@/components/reader/HighlightMenu";
+import SelectionOverlay from "@/components/reader/SelectionOverlay";
 import { HIGHLIGHT_COLORS, getColor } from "@/lib/highlightColors";
 
 type ReaderTheme = "light" | "dark" | "sepia";
@@ -283,8 +285,32 @@ const ReaderPage = () => {
     enabled: !!user && !!id,
   });
 
-  // Text selection state machine — must be after highlights declaration
-  const { state: selState, dispatch: selDispatch } = useTextSelection(contentRef, highlights, !isLoading);
+  // ── State machine (menu phases) ──────────────────────────────────────────
+  const [selState, selDispatch] = useTextSelection();
+
+  // ── Custom pointer-based selection (replaces native browser selection) ───
+  const { rangeState, draggingHandle, startHandleDrag, clearSelection } = useCustomSelection(
+    contentRef,
+    {
+      enabled: !isLoading,
+      onSelected: useCallback((rs) => {
+        // Compute menu position from the first rect of the selection range
+        const rects = [...rs.range.getClientRects()];
+        if (!rects.length) return;
+        const menuPos = computeMenuPos(rects[0]);
+        selDispatch({ type: "TEXT_SELECTED", text: rs.text, menuPos });
+      }, [selDispatch]),
+      onCleared: useCallback(() => {
+        selDispatch({ type: "DISMISS" });
+      }, [selDispatch]),
+      onHighlightTap: useCallback((hlId, element) => {
+        const hl = highlights.find((h) => h.id === hlId);
+        if (!hl) return;
+        const rect = element.getBoundingClientRect();
+        selDispatch({ type: "OPEN_EDIT", highlight: hl, menuPos: computeMenuPos(rect) });
+      }, [highlights, selDispatch]),
+    },
+  );
 
   useEffect(() => {
     localStorage.setItem("reader-theme", theme);
@@ -342,7 +368,7 @@ const ReaderPage = () => {
     },
     onSuccess: (newHighlight) => {
       queryClient.invalidateQueries({ queryKey: ["highlights", user?.id, id] });
-      window.getSelection()?.removeAllRanges();
+      clearSelection(); // dismiss custom overlay
       selDispatch({ type: "SAVE_COMPLETED", highlight: newHighlight });
     },
     onError: (err: any) => {
@@ -548,8 +574,15 @@ const ReaderPage = () => {
       {/* Content */}
       <article
         ref={contentRef}
-        className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground select-text`}
-        style={{ fontSize: `${fontSize}px`, lineHeight }}
+        className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground`}
+        style={{
+          fontSize: `${fontSize}px`,
+          lineHeight,
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          // @ts-ignore — vendor prefix not in CSSProperties types
+          WebkitTouchCallout: "none",
+        }}
       >
         <ReactMarkdown
           components={{
@@ -648,7 +681,17 @@ const ReaderPage = () => {
         </div>
       )}
 
-      {/* Highlight menu (handles all phases: selected, selected-more, saving, editing, editing-note) */}
+      {/* Custom selection overlay + drag handles (visible during "selected" / "saving") */}
+      {rangeState && (selState.phase === "selected" || selState.phase === "saving") && (
+        <SelectionOverlay
+          rangeState={rangeState}
+          dragging={draggingHandle}
+          onStartHandleDrag={startHandleDrag("start")}
+          onEndHandleDrag={startHandleDrag("end")}
+        />
+      )}
+
+      {/* Highlight menu (handles all phases: selected, saving, editing, editing-note) */}
       {selState.phase !== "idle" && (
         <HighlightMenu
           state={selState}
