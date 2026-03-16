@@ -7,30 +7,29 @@ export interface SelectionInfo {
 
 /**
  * Tracks native browser text selection within a container.
- * Shows selection only after the user lifts their finger/mouse (pointerup).
+ * Uses a short debounce on `selectionchange` so the toolbar appears
+ * only after the selection stabilises (user stops dragging).
  */
 export function useNativeSelection(
   containerRef: RefObject<HTMLElement | null>,
   enabled = true,
 ) {
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
-
-  // Track pending selection during drag (not yet committed)
-  const pendingRef = useRef<SelectionInfo | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearSelection = useCallback(() => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     window.getSelection()?.removeAllRanges();
-    pendingRef.current = null;
     setSelection(null);
   }, []);
 
   useEffect(() => {
     if (!enabled) return;
 
-    const onSelectionChange = () => {
+    const readSelection = () => {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !sel.rangeCount) {
-        pendingRef.current = null;
+        setSelection(null);
         return;
       }
 
@@ -42,17 +41,16 @@ export function useNativeSelection(
         !container.contains(range.startContainer) ||
         !container.contains(range.endContainer)
       ) {
-        pendingRef.current = null;
+        setSelection(null);
         return;
       }
 
       const text = sel.toString().trim();
       if (!text) {
-        pendingRef.current = null;
+        setSelection(null);
         return;
       }
 
-      // Compute bounding rect from all client rects
       const rects = range.getClientRects();
       if (!rects.length) return;
 
@@ -66,28 +64,27 @@ export function useNativeSelection(
         right = Math.max(right, r.right);
       }
 
-      pendingRef.current = { text, rect: new DOMRect(left, top, right - left, bottom - top) };
+      setSelection({ text, rect: new DOMRect(left, top, right - left, bottom - top) });
     };
 
-    const onPointerUp = (e: PointerEvent) => {
-      // Don't dismiss when tapping the quote menu
-      if ((e.target as HTMLElement).closest("[data-highlight-menu]")) return;
-
-      if (pendingRef.current) {
-        // User finished selecting — show the toolbar
-        setSelection({ ...pendingRef.current });
-      } else {
-        // Tap with no selection — clear
+    const onSelectionChange = () => {
+      // Quick check: if selection collapsed, hide immediately
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) {
+        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
         setSelection(null);
+        return;
       }
+
+      // Debounce: wait for selection to stabilise before showing the menu
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(readSelection, 200);
     };
 
     document.addEventListener("selectionchange", onSelectionChange);
-    document.addEventListener("pointerup", onPointerUp);
-
     return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
       document.removeEventListener("selectionchange", onSelectionChange);
-      document.removeEventListener("pointerup", onPointerUp);
     };
   }, [containerRef, enabled]);
 
