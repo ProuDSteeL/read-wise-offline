@@ -721,6 +721,11 @@ const ReaderPage = () => {
               deleteHighlight.mutate(toolbarMode.highlight.id);
             }
           }}
+          onNoteOpen={() => {
+            if (toolbarMode.type === "edit-highlight") {
+              setToolbarMode({ type: "note-editor", highlight: toolbarMode.highlight, rect: toolbarMode.rect });
+            }
+          }}
           onNoteSave={(note) => {
             if (toolbarMode.type === "note-editor") {
               updateHighlight.mutate({ highlightId: toolbarMode.highlight.id, note });
