@@ -2,7 +2,7 @@ import '../models/user_highlight.dart';
 import 'supabase_service.dart';
 
 class HighlightService {
-  static final _client = SupabaseService.client;
+  static get _client => SupabaseService.client;
 
   static Future<List<UserHighlight>> getHighlights(
       String userId, String bookId) async {

@@ -5,7 +5,7 @@ import '../models/collection.dart';
 import 'supabase_service.dart';
 
 class BookService {
-  static final _client = SupabaseService.client;
+  static get _client => SupabaseService.client;
 
   static Future<List<Book>> getPublishedBooks() async {
     final data = await _client
