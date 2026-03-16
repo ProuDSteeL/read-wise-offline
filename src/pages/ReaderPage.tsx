@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Trash2, Headphones, List } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
 import { useNativeSelection } from "@/hooks/useNativeSelection";
@@ -57,39 +56,60 @@ function extractToc(markdown: string): TocEntry[] {
 }
 const themeClasses: Record<ReaderTheme, string> = { light: "", dark: "dark", sepia: "sepia" };
 
-/** Escape HTML special chars to prevent XSS when injecting into markdown */
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
+// Highlight text segments within a string
+function applyHighlights(text: string, highlights: Array<{ text: string; color?: string }>): ReactNode[] {
+  if (!highlights.length) return [text];
 
-/**
- * Inject <mark> tags into markdown string for each highlight.
- * The modified string is passed to ReactMarkdown + rehype-raw,
- * so highlights are part of React's rendering — no DOM hacks.
- */
-function injectHighlightsIntoMarkdown(
-  markdown: string,
-  highlights: Array<{ id: string; text: string; note: string | null; color?: string }>,
-): string {
-  if (!highlights.length) return markdown;
+  const parts: ReactNode[] = [];
+  let keyIdx = 0;
+  let offset = 0;
 
-  let result = markdown;
-  // Sort longest first to avoid partial matches
-  const sorted = [...highlights].sort((a, b) => b.text.length - a.text.length);
+  const sorted = highlights
+    .map((h) => {
+      const norm = h.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
+      return { ...h, _norm: norm, idx: text.indexOf(norm) };
+    })
+    .filter((h) => h.idx !== -1)
+    .sort((a, b) => a.idx - b.idx);
 
   for (const hl of sorted) {
-    const norm = hl.text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ");
-    if (!norm) continue;
+    const pos = text.indexOf(hl._norm, offset);
+    if (pos === -1) continue;
+    if (pos > offset) parts.push(text.slice(offset, pos));
 
     const color = getColor(hl.color);
-    const idx = result.indexOf(norm);
-    if (idx === -1) continue;
-
-    const tag = `<mark data-hl="${escapeHtml(hl.id)}" style="background-color:${color.hex}18;border-bottom:2.5px solid ${color.hex};border-radius:1px;padding:0 1px;cursor:pointer">`;
-    result = result.slice(0, idx) + tag + norm + "</mark>" + result.slice(idx + norm.length);
+    parts.push(
+      <mark
+        key={`hl-${keyIdx++}`}
+        style={{
+          backgroundColor: `${color.hex}18`,
+          borderBottom: `2.5px solid ${color.hex}`,
+          borderRadius: "1px",
+          padding: "0 1px",
+          cursor: "pointer",
+        }}
+      >
+        {hl._norm}
+      </mark>
+    );
+    offset = pos + hl._norm.length;
   }
 
-  return result;
+  if (offset < text.length) parts.push(text.slice(offset));
+  return parts.length ? parts : [text];
+}
+
+function highlightChildren(children: ReactNode, highlights: Array<{ text: string; color?: string }>): ReactNode {
+  if (!highlights.length) return children;
+  if (typeof children === "string") return <>{applyHighlights(children, highlights)}</>;
+  if (Array.isArray(children)) {
+    return <>{children.map((child, i) =>
+      typeof child === "string"
+        ? <React.Fragment key={i}>{applyHighlights(child, highlights)}</React.Fragment>
+        : child
+    )}</>;
+  }
+  return children;
 }
 
 const ReaderPage = () => {
@@ -258,6 +278,7 @@ const ReaderPage = () => {
       toast({ title: `Лимит выделений (${highlightLimit}) для бесплатного плана`, description: "Оформите подписку Pro для безлимитных выделений" });
       return;
     }
+    clearSelection();
     createHighlight.mutate({ text, color: "yellow" });
   };
 
@@ -298,31 +319,15 @@ const ReaderPage = () => {
       if (error) throw error;
       return data as HighlightData;
     },
-    onMutate: async ({ text, note, color }) => {
-      await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
-      const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
-      const optimistic: HighlightData = {
-        id: `temp-${Date.now()}`,
-        text,
-        note: note || null,
-        color,
-      };
-      queryClient.setQueryData<HighlightData[]>(
-        ["highlights", user?.id, id],
-        (old) => [...(old ?? []), optimistic],
-      );
-      clearSelection();
-      return { prev };
-    },
     onSuccess: (data) => {
       queryClient.setQueryData<HighlightData[]>(
         ["highlights", user?.id, id],
-        (old) => old?.map((h) => h.id.startsWith("temp-") ? data : h) ?? [data],
+        (old) => [...(old ?? []), data],
       );
+      toast({ title: "Цитата сохранена" });
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
-      toast({ title: "Ошибка", variant: "destructive" });
+    onError: (err: any) => {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
     },
   });
 
@@ -330,21 +335,19 @@ const ReaderPage = () => {
     mutationFn: async (highlightId: string) => {
       const { error } = await supabase.from("user_highlights").delete().eq("id", highlightId);
       if (error) throw error;
+      return highlightId;
     },
-    onMutate: async (highlightId) => {
-      await queryClient.cancelQueries({ queryKey: ["highlights", user?.id, id] });
-      const prev = queryClient.getQueryData<HighlightData[]>(["highlights", user?.id, id]);
+    onSuccess: (deletedId) => {
       queryClient.setQueryData<HighlightData[]>(
         ["highlights", user?.id, id],
-        (old) => old?.filter((h) => h.id !== highlightId) ?? [],
+        (old) => old?.filter((h) => h.id !== deletedId) ?? [],
       );
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(["highlights", user?.id, id], ctx.prev);
-      toast({ title: "Ошибка", variant: "destructive" });
+      toast({ title: "Цитата удалена" });
     },
   });
+
+  const wrapWithHighlights = (children: ReactNode) =>
+    highlightChildren(children, highlights);
 
   if (isLoading) {
     return (
@@ -479,13 +482,13 @@ const ReaderPage = () => {
         }}
       >
         <ReactMarkdown
-          rehypePlugins={[rehypeRaw]}
+          key={highlights.map(h => h.text).join("\0")}
           components={{
             h1: ({ children }) => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
               return (
                 <h1 id={slugify(text)} className="mb-4 mt-8 text-[1.4em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                  {children}
+                  {wrapWithHighlights(children)}
                 </h1>
               );
             },
@@ -493,7 +496,7 @@ const ReaderPage = () => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
               return (
                 <h2 id={slugify(text)} className="mb-3 mt-6 text-[1.2em] font-bold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                  {children}
+                  {wrapWithHighlights(children)}
                 </h2>
               );
             },
@@ -501,12 +504,12 @@ const ReaderPage = () => {
               const text = typeof children === "string" ? children : Array.isArray(children) ? children.map(c => typeof c === "string" ? c : "").join("") : "";
               return (
                 <h3 id={slugify(text)} className="mb-2 mt-5 text-[1.1em] font-semibold text-foreground" style={{ fontFamily: "var(--font-sans)" }}>
-                  {children}
+                  {wrapWithHighlights(children)}
                 </h3>
               );
             },
             p: ({ children }) => (
-              <p className="mb-4 text-muted-foreground">{children}</p>
+              <p className="mb-4 text-muted-foreground">{wrapWithHighlights(children)}</p>
             ),
             blockquote: ({ children }) => (
               <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
@@ -514,17 +517,14 @@ const ReaderPage = () => {
               </blockquote>
             ),
             li: ({ children }) => (
-              <li className="mb-1 text-muted-foreground">{children}</li>
+              <li className="mb-1 text-muted-foreground">{wrapWithHighlights(children)}</li>
             ),
             strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
             em: ({ children }) => <em className="italic">{children}</em>,
             hr: () => <hr className="my-6 border-border" />,
           }}
         >
-          {injectHighlightsIntoMarkdown(
-            hasAccess ? summary.content : summary.content.slice(0, Math.floor(summary.content.length * 0.2)),
-            highlights,
-          )}
+          {hasAccess ? summary.content : summary.content.slice(0, Math.floor(summary.content.length * 0.2))}
         </ReactMarkdown>
         {!hasAccess && (
           <div className="relative -mt-16 pt-16 bg-gradient-to-t from-background via-background to-transparent">
