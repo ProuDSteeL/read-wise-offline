@@ -357,8 +357,8 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen> {
                   thumbColor: Theme.of(context).colorScheme.primary,
                 ),
                 child: Slider(
-                  value: posSeconds.clamp(0, durSeconds),
-                  max: durSeconds,
+                  value: posSeconds.clamp(0.0, durSeconds).toDouble(),
+                  max: durSeconds.toDouble(),
                   onChanged: (value) {
                     _player.seek(Duration(seconds: value.toInt()));
                   },
