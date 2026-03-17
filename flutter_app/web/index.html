@@ -48,14 +48,8 @@
         });
       }
 
-      // Load Flutter
-      _flutter.loader.loadEntrypoint({
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
-          });
-        }
-      });
+      // Load Flutter (modern API)
+      _flutter.loader.load();
     });
   </script>
 </body>

@@ -1,4 +1,6 @@
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 import 'supabase_service.dart';
 
@@ -38,22 +40,19 @@ class PushService {
 
     try {
       final reg = await web.window.navigator.serviceWorker.ready.toDart;
-      final applicationServerKey = _urlBase64ToUint8Array(_vapidPublicKey);
+      final keyBytes = _urlBase64ToUint8Array(_vapidPublicKey);
+      final jsKey = keyBytes.toJS;
 
       final options = web.PushSubscriptionOptionsInit(
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey.toJS,
+        applicationServerKey: jsKey,
       );
       final sub = await reg.pushManager.subscribe(options).toDart;
       final json = sub.toJSON();
 
       final endpoint = sub.endpoint;
-      final p256dh = (json as JSObject).getProperty('keys'.toJS) != null
-          ? _getKey(json, 'p256dh')
-          : '';
-      final auth = (json as JSObject).getProperty('keys'.toJS) != null
-          ? _getKey(json, 'auth')
-          : '';
+      final p256dh = _getKey(json, 'p256dh');
+      final auth = _getKey(json, 'auth');
 
       await SupabaseService.client.from('push_subscriptions').insert({
         'user_id': userId,
@@ -90,24 +89,25 @@ class PushService {
 
   static String _getKey(JSAny json, String key) {
     try {
-      final keys = (json as JSObject).getProperty('keys'.toJS) as JSObject;
-      final value = keys.getProperty(key.toJS);
+      final jsObj = json as JSObject;
+      final keys = jsObj['keys'.toJS] as JSObject?;
+      if (keys == null) return '';
+      final value = keys[key.toJS];
       return (value as JSString?)?.toDart ?? '';
     } catch (_) {
       return '';
     }
   }
 
-  static List<int> _urlBase64ToUint8Array(String base64String) {
+  static Uint8List _urlBase64ToUint8Array(String base64String) {
     final padding = '=' * ((4 - (base64String.length % 4)) % 4);
     final base64 =
         (base64String + padding).replaceAll('-', '+').replaceAll('_', '/');
 
-    // Decode base64 using window.atob
     final rawData = web.window.atob(base64);
-    final outputArray = <int>[];
+    final outputArray = Uint8List(rawData.length);
     for (int i = 0; i < rawData.length; i++) {
-      outputArray.add(rawData.codeUnitAt(i));
+      outputArray[i] = rawData.codeUnitAt(i);
     }
     return outputArray;
   }
