@@ -3,6 +3,7 @@ import 'dart:js_interop_unsafe';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:go_router/go_router.dart';
 import '../../models/enums.dart';
 import '../../models/user_highlight.dart';
@@ -175,6 +176,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
                 final highlights = highlightsAsync.valueOrNull ?? [];
 
+                // Apply highlight markers to content
+                final markedContent = _applyHighlightMarkers(
+                  cleanContent,
+                  highlights,
+                );
+
                 return SelectionArea(
                   onSelectionChanged: (value) {
                     final text = value?.plainText.trim() ?? '';
@@ -193,10 +200,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                       MediaQuery.of(context).padding.bottom + 80,
                     ),
                     children: [
-                      // Markdown summary
+                      // Markdown summary with highlighted quotes
                       MarkdownBody(
-                        data: cleanContent,
+                        data: markedContent,
                         styleSheet: _buildMarkdownStyle(settings, theme, context),
+                        inlineSyntaxes: [_HighlightSyntax()],
+                        builders: {
+                          'highlighted': _HighlightBuilder(
+                            _getHighlightBgColor(theme),
+                          ),
+                        },
                       ),
 
                       // Highlights section
@@ -651,6 +664,37 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
   }
 
+  String _applyHighlightMarkers(
+    String content,
+    List<UserHighlight> highlights,
+  ) {
+    if (highlights.isEmpty) return content;
+    var result = content;
+    // Sort by length descending to avoid partial replacements
+    final sorted = [...highlights]
+      ..sort((a, b) => b.text.length.compareTo(a.text.length));
+    for (final h in sorted) {
+      final text = h.text.trim();
+      if (text.isEmpty) continue;
+      // Escape regex special chars in the highlight text
+      final escaped = RegExp.escape(text);
+      // Replace only first occurrence to avoid double-wrapping
+      result = result.replaceFirst(
+        RegExp(escaped),
+        '==$text==',
+      );
+    }
+    return result;
+  }
+
+  Color _getHighlightBgColor(ReaderTheme theme) {
+    // Yellow highlight that works on all themes
+    if (theme.backgroundColor.computeLuminance() > 0.5) {
+      return const Color(0x40FFD54F); // light/sepia themes
+    }
+    return const Color(0x30FFD54F); // dark theme
+  }
+
   void _showSettingsSheet(BuildContext context) {
     final theme = ref.read(readerSettingsProvider).theme;
 
@@ -772,6 +816,39 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Inline syntax that matches ==highlighted text==
+class _HighlightSyntax extends md.InlineSyntax {
+  _HighlightSyntax() : super(r'==(.*?)==');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text('highlighted', match[1]!));
+    return true;
+  }
+}
+
+/// Builder that renders highlighted text with a background color
+class _HighlightBuilder extends MarkdownElementBuilder {
+  final Color bgColor;
+
+  _HighlightBuilder(this.bgColor);
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Text(
+        element.textContent,
+        style: preferredStyle,
       ),
     );
   }
