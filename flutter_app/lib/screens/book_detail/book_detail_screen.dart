@@ -12,6 +12,8 @@ import '../../core/extensions.dart';
 import '../../services/book_service.dart';
 import '../../services/shelf_service.dart';
 import '../../widgets/paywall_prompt.dart';
+import '../../providers/offline_providers.dart';
+import '../../offline/download_service.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
   final String bookId;
@@ -205,6 +207,8 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
                         icon: const Icon(Icons.headphones),
                         label: const Text('Слушать'),
                       ),
+                    const SizedBox(width: 8),
+                    _DownloadButton(bookId: widget.bookId),
                   ],
                 ),
               ),
@@ -468,6 +472,128 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
       return;
     }
     context.push('/book/${widget.bookId}/listen');
+  }
+}
+
+class _DownloadButton extends ConsumerWidget {
+  final String bookId;
+
+  const _DownloadButton({required this.bookId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDownloaded = ref.watch(isBookDownloadedProvider(bookId));
+    final downloadProgress = ref.watch(downloadStateProvider);
+    final accessControl = ref.watch(accessControlProvider);
+    final isDownloading = downloadProgress.containsKey(bookId);
+
+    if (isDownloading) {
+      final progress = downloadProgress[bookId] ?? 0;
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            CircularProgressIndicator(
+              value: progress > 0 ? progress : null,
+              strokeWidth: 2,
+            ),
+            Text(
+              '${(progress * 100).toInt()}%',
+              style: const TextStyle(fontSize: 9),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isDownloaded) {
+      return IconButton(
+        onPressed: () => _confirmRemove(context, ref),
+        icon: const Icon(Icons.download_done, color: Colors.green),
+        tooltip: 'Скачано',
+      );
+    }
+
+    if (!accessControl.canDownload) {
+      return IconButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            builder: (_) => const Padding(
+              padding: EdgeInsets.all(24),
+              child: PaywallPrompt(
+                message: 'Скачивание доступно только в Pro подписке.',
+              ),
+            ),
+          );
+        },
+        icon: Icon(Icons.download, color: Colors.grey.shade400),
+        tooltip: 'Скачать (Pro)',
+      );
+    }
+
+    return IconButton(
+      onPressed: () => _startDownload(context, ref),
+      icon: const Icon(Icons.download),
+      tooltip: 'Скачать',
+    );
+  }
+
+  void _startDownload(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    final notifier = ref.read(downloadStateProvider.notifier);
+    notifier.setProgress(bookId, 0);
+
+    try {
+      await DownloadService.downloadBook(
+        userId: user.id,
+        bookId: bookId,
+        contentType: DownloadContentType.text,
+        onProgress: (p) => notifier.setProgress(bookId, p),
+      );
+      notifier.removeDownload(bookId);
+      ref.invalidate(isBookDownloadedProvider(bookId));
+      ref.invalidate(downloadedBooksProvider);
+    } catch (e) {
+      notifier.removeDownload(bookId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка скачивания: $e')),
+        );
+      }
+    }
+  }
+
+  void _confirmRemove(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Удалить загрузку?'),
+        content: const Text('Книга будет удалена из офлайн-библиотеки.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Отмена'),
+          ),
+          TextButton(
+            onPressed: () {
+              DownloadService.removeDownload(bookId);
+              ref.invalidate(isBookDownloadedProvider(bookId));
+              ref.invalidate(downloadedBooksProvider);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Загрузка удалена')),
+              );
+            },
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
