@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
+import '../../models/enums.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/book_providers.dart';
 import '../../providers/user_data_providers.dart';
-import '../../providers/access_control_provider.dart';
-import '../../providers/subscription_provider.dart';
 import '../../providers/reader_settings_provider.dart';
 import '../../services/progress_service.dart';
-import '../../services/highlight_service.dart';
+import '../../services/shelf_service.dart';
 import '../../core/theme.dart';
-import '../../core/constants.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   final String bookId;
@@ -25,17 +24,32 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   final _scrollController = ScrollController();
   bool _showControls = true;
   double _scrollProgress = 0;
+  bool _isFavorite = false;
+  bool _restoredPosition = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _checkFavorite();
   }
 
   @override
   void dispose() {
+    _saveProgress();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _checkFavorite() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    final result = await ShelfService.isOnShelf(
+      userId: user.id,
+      bookId: widget.bookId,
+      shelf: ShelfType.favorite,
+    );
+    if (mounted) setState(() => _isFavorite = result);
   }
 
   void _onScroll() {
@@ -68,25 +82,26 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   Widget build(BuildContext context) {
     final bookAsync = ref.watch(bookProvider(widget.bookId));
     final summaryAsync = ref.watch(summaryProvider(widget.bookId));
-    final keyIdeasAsync = ref.watch(keyIdeasProvider(widget.bookId));
     final settings = ref.watch(readerSettingsProvider);
-    final isPro = ref.watch(isProProvider);
     final progressAsync = ref.watch(bookProgressProvider(widget.bookId));
 
     final theme = settings.theme;
 
     // Restore scroll position once
-    final lastPos = progressAsync.valueOrNull?.lastPosition;
-    if (lastPos != null && _scrollProgress == 0) {
-      final offset = double.tryParse(lastPos);
-      if (offset != null && offset > 0) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients &&
-              _scrollController.offset == 0 &&
-              offset <= _scrollController.position.maxScrollExtent) {
-            _scrollController.jumpTo(offset);
-          }
-        });
+    if (!_restoredPosition) {
+      final lastPos = progressAsync.valueOrNull?.lastPosition;
+      if (lastPos != null) {
+        final offset = double.tryParse(lastPos);
+        if (offset != null && offset > 0) {
+          _restoredPosition = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients &&
+                _scrollController.offset == 0 &&
+                offset <= _scrollController.position.maxScrollExtent) {
+              _scrollController.jumpTo(offset);
+            }
+          });
+        }
       }
     }
 
@@ -96,7 +111,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         onTap: _toggleControls,
         child: Stack(
           children: [
-            // Summary content
+            // Summary content — Markdown
             summaryAsync.when(
               data: (summary) {
                 if (summary?.content == null || summary!.content!.isEmpty) {
@@ -108,19 +123,22 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   );
                 }
 
-                return SingleChildScrollView(
+                // Strip <mark> tags — they are not markdown
+                final cleanContent = summary.content!
+                    .replaceAll('<mark>', '')
+                    .replaceAll('</mark>', '');
+
+                return Markdown(
                   controller: _scrollController,
+                  data: cleanContent,
+                  selectable: true,
                   padding: EdgeInsets.fromLTRB(
                     24,
                     MediaQuery.of(context).padding.top + 64,
                     24,
                     MediaQuery.of(context).padding.bottom + 80,
                   ),
-                  child: _buildSummaryContent(
-                    summary.content!,
-                    settings,
-                    theme,
-                  ),
+                  styleSheet: _buildMarkdownStyle(settings, theme, context),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -175,16 +193,19 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                               error: (_, __) => const SizedBox.shrink(),
                             ),
                           ),
-                          // Table of contents (key ideas)
+                          // Table of contents
                           IconButton(
                             onPressed: () => _showTableOfContents(context, theme),
                             icon: Icon(Icons.list, color: theme.textColor),
                             tooltip: 'Содержание',
                           ),
-                          // Favorite/shelf toggle
+                          // Favorite toggle
                           IconButton(
-                            onPressed: () => _toggleFavorite(),
-                            icon: Icon(Icons.favorite_border, color: theme.textColor),
+                            onPressed: _onToggleFavorite,
+                            icon: Icon(
+                              _isFavorite ? Icons.favorite : Icons.favorite_border,
+                              color: _isFavorite ? Colors.red : theme.textColor,
+                            ),
                             tooltip: 'В избранное',
                           ),
                           // Settings
@@ -251,149 +272,68 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     );
   }
 
-  /// Parse summary content, rendering <mark> tags as highlighted text
-  Widget _buildSummaryContent(
-    String content,
+  MarkdownStyleSheet _buildMarkdownStyle(
     ReaderSettings settings,
     ReaderTheme theme,
+    BuildContext context,
   ) {
-    // Split content by chapters/sections marked with headers
-    // and render <mark>...</mark> as highlighted spans
-    final parts = _parseSummaryText(content);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: parts.map((part) {
-        if (part.isHeader) {
-          return Padding(
-            padding: const EdgeInsets.only(top: 28, bottom: 12),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: theme.secondaryTextColor.withOpacity(0.3),
-                  ),
-                ),
-              ),
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                part.text,
-                style: TextStyle(
-                  fontSize: settings.fontSize + 4,
-                  fontWeight: FontWeight.bold,
-                  color: theme.textColor,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          );
-        }
-
-        // Regular paragraph — may contain <mark> tags
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: _buildRichParagraph(part.text, settings, theme),
-        );
-      }).toList(),
+    final baseStyle = TextStyle(
+      fontSize: settings.fontSize,
+      color: theme.textColor,
+      height: settings.lineHeight,
     );
-  }
 
-  /// Build a paragraph that can contain <mark> highlighted segments
-  Widget _buildRichParagraph(
-    String text,
-    ReaderSettings settings,
-    ReaderTheme theme,
-  ) {
-    final markRegex = RegExp(r'<mark>(.*?)</mark>', dotAll: true);
-    final spans = <InlineSpan>[];
-    int lastEnd = 0;
-
-    for (final match in markRegex.allMatches(text)) {
-      // Text before mark
-      if (match.start > lastEnd) {
-        spans.add(TextSpan(
-          text: text.substring(lastEnd, match.start),
-          style: TextStyle(
-            fontSize: settings.fontSize,
-            color: theme.textColor,
-            height: settings.lineHeight,
+    return MarkdownStyleSheet(
+      p: baseStyle,
+      h1: baseStyle.copyWith(
+        fontSize: settings.fontSize + 8,
+        fontWeight: FontWeight.bold,
+        height: 1.3,
+      ),
+      h2: baseStyle.copyWith(
+        fontSize: settings.fontSize + 4,
+        fontWeight: FontWeight.bold,
+        height: 1.3,
+      ),
+      h3: baseStyle.copyWith(
+        fontSize: settings.fontSize + 2,
+        fontWeight: FontWeight.w600,
+        height: 1.3,
+      ),
+      h1Padding: const EdgeInsets.only(top: 24, bottom: 8),
+      h2Padding: const EdgeInsets.only(top: 20, bottom: 8),
+      h3Padding: const EdgeInsets.only(top: 16, bottom: 6),
+      strong: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: theme.textColor,
+      ),
+      em: TextStyle(
+        fontStyle: FontStyle.italic,
+        color: theme.textColor,
+      ),
+      blockquote: baseStyle.copyWith(
+        color: theme.secondaryTextColor,
+        fontStyle: FontStyle.italic,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: theme.secondaryTextColor.withOpacity(0.4),
+            width: 3,
           ),
-        ));
-      }
-      // Highlighted text
-      spans.add(TextSpan(
-        text: match.group(1),
-        style: TextStyle(
-          fontSize: settings.fontSize,
-          color: theme.textColor,
-          height: settings.lineHeight,
-          backgroundColor: const Color(0x40F59E0B), // yellow highlight
         ),
-      ));
-      lastEnd = match.end;
-    }
-
-    // Remaining text
-    if (lastEnd < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastEnd),
-        style: TextStyle(
-          fontSize: settings.fontSize,
-          color: theme.textColor,
-          height: settings.lineHeight,
+      ),
+      blockquotePadding: const EdgeInsets.fromLTRB(16, 8, 0, 8),
+      listBullet: baseStyle.copyWith(fontSize: settings.fontSize - 2),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: theme.secondaryTextColor.withOpacity(0.3),
+          ),
         ),
-      ));
-    }
-
-    if (spans.isEmpty) {
-      return Text(
-        text,
-        style: TextStyle(
-          fontSize: settings.fontSize,
-          color: theme.textColor,
-          height: settings.lineHeight,
-        ),
-      );
-    }
-
-    return RichText(
-      text: TextSpan(children: spans),
+      ),
+      pPadding: const EdgeInsets.only(bottom: 12),
     );
-  }
-
-  /// Parse summary text into headers and paragraphs
-  List<_SummaryPart> _parseSummaryText(String content) {
-    final parts = <_SummaryPart>[];
-    // Split by double newlines into paragraphs
-    final paragraphs = content.split(RegExp(r'\n\n+'));
-
-    for (final p in paragraphs) {
-      final trimmed = p.trim();
-      if (trimmed.isEmpty) continue;
-
-      // Detect headers: lines starting with "Глава", "Часть", numbered headers,
-      // or lines that are short and bold-looking (no period at end, < 80 chars)
-      final isHeader = trimmed.startsWith('Глава ') ||
-          trimmed.startsWith('Часть ') ||
-          trimmed.startsWith('# ') ||
-          trimmed.startsWith('## ') ||
-          (trimmed.length < 80 &&
-              !trimmed.endsWith('.') &&
-              !trimmed.endsWith('!') &&
-              !trimmed.endsWith('?') &&
-              !trimmed.contains('<mark>') &&
-              trimmed.split('\n').length == 1);
-
-      final cleanText = trimmed
-          .replaceAll(RegExp(r'^#{1,3}\s*'), ''); // Remove markdown headers
-
-      parts.add(_SummaryPart(
-        text: cleanText,
-        isHeader: isHeader,
-      ));
-    }
-
-    return parts;
   }
 
   void _showTableOfContents(BuildContext context, ReaderTheme theme) {
@@ -491,17 +431,26 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     );
   }
 
-  void _toggleFavorite() async {
+  void _onToggleFavorite() async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    try {
-      await ref.read(currentUserProvider) != null;
-      // Import is not available here, use a simpler approach
+    await ShelfService.toggleShelf(
+      userId: user.id,
+      bookId: widget.bookId,
+      shelf: ShelfType.favorite,
+    );
+    setState(() => _isFavorite = !_isFavorite);
+    ref.invalidate(userShelvesProvider);
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Добавлено в избранное')),
+        SnackBar(
+          content: Text(_isFavorite ? 'Добавлено в избранное' : 'Удалено из избранного'),
+          duration: const Duration(seconds: 1),
+        ),
       );
-    } catch (_) {}
+    }
   }
 
   void _showSettingsSheet(BuildContext context) {
@@ -535,10 +484,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   // Font size
                   Row(
                     children: [
-                      Text(
-                        'Размер шрифта',
-                        style: TextStyle(color: settings.theme.textColor),
-                      ),
+                      Text('Размер шрифта',
+                          style: TextStyle(color: settings.theme.textColor)),
                       const Spacer(),
                       IconButton(
                         onPressed: () => notifier.decreaseFontSize(),
@@ -564,10 +511,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   // Line height
                   Row(
                     children: [
-                      Text(
-                        'Межстрочный интервал',
-                        style: TextStyle(color: settings.theme.textColor),
-                      ),
+                      Text('Межстрочный интервал',
+                          style: TextStyle(color: settings.theme.textColor)),
                       const Spacer(),
                       Text(
                         settings.lineHeight.toStringAsFixed(1),
@@ -588,10 +533,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   const SizedBox(height: 12),
 
                   // Theme selection
-                  Text(
-                    'Тема',
-                    style: TextStyle(color: settings.theme.textColor),
-                  ),
+                  Text('Тема',
+                      style: TextStyle(color: settings.theme.textColor)),
                   const SizedBox(height: 8),
                   Row(
                     children: AppTheme.readerThemes
@@ -640,11 +583,4 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       ),
     );
   }
-}
-
-class _SummaryPart {
-  final String text;
-  final bool isHeader;
-
-  const _SummaryPart({required this.text, required this.isHeader});
 }
