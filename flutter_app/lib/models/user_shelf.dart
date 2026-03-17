@@ -25,8 +25,8 @@ class UserShelf {
       bookId: json['book_id'] as String,
       shelf: ShelfType.fromJson(json['shelf'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
-      book: json['books'] != null
-          ? Book.fromJson(json['books'] as Map<String, dynamic>)
+      book: json['books'] is Map
+          ? Book.fromJson(Map<String, dynamic>.from(json['books'] as Map))
           : null,
     );
   }

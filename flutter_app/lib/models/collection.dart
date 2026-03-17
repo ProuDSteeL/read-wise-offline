@@ -25,9 +25,15 @@ class Collection {
       title: json['title'] as String,
       description: json['description'] as String?,
       coverUrl: json['cover_url'] as String?,
-      bookIds: (json['book_ids'] as List?)?.cast<String>(),
+      bookIds: json['book_ids'] is List
+          ? (json['book_ids'] as List).map((e) => e.toString()).toList()
+          : null,
       isFeatured: json['is_featured'] as bool?,
-      orderIndex: json['order_index'] as int?,
+      orderIndex: json['order_index'] is int
+          ? json['order_index'] as int
+          : (json['order_index'] is num
+              ? (json['order_index'] as num).toInt()
+              : null),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

@@ -10,7 +10,10 @@ class ShelfService {
         .from('user_shelves')
         .select('*, books(*)')
         .eq('user_id', userId);
-    return (data as List).map((e) => UserShelf.fromJson(e)).toList();
+    if (data is! List) return [];
+    return data
+        .map((e) => UserShelf.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   static Future<Map<ShelfType, int>> getShelfCounts(String userId) async {
@@ -23,8 +26,10 @@ class ShelfService {
       ShelfType.read: 0,
       ShelfType.wantToRead: 0,
     };
+    if (data is! List) return counts;
     for (final row in data) {
-      final shelf = ShelfType.fromJson(row['shelf'] as String);
+      final m = Map<String, dynamic>.from(row as Map);
+      final shelf = ShelfType.fromJson(m['shelf'] as String);
       counts[shelf] = (counts[shelf] ?? 0) + 1;
     }
     return counts;

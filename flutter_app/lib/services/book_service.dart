@@ -7,13 +7,22 @@ import 'supabase_service.dart';
 class BookService {
   static get _client => SupabaseService.client;
 
+  static List<T> _parseList<T>(dynamic data, T Function(Map<String, dynamic>) fromJson) {
+    if (data is List) {
+      return data
+          .map((e) => fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    }
+    return [];
+  }
+
   static Future<List<Book>> getPublishedBooks() async {
     final data = await _client
         .from('books')
         .select()
         .eq('status', 'published')
         .order('created_at', ascending: false);
-    return (data as List).map((e) => Book.fromJson(e)).toList();
+    return _parseList(data, Book.fromJson);
   }
 
   static Future<List<Book>> getPopularBooks({int limit = 10}) async {
@@ -23,7 +32,7 @@ class BookService {
         .eq('status', 'published')
         .order('views_count', ascending: false)
         .limit(limit);
-    return (data as List).map((e) => Book.fromJson(e)).toList();
+    return _parseList(data, Book.fromJson);
   }
 
   static Future<List<Book>> getNewBooks({int limit = 10}) async {
@@ -33,13 +42,13 @@ class BookService {
         .eq('status', 'published')
         .order('created_at', ascending: false)
         .limit(limit);
-    return (data as List).map((e) => Book.fromJson(e)).toList();
+    return _parseList(data, Book.fromJson);
   }
 
   static Future<Book> getBook(String id) async {
     final data =
         await _client.from('books').select().eq('id', id).single();
-    return Book.fromJson(data);
+    return Book.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   static Future<List<Book>> searchBooks(String query) async {
@@ -49,7 +58,7 @@ class BookService {
         .eq('status', 'published')
         .or('title.ilike.%$query%,author.ilike.%$query%')
         .limit(20);
-    return (data as List).map((e) => Book.fromJson(e)).toList();
+    return _parseList(data, Book.fromJson);
   }
 
   static Future<List<Book>> getAllBooks() async {
@@ -57,7 +66,7 @@ class BookService {
         .from('books')
         .select()
         .order('created_at', ascending: false);
-    return (data as List).map((e) => Book.fromJson(e)).toList();
+    return _parseList(data, Book.fromJson);
   }
 
   static Future<List<KeyIdea>> getKeyIdeas(String bookId) async {
@@ -66,7 +75,7 @@ class BookService {
         .select()
         .eq('book_id', bookId)
         .order('order_index', ascending: true);
-    return (data as List).map((e) => KeyIdea.fromJson(e)).toList();
+    return _parseList(data, KeyIdea.fromJson);
   }
 
   static Future<Summary?> getSummary(String bookId) async {
@@ -75,7 +84,8 @@ class BookService {
         .select()
         .eq('book_id', bookId)
         .maybeSingle();
-    return data != null ? Summary.fromJson(data) : null;
+    if (data == null) return null;
+    return Summary.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   static Future<List<Collection>> getFeaturedCollections() async {
@@ -84,7 +94,7 @@ class BookService {
         .select()
         .eq('is_featured', true)
         .order('order_index', ascending: true);
-    return (data as List).map((e) => Collection.fromJson(e)).toList();
+    return _parseList(data, Collection.fromJson);
   }
 
   static Future<void> incrementViews(String bookId) async {
