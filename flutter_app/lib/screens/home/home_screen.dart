@@ -10,6 +10,7 @@ import '../../providers/categories_provider.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/continue_card.dart';
 import '../../widgets/section_header.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -102,7 +103,26 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              loading: () => SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionHeader(title: 'Продолжить чтение'),
+                    SizedBox(
+                      height: 100,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 2,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (_, __) => const ContinueCardSkeleton(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
               error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
 
@@ -130,7 +150,7 @@ class HomeScreen extends ConsumerWidget {
                           );
                         },
                       ),
-                      loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      loading: () => const CategoryChipsSkeleton(),
                       error: (_, __) => const SizedBox.shrink(),
                     ),
                   ),
@@ -168,11 +188,14 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const SliverToBoxAdapter(
-                child: Center(child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
-                )),
+              loading: () => SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    SectionHeader(title: 'Популярное', onSeeAll: () {}),
+                    const BookListSkeleton(),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
               error: (e, _) => SliverToBoxAdapter(
                 child: Padding(
@@ -205,7 +228,15 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              loading: () => SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    const SectionHeader(title: 'Рекомендации для вас'),
+                    const BookListSkeleton(count: 3),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
               error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
 
@@ -237,7 +268,14 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              loading: () => SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    SectionHeader(title: 'Новинки', onSeeAll: () {}),
+                    const BookListSkeleton(count: 3),
+                  ],
+                ),
+              ),
               error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
 

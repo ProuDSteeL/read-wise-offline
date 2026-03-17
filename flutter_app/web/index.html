@@ -17,7 +17,38 @@
 </head>
 <body>
   <script>
+    // Capture PWA install prompt
+    let _deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      _deferredInstallPrompt = e;
+    });
+
+    // Expose install prompt for Flutter
+    window._pwaInstallPrompt = function() {
+      if (_deferredInstallPrompt) {
+        _deferredInstallPrompt.prompt();
+        _deferredInstallPrompt = null;
+        return true;
+      }
+      return false;
+    };
+
+    window._pwaCanInstall = function() {
+      return _deferredInstallPrompt != null;
+    };
+
     window.addEventListener('load', function(ev) {
+      // Register custom service worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js').then(function(reg) {
+          console.log('Service Worker registered:', reg.scope);
+        }).catch(function(err) {
+          console.warn('Service Worker registration failed:', err);
+        });
+      }
+
+      // Load Flutter
       _flutter.loader.loadEntrypoint({
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
