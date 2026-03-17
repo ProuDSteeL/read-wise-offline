@@ -30,14 +30,14 @@ class HighlightService {
         .toList();
   }
 
-  static Future<UserHighlight> createHighlight({
+  static Future<void> createHighlight({
     required String userId,
     required String bookId,
     required String text,
     String? note,
     String? color,
   }) async {
-    final data = await _client
+    await _client
         .from('user_highlights')
         .insert({
           'user_id': userId,
@@ -45,10 +45,7 @@ class HighlightService {
           'text': text,
           'note': note,
           'color': color ?? 'yellow',
-        })
-        .select()
-        .single();
-    return UserHighlight.fromJson(Map<String, dynamic>.from(data as Map));
+        });
   }
 
   static Future<void> updateHighlight({
