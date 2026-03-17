@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/readwise-flutter-web-mCyAi
+      - claude/add-admin-categories-tnfxh
       - main
 
 permissions:

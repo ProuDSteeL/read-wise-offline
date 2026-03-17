@@ -7,8 +7,11 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/user_data_providers.dart';
 import '../../providers/access_control_provider.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/push_provider.dart';
 import '../../widgets/paywall_prompt.dart';
 import '../../core/constants.dart';
+import '../../services/toast_service.dart';
+import '../../services/pwa_service.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -23,6 +26,7 @@ class ProfileScreen extends ConsumerWidget {
     final highlightsAsync = ref.watch(allHighlightsProvider);
     final isPro = ref.watch(isProProvider);
     final freeReadsUsed = ref.watch(freeReadsUsedProvider).valueOrNull ?? 0;
+    final pushState = ref.watch(pushProvider);
 
     final profile = profileAsync.valueOrNull;
 
@@ -180,6 +184,48 @@ class ProfileScreen extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
             ),
 
+            // PWA install banner
+            if (PwaService.canInstall && !PwaService.isInstalled)
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [
+                      Theme.of(context).colorScheme.primaryContainer,
+                      Theme.of(context).colorScheme.secondaryContainer,
+                    ]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.install_mobile, size: 32),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Установить приложение',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Быстрый доступ с главного экрана',
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        onPressed: () {
+                          PwaService.promptInstall();
+                        },
+                        icon: const Icon(Icons.download, size: 18),
+                        label: const Text('Установить'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             // Settings
             const SizedBox(height: 24),
             const Align(
@@ -193,13 +239,34 @@ class ProfileScreen extends ConsumerWidget {
             _SettingsTile(
               icon: Icons.notifications_outlined,
               title: 'Уведомления',
-              subtitle: 'Push-уведомления о новых книгах',
-              trailing: Switch(
-                value: false, // TODO: connect to push subscription provider
-                onChanged: (v) {
-                  // TODO: toggle push subscription
-                },
-              ),
+              subtitle: pushState.isSupported
+                  ? (pushState.isSubscribed
+                      ? 'Push-уведомления включены'
+                      : 'Push-уведомления о новых книгах')
+                  : 'Не поддерживается в этом браузере',
+              trailing: pushState.loading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Switch(
+                      value: pushState.isSubscribed,
+                      onChanged: pushState.isSupported
+                          ? (v) async {
+                              final ok =
+                                  await ref.read(pushProvider.notifier).toggle();
+                              if (!ok && !pushState.isSubscribed) {
+                                AppToast.error(
+                                    'Разрешите уведомления в настройках браузера');
+                              } else if (ok) {
+                                AppToast.show(pushState.isSubscribed
+                                    ? 'Уведомления отключены'
+                                    : 'Уведомления включены');
+                              }
+                            }
+                          : null,
+                    ),
             ),
             _SettingsTile(
               icon: Icons.storage_outlined,

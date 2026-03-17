@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
 import 'offline/connectivity_sync_handler.dart';
+import 'services/toast_service.dart';
 
 class ReadWiseApp extends ConsumerWidget {
   const ReadWiseApp({super.key});
@@ -18,6 +19,7 @@ class ReadWiseApp extends ConsumerWidget {
       theme: AppTheme.light,
       routerConfig: router,
       locale: const Locale('ru', 'RU'),
+      scaffoldMessengerKey: AppToast.messengerKey,
     );
   }
 }

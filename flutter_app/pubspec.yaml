@@ -45,6 +45,12 @@ dependencies:
   url_launcher: ^6.2.5
   shared_preferences: ^2.2.2
 
+  # Shimmer loading
+  shimmer: ^3.0.0
+
+  # Web APIs (for push notifications, PWA install)
+  web: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

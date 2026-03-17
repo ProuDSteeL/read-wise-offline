@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_providers.dart';
 import '../../providers/categories_provider.dart';
 import '../../widgets/book_card.dart';
+import '../../widgets/shimmer_loading.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -165,7 +166,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   itemBuilder: (context, index) => BookCard(book: books[index]),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 180,
+                  childAspectRatio: 0.55,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 16,
+                ),
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 6,
+                itemBuilder: (_, __) => const BookCardSkeleton(),
+              ),
               error: (e, _) => Center(
                 child: Text('Ошибка: $e'),
               ),
