@@ -31,6 +31,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   double _scrollProgress = 0;
   bool _isFavorite = false;
   bool _restoredPosition = false;
+  bool _hasSelection = false;
 
   @override
   void initState() {
@@ -163,8 +164,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 final highlights = highlightsAsync.valueOrNull ?? [];
 
                 return SelectionArea(
-                  contextMenuBuilder: (context, selectableRegionState) {
-                    return _buildContextMenu(context, selectableRegionState);
+                  onSelectionChanged: (value) {
+                    final hasText = value != null &&
+                        value.plainText.trim().isNotEmpty;
+                    if (hasText != _hasSelection) {
+                      setState(() => _hasSelection = hasText);
+                    }
                   },
                   child: ListView(
                     controller: _scrollController,
@@ -325,41 +330,39 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   ),
                 ),
               ),
+
+            // Floating quote button when text is selected
+            if (_hasSelection)
+              Positioned(
+                bottom: _showControls ? 60 : 16,
+                right: 16,
+                child: FloatingActionButton.extended(
+                  onPressed: () {
+                    final result = globalContext.callMethod(
+                      'eval'.toJS,
+                      'String(window.getSelection() || "")'.toJS,
+                    );
+                    final selectedText =
+                        result != null ? (result as JSString).toDart : '';
+                    if (selectedText.trim().isNotEmpty) {
+                      _saveHighlight(selectedText);
+                    }
+                    // Clear selection
+                    globalContext.callMethod(
+                      'eval'.toJS,
+                      'window.getSelection().removeAllRanges()'.toJS,
+                    );
+                    setState(() => _hasSelection = false);
+                  },
+                  icon: const Icon(Icons.format_quote, size: 20),
+                  label: const Text('Цитата'),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
           ],
         ),
       ),
-    );
-  }
-
-  /// Custom context menu with "Цитата" button
-  Widget _buildContextMenu(
-    BuildContext context,
-    SelectableRegionState selectableRegionState,
-  ) {
-    final List<ContextMenuButtonItem> items = [
-      ContextMenuButtonItem(
-        label: 'Копировать',
-        onPressed: () {
-          selectableRegionState.copySelection(SelectionChangedCause.toolbar);
-        },
-      ),
-      ContextMenuButtonItem(
-        label: 'Цитата',
-        onPressed: () {
-          final result = globalContext.callMethod(
-            'eval'.toJS,
-            'String(window.getSelection() || "")'.toJS,
-          );
-          final selectedText = result != null ? (result as JSString).toDart : '';
-          selectableRegionState.hideToolbar();
-          _saveHighlight(selectedText);
-        },
-      ),
-    ];
-
-    return AdaptiveTextSelectionToolbar.buttonItems(
-      anchors: selectableRegionState.contextMenuAnchors,
-      buttonItems: items,
     );
   }
 
