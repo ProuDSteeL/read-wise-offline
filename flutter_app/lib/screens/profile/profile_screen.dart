@@ -6,6 +6,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/user_data_providers.dart';
 import '../../providers/access_control_provider.dart';
+import '../../providers/admin_provider.dart';
+import '../../widgets/paywall_prompt.dart';
 import '../../core/constants.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -141,9 +143,7 @@ class ProfileScreen extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () {
-                          // TODO: open subscription/payment page
-                        },
+                        onPressed: () => _showPaywall(context),
                         child: const Text('Перейти на Pro'),
                       ),
                     ),
@@ -155,6 +155,30 @@ class ProfileScreen extends ConsumerWidget {
             // Stats
             const SizedBox(height: 24),
             _buildStatsSection(context, ref, shelfCountsAsync, progressAsync, highlightsAsync),
+
+            // Admin panel link (only for admins)
+            ref.watch(isAdminProvider).when(
+              data: (isAdmin) {
+                if (!isAdmin) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push('/admin/books'),
+                      icon: const Icon(Icons.admin_panel_settings),
+                      label: const Text('Админ-панель'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor:
+                            Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
 
             // Settings
             const SizedBox(height: 24),
@@ -290,6 +314,47 @@ class ProfileScreen extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+
+  void _showPaywall(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              PaywallPrompt(
+                message: 'Откройте полный доступ ко всем книгам и функциям',
+                showBenefits: true,
+                actionLabel: 'Оформить подписку',
+                onAction: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Оплата будет доступна в ближайшее время'),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
