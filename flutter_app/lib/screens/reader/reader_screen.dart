@@ -92,23 +92,34 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     final text = selectedText.trim();
     if (text.isEmpty) return;
 
-    await HighlightService.createHighlight(
-      userId: user.id,
-      bookId: widget.bookId,
-      text: text.length > 500 ? text.substring(0, 500) : text,
-      color: defaultHighlightColor,
-    );
-
-    ref.invalidate(bookHighlightsProvider(widget.bookId));
-    ref.invalidate(allHighlightsProvider);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Цитата сохранена'),
-          duration: Duration(seconds: 1),
-        ),
+    try {
+      await HighlightService.createHighlight(
+        userId: user.id,
+        bookId: widget.bookId,
+        text: text.length > 500 ? text.substring(0, 500) : text,
+        color: defaultHighlightColor,
       );
+
+      ref.invalidate(bookHighlightsProvider(widget.bookId));
+      ref.invalidate(allHighlightsProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Цитата сохранена'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка сохранения: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -340,8 +351,19 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 right: 16,
                 child: FloatingActionButton.extended(
                   onPressed: () {
-                    if (_selectedText.isNotEmpty) {
-                      _saveHighlight(_selectedText);
+                    // Try stored text first, fallback to JS selection
+                    var text = _selectedText;
+                    if (text.isEmpty) {
+                      final result = globalContext.callMethod(
+                        'eval'.toJS,
+                        'String(window.getSelection() || "")'.toJS,
+                      );
+                      text = result != null
+                          ? (result as JSString).toDart
+                          : '';
+                    }
+                    if (text.trim().isNotEmpty) {
+                      _saveHighlight(text);
                     }
                     // Clear selection
                     globalContext.callMethod(
