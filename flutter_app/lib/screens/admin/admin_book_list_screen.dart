@@ -58,6 +58,11 @@ class _AdminBookListScreenState extends ConsumerState<AdminBookListScreen> {
         title: const Text('Управление книгами'),
         actions: [
           TextButton.icon(
+            onPressed: () => context.push('/admin/categories'),
+            icon: const Icon(Icons.category, size: 18),
+            label: const Text('Категории'),
+          ),
+          TextButton.icon(
             onPressed: () => context.push('/admin/collections'),
             icon: const Icon(Icons.collections_bookmark, size: 18),
             label: const Text('Коллекции'),

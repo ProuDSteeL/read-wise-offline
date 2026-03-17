@@ -13,7 +13,7 @@ import '../../models/summary.dart';
 import '../../providers/admin_provider.dart';
 import '../../services/book_service.dart';
 import '../../services/supabase_service.dart';
-import '../../core/constants.dart';
+import '../../providers/categories_provider.dart';
 
 const _uuid = Uuid();
 const _maxAudioSizeMb = 100;
@@ -457,25 +457,32 @@ class _AdminBookFormScreenState extends ConsumerState<AdminBookFormScreen> {
             // Categories
             _SectionTitle(title: 'Категории'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: bookCategories.map((cat) {
-                final selected = _selectedCategories.contains(cat);
-                return FilterChip(
-                  label: Text(cat),
-                  selected: selected,
-                  onSelected: (v) {
-                    setState(() {
-                      if (v) {
-                        _selectedCategories.add(cat);
-                      } else {
-                        _selectedCategories.remove(cat);
-                      }
-                    });
-                  },
-                );
-              }).toList(),
+            ref.watch(categoriesProvider).when(
+              data: (categories) => Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: categories.map((cat) {
+                  final selected = _selectedCategories.contains(cat);
+                  return FilterChip(
+                    label: Text(cat),
+                    selected: selected,
+                    onSelected: (v) {
+                      setState(() {
+                        if (v) {
+                          _selectedCategories.add(cat);
+                        } else {
+                          _selectedCategories.remove(cat);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              loading: () => const SizedBox(
+                height: 32,
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              error: (_, __) => const Text('Ошибка загрузки категорий'),
             ),
             const SizedBox(height: 16),
 

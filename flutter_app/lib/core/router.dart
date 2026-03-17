@@ -18,6 +18,7 @@ import '../screens/auth/reset_password_screen.dart';
 import '../screens/admin/admin_book_list_screen.dart';
 import '../screens/admin/admin_book_form_screen.dart';
 import '../screens/admin/admin_collections_screen.dart';
+import '../screens/admin/admin_categories_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -150,6 +151,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/collections',
         builder: (context, state) => const AdminCollectionsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/categories',
+        builder: (context, state) => const AdminCategoriesScreen(),
       ),
     ],
   );

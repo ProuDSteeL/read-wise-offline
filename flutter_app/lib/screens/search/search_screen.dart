@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_providers.dart';
-import '../../core/constants.dart';
+import '../../providers/categories_provider.dart';
 import '../../widgets/book_card.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -80,17 +80,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     },
                   ),
                 ),
-                ...bookCategories.map((cat) => Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: FilterChip(
-                        label: Text(cat),
-                        selected: selectedCategory == cat,
-                        onSelected: (_) {
-                          ref.read(selectedCategoryProvider.notifier).state =
-                              selectedCategory == cat ? null : cat;
-                        },
-                      ),
-                    )),
+                ...ref.watch(categoriesProvider).when(
+                  data: (categories) => categories.map((cat) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: FilterChip(
+                          label: Text(cat),
+                          selected: selectedCategory == cat,
+                          onSelected: (_) {
+                            ref.read(selectedCategoryProvider.notifier).state =
+                                selectedCategory == cat ? null : cat;
+                          },
+                        ),
+                      )),
+                  loading: () => [const SizedBox.shrink()],
+                  error: (_, __) => [const SizedBox.shrink()],
+                ),
               ],
             ),
           ),
