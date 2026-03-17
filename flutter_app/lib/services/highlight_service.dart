@@ -48,7 +48,7 @@ class HighlightService {
         })
         .select()
         .single();
-    return UserHighlight.fromJson(data);
+    return UserHighlight.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   static Future<void> updateHighlight({
@@ -73,6 +73,6 @@ class HighlightService {
         .select('id')
         .eq('user_id', userId)
         .eq('book_id', bookId);
-    return (data as List).length;
+    return data is List ? data.length : 0;
   }
 }

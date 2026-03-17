@@ -21,7 +21,9 @@ class KeyIdea {
       bookId: json['book_id'] as String,
       title: json['title'] as String,
       content: json['content'] as String,
-      orderIndex: json['order_index'] as int,
+      orderIndex: json['order_index'] is int
+          ? json['order_index'] as int
+          : (json['order_index'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

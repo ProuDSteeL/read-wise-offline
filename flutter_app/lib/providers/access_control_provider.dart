@@ -13,7 +13,7 @@ final freeReadsUsedProvider = FutureProvider<int>((ref) async {
       .from('user_progress')
       .select('book_id')
       .eq('user_id', user.id);
-  return (data as List).length;
+  return data is List ? data.length : 0;
 });
 
 final accessControlProvider = Provider<AccessControl>((ref) {
