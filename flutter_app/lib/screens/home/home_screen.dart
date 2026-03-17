@@ -6,7 +6,7 @@ import '../../providers/book_providers.dart';
 import '../../providers/user_data_providers.dart';
 import '../../providers/recommendations_provider.dart';
 import '../../providers/subscription_provider.dart';
-import '../../core/constants.dart';
+import '../../providers/categories_provider.dart';
 import '../../widgets/book_card.dart';
 import '../../widgets/continue_card.dart';
 import '../../widgets/section_header.dart';
@@ -114,20 +114,24 @@ class HomeScreen extends ConsumerWidget {
                   const SectionHeader(title: 'Категории'),
                   SizedBox(
                     height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: bookCategories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        return ActionChip(
-                          label: Text(bookCategories[i], style: const TextStyle(fontSize: 13)),
-                          onPressed: () {
-                            ref.read(selectedCategoryProvider.notifier).state = bookCategories[i];
-                            context.go('/search');
-                          },
-                        );
-                      },
+                    child: ref.watch(categoriesProvider).when(
+                      data: (categories) => ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: categories.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) {
+                          return ActionChip(
+                            label: Text(categories[i], style: const TextStyle(fontSize: 13)),
+                            onPressed: () {
+                              ref.read(selectedCategoryProvider.notifier).state = categories[i];
+                              context.go('/search');
+                            },
+                          );
+                        },
+                      ),
+                      loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      error: (_, __) => const SizedBox.shrink(),
                     ),
                   ),
                   const SizedBox(height: 8),
