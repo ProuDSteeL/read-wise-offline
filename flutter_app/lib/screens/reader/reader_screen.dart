@@ -1,3 +1,5 @@
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -344,9 +346,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       ContextMenuButtonItem(
         label: 'Цитата',
         onPressed: () {
-          final selectedText = selectableRegionState
-              .getSelectedContent()
-              ?.plainText ?? '';
+          final result = globalContext.callMethod(
+            'eval'.toJS,
+            'String(window.getSelection() || "")'.toJS,
+          );
+          final selectedText = result != null ? (result as JSString).toDart : '';
           selectableRegionState.hideToolbar();
           _saveHighlight(selectedText);
         },
