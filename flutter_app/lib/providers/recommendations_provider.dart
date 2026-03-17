@@ -16,13 +16,17 @@ final recommendationsProvider = FutureProvider<List<Book>>((ref) async {
       .eq('user_id', user.id);
 
   final categoryCounts = <String, int>{};
-  for (final s in userShelves) {
-    final books = s['books'];
-    if (books != null) {
-      final cats = books['categories'];
-      if (cats is List) {
-        for (final cat in cats) {
-          categoryCounts[cat as String] = (categoryCounts[cat] ?? 0) + 1;
+  if (userShelves is List) {
+    for (final s in userShelves) {
+      final row = Map<String, dynamic>.from(s as Map);
+      final books = row['books'];
+      if (books is Map) {
+        final cats = books['categories'];
+        if (cats is List) {
+          for (final cat in cats) {
+            final catStr = cat.toString();
+            categoryCounts[catStr] = (categoryCounts[catStr] ?? 0) + 1;
+          }
         }
       }
     }
@@ -45,10 +49,19 @@ final recommendationsProvider = FutureProvider<List<Book>>((ref) async {
       .select('book_id')
       .eq('user_id', user.id);
 
-  final seenIds = <String>{
-    ...((seenShelves as List).map((s) => s['book_id'] as String)),
-    ...((seenProgress as List).map((p) => p['book_id'] as String)),
-  };
+  final seenIds = <String>{};
+  if (seenShelves is List) {
+    for (final s in seenShelves) {
+      final row = Map<String, dynamic>.from(s as Map);
+      seenIds.add(row['book_id'] as String);
+    }
+  }
+  if (seenProgress is List) {
+    for (final p in seenProgress) {
+      final row = Map<String, dynamic>.from(p as Map);
+      seenIds.add(row['book_id'] as String);
+    }
+  }
 
   // Fetch books overlapping with top categories
   final booksData = await client
@@ -59,7 +72,12 @@ final recommendationsProvider = FutureProvider<List<Book>>((ref) async {
       .order('rating', ascending: false)
       .limit(20);
 
-  final books = (booksData as List).map((e) => Book.fromJson(e)).toList();
+  final books = <Book>[];
+  if (booksData is List) {
+    for (final e in booksData) {
+      books.add(Book.fromJson(Map<String, dynamic>.from(e as Map)));
+    }
+  }
 
   // Filter out seen, return top 10
   return books.where((b) => !seenIds.contains(b.id)).take(10).toList();

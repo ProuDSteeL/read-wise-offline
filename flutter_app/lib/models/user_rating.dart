@@ -18,7 +18,9 @@ class UserRating {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       bookId: json['book_id'] as String,
-      rating: json['rating'] as int,
+      rating: json['rating'] is int
+          ? json['rating'] as int
+          : (json['rating'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

@@ -25,7 +25,11 @@ class Summary {
       bookId: json['book_id'] as String,
       content: json['content'] as String?,
       audioUrl: json['audio_url'] as String?,
-      audioSizeBytes: json['audio_size_bytes'] as int?,
+      audioSizeBytes: json['audio_size_bytes'] is int
+          ? json['audio_size_bytes'] as int
+          : (json['audio_size_bytes'] is num
+              ? (json['audio_size_bytes'] as num).toInt()
+              : null),
       publishedAt: json['published_at'] != null
           ? DateTime.parse(json['published_at'] as String)
           : null,
