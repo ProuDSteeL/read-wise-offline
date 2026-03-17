@@ -6,7 +6,9 @@ import '../models/enums.dart';
 import '../services/progress_service.dart';
 import '../services/shelf_service.dart';
 import '../services/highlight_service.dart';
+import '../offline/offline_storage_service.dart';
 import 'auth_provider.dart';
+import 'connectivity_provider.dart';
 
 final userProgressProvider = FutureProvider<List<UserProgress>>((ref) {
   final user = ref.watch(currentUserProvider);
@@ -17,7 +19,11 @@ final userProgressProvider = FutureProvider<List<UserProgress>>((ref) {
 final bookProgressProvider =
     FutureProvider.family<UserProgress?, String>((ref, bookId) {
   final user = ref.watch(currentUserProvider);
+  final isOnline = ref.watch(isOnlineProvider);
   if (user == null) return null;
+  if (!isOnline) {
+    return OfflineStorageService.getProgress(bookId);
+  }
   return ProgressService.getBookProgress(user.id, bookId);
 });
 
@@ -59,6 +65,10 @@ final allHighlightsProvider = FutureProvider<List<UserHighlight>>((ref) {
 final bookHighlightsProvider =
     FutureProvider.family<List<UserHighlight>, String>((ref, bookId) {
   final user = ref.watch(currentUserProvider);
+  final isOnline = ref.watch(isOnlineProvider);
   if (user == null) return [];
+  if (!isOnline) {
+    return OfflineStorageService.getHighlights(bookId);
+  }
   return HighlightService.getHighlights(user.id, bookId);
 });

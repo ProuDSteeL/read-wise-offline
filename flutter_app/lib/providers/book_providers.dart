@@ -4,6 +4,8 @@ import '../models/key_idea.dart';
 import '../models/summary.dart';
 import '../models/collection.dart';
 import '../services/book_service.dart';
+import '../offline/offline_storage_service.dart';
+import 'connectivity_provider.dart';
 
 final publishedBooksProvider = FutureProvider<List<Book>>((ref) {
   return BookService.getPublishedBooks();
@@ -18,14 +20,28 @@ final newBooksProvider = FutureProvider<List<Book>>((ref) {
 });
 
 final bookProvider = FutureProvider.family<Book, String>((ref, id) {
+  final isOnline = ref.watch(isOnlineProvider);
+  if (!isOnline) {
+    final offlineBook = OfflineStorageService.getBook(id);
+    if (offlineBook != null) return offlineBook;
+    throw Exception('Книга недоступна офлайн');
+  }
   return BookService.getBook(id);
 });
 
 final keyIdeasProvider = FutureProvider.family<List<KeyIdea>, String>((ref, bookId) {
+  final isOnline = ref.watch(isOnlineProvider);
+  if (!isOnline) {
+    return OfflineStorageService.getKeyIdeas(bookId);
+  }
   return BookService.getKeyIdeas(bookId);
 });
 
 final summaryProvider = FutureProvider.family<Summary?, String>((ref, bookId) {
+  final isOnline = ref.watch(isOnlineProvider);
+  if (!isOnline) {
+    return OfflineStorageService.getSummary(bookId);
+  }
   return BookService.getSummary(bookId);
 });
 
