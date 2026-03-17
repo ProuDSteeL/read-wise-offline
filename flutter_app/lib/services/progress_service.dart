@@ -10,7 +10,10 @@ class ProgressService {
         .select('*, books(*)')
         .eq('user_id', userId)
         .order('updated_at', ascending: false);
-    return (data as List).map((e) => UserProgress.fromJson(e)).toList();
+    if (data is! List) return [];
+    return data
+        .map((e) => UserProgress.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   static Future<UserProgress?> getBookProgress(
@@ -21,7 +24,8 @@ class ProgressService {
         .eq('user_id', userId)
         .eq('book_id', bookId)
         .maybeSingle();
-    return data != null ? UserProgress.fromJson(data) : null;
+    if (data == null) return null;
+    return UserProgress.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
   static Future<void> upsertProgress({

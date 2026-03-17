@@ -12,7 +12,10 @@ class HighlightService {
         .eq('user_id', userId)
         .eq('book_id', bookId)
         .order('created_at', ascending: false);
-    return (data as List).map((e) => UserHighlight.fromJson(e)).toList();
+    if (data is! List) return [];
+    return data
+        .map((e) => UserHighlight.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   static Future<List<UserHighlight>> getAllHighlights(String userId) async {
@@ -21,7 +24,10 @@ class HighlightService {
         .select()
         .eq('user_id', userId)
         .order('created_at', ascending: false);
-    return (data as List).map((e) => UserHighlight.fromJson(e)).toList();
+    if (data is! List) return [];
+    return data
+        .map((e) => UserHighlight.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   static Future<UserHighlight> createHighlight({

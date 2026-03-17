@@ -45,17 +45,43 @@ class Book {
       aboutAuthor: json['about_author'] as String?,
       description: json['description'] as String?,
       coverUrl: json['cover_url'] as String?,
-      categories: (json['categories'] as List?)?.cast<String>(),
-      tags: (json['tags'] as List?)?.cast<String>(),
-      readTimeMin: json['read_time_min'] as int?,
-      listenTimeMin: json['listen_time_min'] as int?,
-      rating: (json['rating'] as num?)?.toDouble(),
-      viewsCount: json['views_count'] as int?,
+      categories: _toStringList(json['categories']),
+      tags: _toStringList(json['tags']),
+      readTimeMin: _toInt(json['read_time_min']),
+      listenTimeMin: _toInt(json['listen_time_min']),
+      rating: _toDouble(json['rating']),
+      viewsCount: _toInt(json['views_count']),
       status: BookStatus.fromJson(json['status'] as String? ?? 'draft'),
-      whyRead: json['why_read'] as Map<String, dynamic>?,
+      whyRead: _toMap(json['why_read']),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
+  }
+
+  static List<String>? _toStringList(dynamic value) {
+    if (value == null) return null;
+    if (value is List) return value.map((e) => e.toString()).toList();
+    return null;
+  }
+
+  static Map<String, dynamic>? _toMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  static int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
   }
 
   Map<String, dynamic> toJson() {

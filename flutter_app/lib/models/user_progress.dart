@@ -26,12 +26,16 @@ class UserProgress {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       bookId: json['book_id'] as String,
-      progressPercent: (json['progress_percent'] as num?)?.toDouble(),
-      audioPosition: (json['audio_position'] as num?)?.toDouble(),
+      progressPercent: json['progress_percent'] is num
+          ? (json['progress_percent'] as num).toDouble()
+          : null,
+      audioPosition: json['audio_position'] is num
+          ? (json['audio_position'] as num).toDouble()
+          : null,
       lastPosition: json['last_position'] as String?,
       updatedAt: DateTime.parse(json['updated_at'] as String),
-      book: json['books'] != null
-          ? Book.fromJson(json['books'] as Map<String, dynamic>)
+      book: json['books'] is Map
+          ? Book.fromJson(Map<String, dynamic>.from(json['books'] as Map))
           : null,
     );
   }

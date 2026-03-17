@@ -13,7 +13,8 @@ final profileProvider = FutureProvider<Profile?>((ref) async {
       .eq('user_id', user.id)
       .maybeSingle();
 
-  return data != null ? Profile.fromJson(data) : null;
+  if (data == null) return null;
+  return Profile.fromJson(Map<String, dynamic>.from(data as Map));
 });
 
 final isProProvider = Provider<bool>((ref) {
