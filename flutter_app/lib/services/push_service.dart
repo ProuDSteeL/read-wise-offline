@@ -90,9 +90,9 @@ class PushService {
   static String _getKey(JSAny json, String key) {
     try {
       final jsObj = json as JSObject;
-      final keys = jsObj['keys'.toJS] as JSObject?;
+      final keys = jsObj['keys'] as JSObject?;
       if (keys == null) return '';
-      final value = keys[key.toJS];
+      final value = keys[key];
       return (value as JSString?)?.toDart ?? '';
     } catch (_) {
       return '';
