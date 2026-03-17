@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/enums.dart';
+import '../../models/user_highlight.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/book_providers.dart';
 import '../../providers/user_data_providers.dart';
 import '../../providers/reader_settings_provider.dart';
 import '../../services/progress_service.dart';
 import '../../services/shelf_service.dart';
+import '../../services/highlight_service.dart';
 import '../../core/theme.dart';
+import '../../core/constants.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   final String bookId;
@@ -78,10 +81,38 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     setState(() => _showControls = !_showControls);
   }
 
+  void _saveHighlight(String selectedText) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+
+    final text = selectedText.trim();
+    if (text.isEmpty) return;
+
+    await HighlightService.createHighlight(
+      userId: user.id,
+      bookId: widget.bookId,
+      text: text.length > 500 ? text.substring(0, 500) : text,
+      color: defaultHighlightColor,
+    );
+
+    ref.invalidate(bookHighlightsProvider(widget.bookId));
+    ref.invalidate(allHighlightsProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Цитата сохранена'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bookAsync = ref.watch(bookProvider(widget.bookId));
     final summaryAsync = ref.watch(summaryProvider(widget.bookId));
+    final highlightsAsync = ref.watch(bookHighlightsProvider(widget.bookId));
     final settings = ref.watch(readerSettingsProvider);
     final progressAsync = ref.watch(bookProgressProvider(widget.bookId));
 
@@ -111,7 +142,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         onTap: _toggleControls,
         child: Stack(
           children: [
-            // Summary content — Markdown
+            // Summary content with selection for quotes
             summaryAsync.when(
               data: (summary) {
                 if (summary?.content == null || summary!.content!.isEmpty) {
@@ -123,22 +154,51 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                   );
                 }
 
-                // Strip <mark> tags — they are not markdown
                 final cleanContent = summary.content!
                     .replaceAll('<mark>', '')
                     .replaceAll('</mark>', '');
 
-                return Markdown(
-                  controller: _scrollController,
-                  data: cleanContent,
-                  selectable: true,
-                  padding: EdgeInsets.fromLTRB(
-                    24,
-                    MediaQuery.of(context).padding.top + 64,
-                    24,
-                    MediaQuery.of(context).padding.bottom + 80,
+                final highlights = highlightsAsync.valueOrNull ?? [];
+
+                return SelectionArea(
+                  contextMenuBuilder: (context, selectableRegionState) {
+                    return _buildContextMenu(context, selectableRegionState);
+                  },
+                  child: ListView(
+                    controller: _scrollController,
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      MediaQuery.of(context).padding.top + 64,
+                      24,
+                      MediaQuery.of(context).padding.bottom + 80,
+                    ),
+                    children: [
+                      // Markdown summary
+                      MarkdownBody(
+                        data: cleanContent,
+                        styleSheet: _buildMarkdownStyle(settings, theme, context),
+                      ),
+
+                      // Highlights section
+                      if (highlights.isNotEmpty) ...[
+                        const SizedBox(height: 32),
+                        Divider(color: theme.secondaryTextColor.withOpacity(0.3)),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Мои выделения · ${highlights.length}',
+                          style: TextStyle(
+                            fontSize: settings.fontSize,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...highlights.map((h) => _buildHighlightCard(h, theme, settings)),
+                      ],
+
+                      const SizedBox(height: 40),
+                    ],
                   ),
-                  styleSheet: _buildMarkdownStyle(settings, theme, context),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -193,13 +253,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                               error: (_, __) => const SizedBox.shrink(),
                             ),
                           ),
-                          // Table of contents
                           IconButton(
                             onPressed: () => _showTableOfContents(context, theme),
                             icon: Icon(Icons.list, color: theme.textColor),
                             tooltip: 'Содержание',
                           ),
-                          // Favorite toggle
                           IconButton(
                             onPressed: _onToggleFavorite,
                             icon: Icon(
@@ -208,7 +266,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                             ),
                             tooltip: 'В избранное',
                           ),
-                          // Settings
                           IconButton(
                             onPressed: () => _showSettingsSheet(context),
                             icon: Icon(Icons.tune, color: theme.textColor),
@@ -270,6 +327,119 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         ),
       ),
     );
+  }
+
+  /// Custom context menu with "Цитата" button
+  Widget _buildContextMenu(
+    BuildContext context,
+    SelectableRegionState selectableRegionState,
+  ) {
+    final List<ContextMenuButtonItem> items = [
+      ContextMenuButtonItem(
+        label: 'Копировать',
+        onPressed: () {
+          selectableRegionState.copySelection(SelectionChangedCause.toolbar);
+        },
+      ),
+      ContextMenuButtonItem(
+        label: 'Цитата',
+        onPressed: () {
+          final selectedText = selectableRegionState
+              .getSelectedContent()
+              ?.plainText ?? '';
+          selectableRegionState.hideToolbar();
+          _saveHighlight(selectedText);
+        },
+      ),
+    ];
+
+    return AdaptiveTextSelectionToolbar.buttonItems(
+      anchors: selectableRegionState.contextMenuAnchors,
+      buttonItems: items,
+    );
+  }
+
+  Widget _buildHighlightCard(
+    UserHighlight highlight,
+    ReaderTheme theme,
+    ReaderSettings settings,
+  ) {
+    final highlightColor = getHighlightColor(highlight.color);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Color(highlightColor.bgHex),
+          borderRadius: BorderRadius.circular(10),
+          border: Border(
+            left: BorderSide(
+              color: Color(highlightColor.hex),
+              width: 3,
+            ),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '«${highlight.text}»',
+                    style: TextStyle(
+                      fontSize: settings.fontSize - 2,
+                      color: theme.textColor,
+                      height: 1.5,
+                    ),
+                  ),
+                  if (highlight.note != null && highlight.note!.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      highlight.note!,
+                      style: TextStyle(
+                        fontSize: settings.fontSize - 3,
+                        color: theme.secondaryTextColor,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () => _deleteHighlight(highlight.id),
+              icon: Icon(
+                Icons.delete_outline,
+                size: 20,
+                color: theme.secondaryTextColor,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Удалить',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteHighlight(String highlightId) async {
+    await HighlightService.deleteHighlight(highlightId);
+    ref.invalidate(bookHighlightsProvider(widget.bookId));
+    ref.invalidate(allHighlightsProvider);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Цитата удалена'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   MarkdownStyleSheet _buildMarkdownStyle(
@@ -480,8 +650,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Font size
                   Row(
                     children: [
                       Text('Размер шрифта',
@@ -507,8 +675,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // Line height
                   Row(
                     children: [
                       Text('Межстрочный интервал',
@@ -531,8 +697,6 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                     onChanged: (v) => notifier.setLineHeight(v),
                   ),
                   const SizedBox(height: 12),
-
-                  // Theme selection
                   Text('Тема',
                       style: TextStyle(color: settings.theme.textColor)),
                   const SizedBox(height: 8),
