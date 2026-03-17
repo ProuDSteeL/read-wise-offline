@@ -32,6 +32,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   bool _isFavorite = false;
   bool _restoredPosition = false;
   bool _hasSelection = false;
+  String _selectedText = '';
 
   @override
   void initState() {
@@ -165,8 +166,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
                 return SelectionArea(
                   onSelectionChanged: (value) {
-                    final hasText = value != null &&
-                        value.plainText.trim().isNotEmpty;
+                    final text = value?.plainText.trim() ?? '';
+                    final hasText = text.isNotEmpty;
+                    if (hasText) _selectedText = text;
                     if (hasText != _hasSelection) {
                       setState(() => _hasSelection = hasText);
                     }
@@ -338,21 +340,18 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 right: 16,
                 child: FloatingActionButton.extended(
                   onPressed: () {
-                    final result = globalContext.callMethod(
-                      'eval'.toJS,
-                      'String(window.getSelection() || "")'.toJS,
-                    );
-                    final selectedText =
-                        result != null ? (result as JSString).toDart : '';
-                    if (selectedText.trim().isNotEmpty) {
-                      _saveHighlight(selectedText);
+                    if (_selectedText.isNotEmpty) {
+                      _saveHighlight(_selectedText);
                     }
                     // Clear selection
                     globalContext.callMethod(
                       'eval'.toJS,
                       'window.getSelection().removeAllRanges()'.toJS,
                     );
-                    setState(() => _hasSelection = false);
+                    setState(() {
+                      _hasSelection = false;
+                      _selectedText = '';
+                    });
                   },
                   icon: const Icon(Icons.format_quote, size: 20),
                   label: const Text('Цитата'),
