@@ -36,6 +36,9 @@ dependencies:
   cached_network_image: ^3.3.1
   google_fonts: ^6.2.1
 
+  # File picking
+  file_picker: ^8.0.0
+
   # Functional utilities
   uuid: ^4.3.3
   intl: ^0.19.0
