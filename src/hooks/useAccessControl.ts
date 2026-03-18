@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "./useSubscription";
 
-const FREE_READS_LIMIT = 5;
-const FREE_HIGHLIGHTS_LIMIT = 10;
+const FREE_READS_LIMIT = 10;
 
 export const useAccessControl = () => {
   const { user } = useAuth();
@@ -34,10 +33,7 @@ export const useAccessControl = () => {
   const canListenAudio = isPro;
   const canDownload = isPro;
 
-  const canHighlight = (currentCount: number) => {
-    if (isPro) return true;
-    return currentCount < FREE_HIGHLIGHTS_LIMIT;
-  };
+  const canHighlight = (_currentCount?: number) => true;
 
   return {
     isPro,
@@ -47,7 +43,7 @@ export const useAccessControl = () => {
     canHighlight,
     freeReadsUsed,
     freeReadsLimit: FREE_READS_LIMIT,
-    highlightLimit: FREE_HIGHLIGHTS_LIMIT,
+    highlightLimit: Infinity,
     isLoading: subLoading || readsLoading,
   };
 };
