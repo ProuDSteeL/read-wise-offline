@@ -51,7 +51,7 @@ const AudioPlayerPage = () => {
     if (!summary?.audio_url || !id) return;
     if (audio.state.bookId !== id) {
       // Different book — load it but don't auto-play
-      audio.load(id, summary.audio_url, book?.title);
+      audio.load(id, book?.title);
     }
   }, [summary?.audio_url, id, book?.title]);
 

@@ -177,7 +177,7 @@ const ReaderPage = () => {
 
   const audio_start = () => {
     if (summary?.audio_url && id) {
-      audioCtx.play(id, summary.audio_url, book?.title);
+      audioCtx.play(id, book?.title);
     }
   };
 
@@ -393,7 +393,7 @@ const ReaderPage = () => {
               const next = !showAudioPlayer;
               setShowAudioPlayer(next);
               if (next && summary?.audio_url && id && audioCtx.state.bookId !== id) {
-                audioCtx.play(id, summary.audio_url, book?.title);
+                audioCtx.play(id, book?.title);
               }
               if (!next) {
                 audioCtx.stop();

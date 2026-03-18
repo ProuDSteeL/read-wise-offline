@@ -205,8 +205,7 @@ const AdminBookForm = () => {
           throw new Error(`Ошибка загрузки аудио: ${error?.message || "неизвестная ошибка"}`);
         }
 
-        const { data: urlData } = supabase.storage.from("audio-files").getPublicUrl(path);
-        audioUrl = urlData.publicUrl;
+        audioUrl = path;
         audioSize = audioFile.size;
       }
 

@@ -15,8 +15,8 @@ interface AudioState {
 interface AudioContextType {
   state: AudioState;
   audioRef: React.RefObject<HTMLAudioElement | null>;
-  play: (bookId: string, audioUrl: string, bookTitle?: string, position?: number, speed?: number) => void;
-  load: (bookId: string, audioUrl: string, bookTitle?: string, position?: number) => void;
+  play: (bookId: string, bookTitle?: string, position?: number, speed?: number) => void;
+  load: (bookId: string, bookTitle?: string, position?: number) => void;
   togglePlay: () => void;
   seek: (time: number) => void;
   skip: (seconds: number) => void;
@@ -27,10 +27,21 @@ interface AudioContextType {
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
 
+// Helper to fetch signed audio URL from Edge Function
+const getSignedAudioUrl = async (bookId: string): Promise<string> => {
+  const { data, error } = await supabase.functions.invoke("get-audio-url", {
+    body: { bookId },
+  });
+  if (error) throw new Error(error.message || "Failed to get audio URL");
+  if (!data?.signedUrl) throw new Error("No signed URL returned");
+  return data.signedUrl;
+};
+
 export const AudioProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const fetchingRef = useRef<string | null>(null);
 
   const [state, setState] = useState<AudioState>({
     bookId: null,
@@ -64,14 +75,14 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
 
   // Play a book's audio (or resume if same book)
   const play = useCallback(
-    (bookId: string, audioUrl: string, bookTitle?: string, position?: number, speed?: number) => {
+    async (bookId: string, bookTitle?: string, position?: number, speed?: number) => {
       const audio = audioRef.current;
       if (!audio) return;
 
       const newSpeed = speed ?? state.speed;
 
-      if (state.bookId === bookId && state.audioUrl === audioUrl) {
-        // Same book — just seek if needed and play
+      // Same book already loaded — just resume
+      if (state.bookId === bookId && state.audioUrl) {
         if (position != null && position > 0) {
           audio.currentTime = position;
         }
@@ -81,91 +92,121 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Different book — change source
-      audio.src = audioUrl;
-      audio.playbackRate = newSpeed;
-      audio.load();
+      // Prevent duplicate fetches
+      if (fetchingRef.current === bookId) return;
+      fetchingRef.current = bookId;
 
-      const onLoaded = () => {
-        if (position != null && position > 0) {
-          audio.currentTime = position;
+      try {
+        const signedUrl = await getSignedAudioUrl(bookId);
+        // Check we're still relevant (user didn't switch)
+        if (fetchingRef.current !== bookId) return;
+
+        audio.src = signedUrl;
+        audio.playbackRate = newSpeed;
+        audio.load();
+
+        const onLoaded = () => {
+          if (position != null && position > 0) {
+            audio.currentTime = position;
+          }
+          audio.play().catch(() => {});
+          audio.removeEventListener("loadedmetadata", onLoaded);
+        };
+        audio.addEventListener("loadedmetadata", onLoaded);
+
+        // If no position provided, load from DB
+        if (position == null && user) {
+          supabase
+            .from("user_progress")
+            .select("audio_position")
+            .eq("user_id", user.id)
+            .eq("book_id", bookId)
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data?.audio_position && audio.src.includes(signedUrl)) {
+                audio.currentTime = Number(data.audio_position);
+              }
+            });
         }
-        audio.play().catch(() => {});
-        audio.removeEventListener("loadedmetadata", onLoaded);
-      };
-      audio.addEventListener("loadedmetadata", onLoaded);
 
-      // If no position provided, load from DB
-      if (position == null && user) {
-        supabase
-          .from("user_progress")
-          .select("audio_position")
-          .eq("user_id", user.id)
-          .eq("book_id", bookId)
-          .maybeSingle()
-          .then(({ data }) => {
-            if (data?.audio_position && audio.src.includes(audioUrl)) {
-              audio.currentTime = Number(data.audio_position);
-            }
-          });
+        setState({
+          bookId,
+          bookTitle: bookTitle || "",
+          audioUrl: signedUrl,
+          playing: true,
+          currentTime: position || 0,
+          duration: 0,
+          speed: newSpeed,
+        });
+        localStorage.setItem("audio-speed", String(newSpeed));
+      } catch {
+        // Silently fail — user likely not Pro or no audio available
+      } finally {
+        if (fetchingRef.current === bookId) {
+          fetchingRef.current = null;
+        }
       }
-
-      setState({
-        bookId,
-        bookTitle: bookTitle || "",
-        audioUrl,
-        playing: true,
-        currentTime: position || 0,
-        duration: 0,
-        speed: newSpeed,
-      });
-      localStorage.setItem("audio-speed", String(newSpeed));
     },
     [state.bookId, state.audioUrl, state.speed, user]
   );
 
   // Load without auto-playing
   const load = useCallback(
-    (bookId: string, audioUrl: string, bookTitle?: string, position?: number) => {
+    async (bookId: string, bookTitle?: string, position?: number) => {
       const audio = audioRef.current;
       if (!audio) return;
-      if (state.bookId === bookId && state.audioUrl === audioUrl) return;
+      if (state.bookId === bookId && state.audioUrl) return;
 
-      audio.src = audioUrl;
-      audio.playbackRate = state.speed;
-      audio.load();
+      // Prevent duplicate fetches
+      if (fetchingRef.current === bookId) return;
+      fetchingRef.current = bookId;
 
-      const onLoaded = () => {
-        if (position != null && position > 0) {
-          audio.currentTime = position;
+      try {
+        const signedUrl = await getSignedAudioUrl(bookId);
+        if (fetchingRef.current !== bookId) return;
+
+        audio.src = signedUrl;
+        audio.playbackRate = state.speed;
+        audio.load();
+
+        const onLoaded = () => {
+          if (position != null && position > 0) {
+            audio.currentTime = position;
+          }
+          audio.removeEventListener("loadedmetadata", onLoaded);
+        };
+        audio.addEventListener("loadedmetadata", onLoaded);
+
+        if (position == null && user) {
+          supabase
+            .from("user_progress")
+            .select("audio_position")
+            .eq("user_id", user.id)
+            .eq("book_id", bookId)
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data?.audio_position && audio.src.includes(signedUrl)) {
+                audio.currentTime = Number(data.audio_position);
+              }
+            });
         }
-        audio.removeEventListener("loadedmetadata", onLoaded);
-      };
-      audio.addEventListener("loadedmetadata", onLoaded);
 
-      if (position == null && user) {
-        supabase
-          .from("user_progress")
-          .select("audio_position")
-          .eq("user_id", user.id)
-          .eq("book_id", bookId)
-          .maybeSingle()
-          .then(({ data }) => {
-            if (data?.audio_position && audio.src.includes(audioUrl)) {
-              audio.currentTime = Number(data.audio_position);
-            }
-          });
+        setState({
+          bookId,
+          bookTitle: bookTitle || "",
+          audioUrl: signedUrl,
+          playing: false,
+          currentTime: position || 0,
+          duration: 0,
+          speed: state.speed,
+        });
+      } catch {
+        // Silently fail — user likely not Pro or no audio available
+      } finally {
+        if (fetchingRef.current === bookId) {
+          fetchingRef.current = null;
+        }
       }
-
-      setState({
-        bookId,
-        bookTitle: bookTitle || "",
-        audioUrl,
-        playing: false,
-        currentTime: position || 0,
-        duration: 0,
-        speed: state.speed,
-      });
     },
     [state.bookId, state.audioUrl, state.speed, user]
   );
