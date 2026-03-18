@@ -51,14 +51,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const token = authHeader.replace("Bearer ", "");
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
     if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: "Not authenticated" }),
+        JSON.stringify({ error: "Not authenticated", detail: authError?.message }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
