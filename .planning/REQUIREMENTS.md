@@ -9,7 +9,7 @@
 
 - [x] **SEC-01**: RLS policy restricts subscription field updates to service role only (prevents user self-promotion to Pro)
 - [ ] **SEC-02**: Server-side content gating via Edge Functions validates subscription before returning full summary content
-- [ ] **SEC-03**: Signed audio URLs with time-limited access tokens prevent direct audio file access
+- [x] **SEC-03**: Signed audio URLs with time-limited access tokens prevent direct audio file access
 
 ### Audio Player
 
@@ -100,7 +100,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Complete |
 | AUDIO-03 | Phase 3 | Pending |
 | AUDIO-04 | Phase 3 | Pending |
 | READ-04 | Phase 2 | Pending |
