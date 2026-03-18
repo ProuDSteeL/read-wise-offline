@@ -30,11 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. A non-Pro user cannot update their own subscription fields via DevTools or API calls
   2. Full summary content is only returned from Edge Functions after server-side subscription validation
   3. Audio file URLs are time-limited signed URLs that expire and cannot be shared or reused
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — RLS trigger to protect subscription fields + update free tier limits (SEC-01)
+- [ ] 01-02-PLAN.md — Content gating Edge Function with server-side truncation + paywall UI (SEC-02)
+- [ ] 01-03-PLAN.md — Private audio bucket + signed URL Edge Function + client integration (SEC-03)
 
 ### Phase 2: Reader Enhancement
 **Goal**: Users have a comfortable, customizable reading experience with navigation and text interaction tools
@@ -130,7 +131,7 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Security Hardening | 0/? | Not started | - |
+| 1. Security Hardening | 0/3 | Not started | - |
 | 2. Reader Enhancement | 0/? | Not started | - |
 | 3. Audio Player Polish | 0/? | Not started | - |
 | 4. Content & Collections | 0/? | Not started | - |
