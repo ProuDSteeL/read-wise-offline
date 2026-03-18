@@ -98,40 +98,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | - | Pending |
-| SEC-02 | - | Pending |
-| SEC-03 | - | Pending |
-| AUDIO-03 | - | Pending |
-| AUDIO-04 | - | Pending |
-| READ-04 | - | Pending |
-| READ-05 | - | Pending |
-| READ-06 | - | Pending |
-| READ-07 | - | Pending |
-| READ-08 | - | Pending |
-| READ-09 | - | Pending |
-| READ-10 | - | Pending |
-| CONT-01 | - | Pending |
-| CONT-02 | - | Pending |
-| CONT-03 | - | Pending |
-| CONT-04 | - | Pending |
-| QUIZ-01 | - | Pending |
-| QUIZ-02 | - | Pending |
-| QUIZ-03 | - | Pending |
-| QUIZ-04 | - | Pending |
-| OFFL-04 | - | Pending |
-| OFFL-05 | - | Pending |
-| OFFL-06 | - | Pending |
-| GROW-01 | - | Pending |
-| GROW-02 | - | Pending |
-| GROW-03 | - | Pending |
-| COLL-01 | - | Pending |
-| COLL-02 | - | Pending |
+| SEC-01 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| AUDIO-03 | Phase 3 | Pending |
+| AUDIO-04 | Phase 3 | Pending |
+| READ-04 | Phase 2 | Pending |
+| READ-05 | Phase 2 | Pending |
+| READ-06 | Phase 2 | Pending |
+| READ-07 | Phase 2 | Pending |
+| READ-08 | Phase 2 | Pending |
+| READ-09 | Phase 2 | Pending |
+| READ-10 | Phase 2 | Pending |
+| CONT-01 | Phase 4 | Pending |
+| CONT-02 | Phase 4 | Pending |
+| CONT-03 | Phase 4 | Pending |
+| CONT-04 | Phase 4 | Pending |
+| QUIZ-01 | Phase 5 | Pending |
+| QUIZ-02 | Phase 5 | Pending |
+| QUIZ-03 | Phase 5 | Pending |
+| QUIZ-04 | Phase 5 | Pending |
+| OFFL-04 | Phase 6 | Pending |
+| OFFL-05 | Phase 6 | Pending |
+| OFFL-06 | Phase 6 | Pending |
+| GROW-01 | Phase 7 | Pending |
+| GROW-02 | Phase 7 | Pending |
+| GROW-03 | Phase 7 | Pending |
+| COLL-01 | Phase 4 | Pending |
+| COLL-02 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28 ⚠️
+- Mapped to phases: 28
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 after roadmap creation*
