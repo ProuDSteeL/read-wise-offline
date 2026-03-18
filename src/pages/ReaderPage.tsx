@@ -367,7 +367,7 @@ const ReaderPage = () => {
   }
 
   const fontClass = fontFamily === "serif" ? "font-serif" : "font-sans";
-  const hasAccess = !user || canReadFull(id!);
+  const isTruncated = summary?.truncated === true;
 
   return (
     <div className={`relative min-h-screen ${themeClasses[theme]} bg-background text-foreground transition-colors duration-300`}>
@@ -475,7 +475,7 @@ const ReaderPage = () => {
       {/* Content */}
       <article
         ref={contentRef}
-        className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground`}
+        className={`relative mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground`}
         style={{
           fontSize: `${fontSize}px`,
           lineHeight,
@@ -524,15 +524,23 @@ const ReaderPage = () => {
             hr: () => <hr className="my-6 border-border" />,
           }}
         >
-          {hasAccess ? summary.content : summary.content.slice(0, Math.floor(summary.content.length * 0.2))}
+          {summary.content}
         </ReactMarkdown>
-        {!hasAccess && (
-          <div className="relative -mt-16 pt-16 bg-gradient-to-t from-background via-background to-transparent">
-            <PaywallPrompt
-              message={`Вы прочитали ${freeReadsUsed} из ${freeReadsLimit} бесплатных саммари`}
-              inline
-            />
-          </div>
+        {isTruncated && (
+          <>
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+            <div className="relative">
+              {summary.freeReadsUsed != null && summary.freeReadsLimit != null && (
+                <p className="mb-2 text-center text-sm text-muted-foreground">
+                  {`\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u043E ${summary.freeReadsUsed} \u0438\u0437 ${summary.freeReadsLimit} \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u044B\u0445 \u0441\u0430\u043C\u043C\u0430\u0440\u0438`}
+                </p>
+              )}
+              <PaywallPrompt
+                inline
+                message={"\u0427\u0438\u0442\u0430\u0439\u0442\u0435 \u043F\u043E\u043B\u043D\u0443\u044E \u0432\u0435\u0440\u0441\u0438\u044E \u0441 \u043F\u043E\u0434\u043F\u0438\u0441\u043A\u043E\u0439 Pro"}
+              />
+            </div>
+          </>
         )}
       </article>
 
