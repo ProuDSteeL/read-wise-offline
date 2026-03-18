@@ -73,7 +73,9 @@ Deno.serve(async (req) => {
     }
 
     // Admin client for data queries (bypasses RLS)
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     // Fetch summary
     const { data: summary, error: summaryError } = await adminClient
@@ -84,7 +86,7 @@ Deno.serve(async (req) => {
 
     if (summaryError) {
       return new Response(
-        JSON.stringify({ error: "Failed to fetch summary" }),
+        JSON.stringify({ error: "Failed to fetch summary", detail: summaryError.message, code: summaryError.code }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
