@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-03-18T18:46:28Z"
-last_activity: 2026-03-18 -- Completed plan 01-03 (audio bucket security)
+status: completed
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-18T18:49:44.380Z"
+last_activity: 2026-03-18 -- Completed 01-03-PLAN.md (audio bucket security)
 progress:
   total_phases: 7
   completed_phases: 1
@@ -52,6 +52,7 @@ Progress: [██░░░░░░░░] 14%
 *Updated after each plan completion*
 | Phase 01 P01 | 3min | 2 tasks | 3 files |
 | Phase 01 P03 | 2min | 2 tasks | 6 files |
+| Phase 01 P02 | 5min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Set highlightLimit to Infinity for backward compat; canHighlight always returns true
 - [Phase 01-03]: 24h signed URL expiry balances security with UX
 - [Phase 01-03]: AudioContext fetches signed URLs internally so callers only pass bookId
+- [Phase 01]: Server-side content gating via Edge Function - client never receives full text for gated content
+- [Phase 01]: truncateSummary duplicated in Edge Function (Deno isolation from src/lib)
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T18:46:28Z
-Stopped at: Completed 01-03-PLAN.md
-Resume file: .planning/phases/01-security-hardening/01-03-SUMMARY.md
+Last session: 2026-03-18T18:49:44.374Z
+Stopped at: Completed 01-02-PLAN.md
+Resume file: None
