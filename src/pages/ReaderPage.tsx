@@ -204,6 +204,16 @@ const ReaderPage = () => {
     }
   }, [savedProgress, isLoading]);
 
+  // Track book open immediately (for free reads counter)
+  useEffect(() => {
+    if (user && id && summary?.content) {
+      supabase.from("user_progress").upsert(
+        { user_id: user.id, book_id: id, progress_percent: 0, scroll_position: 0 },
+        { onConflict: "user_id,book_id", ignoreDuplicates: true }
+      );
+    }
+  }, [user, id, summary]);
+
   const saveProgress = useCallback(
     (percent: number) => {
       if (!user || !id) return;
