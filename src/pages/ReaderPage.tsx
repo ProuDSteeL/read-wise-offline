@@ -188,7 +188,7 @@ const ReaderPage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("user_progress")
-        .select("progress_percent, last_position")
+        .select("progress_percent, scroll_position")
         .eq("user_id", user!.id)
         .eq("book_id", id!)
         .maybeSingle();
@@ -198,9 +198,9 @@ const ReaderPage = () => {
   });
 
   useEffect(() => {
-    if (savedProgress?.last_position && !isLoading && !hasRestoredPosition.current) {
+    if (savedProgress?.scroll_position && !isLoading && !hasRestoredPosition.current) {
       hasRestoredPosition.current = true;
-      setTimeout(() => window.scrollTo(0, parseInt(savedProgress.last_position)), 150);
+      setTimeout(() => window.scrollTo(0, savedProgress.scroll_position), 150);
     }
   }, [savedProgress, isLoading]);
 
@@ -214,7 +214,7 @@ const ReaderPage = () => {
             user_id: user.id,
             book_id: id,
             progress_percent: Math.round(percent),
-            last_position: String(window.scrollY),
+            scroll_position: window.scrollY,
           },
           { onConflict: "user_id,book_id" }
         );
@@ -244,7 +244,7 @@ const ReaderPage = () => {
             user_id: user.id,
             book_id: id,
             progress_percent: Math.round(percent),
-            last_position: String(scrollTop),
+            scroll_position: scrollTop,
           },
           { onConflict: "user_id,book_id" }
         );
