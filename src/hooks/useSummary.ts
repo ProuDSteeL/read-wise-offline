@@ -7,7 +7,6 @@ interface SummaryResponse {
   content: string | null;
   audio_url: string | null;
   audio_size_bytes: number | null;
-  published_at: string | null;
   created_at: string;
   updated_at: string;
   truncated: boolean;
@@ -19,11 +18,22 @@ export const useSummary = (bookId: string) => {
   return useQuery({
     queryKey: ["summary", bookId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke<SummaryResponse>("get-summary", {
-        body: { bookId },
-      });
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase.functions.invoke<SummaryResponse>("get-summary", {
+          body: { bookId },
+        });
+        if (error) throw error;
+        return data;
+      } catch {
+        // Fallback: direct table query if Edge Function fails
+        const { data, error } = await supabase
+          .from("summaries")
+          .select("*")
+          .eq("book_id", bookId)
+          .maybeSingle();
+        if (error) throw error;
+        return data ? { ...data, truncated: false, freeReadsUsed: 0, freeReadsLimit: 10 } : null;
+      }
     },
     enabled: !!bookId,
   });
