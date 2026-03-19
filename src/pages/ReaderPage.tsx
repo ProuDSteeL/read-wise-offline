@@ -19,6 +19,7 @@ import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
 import { useNativeSelection } from "@/hooks/useNativeSelection";
 import SelectionToolbar from "@/components/reader/SelectionToolbar";
+import HighlightEditMenu from "@/components/reader/HighlightEditMenu";
 import { getColor, HIGHLIGHT_COLORS } from "@/lib/highlightColors";
 
 type ReaderTheme = "light" | "dark" | "sepia";
@@ -60,7 +61,7 @@ function extractToc(markdown: string): TocEntry[] {
 const themeClasses: Record<ReaderTheme, string> = { light: "", dark: "dark", sepia: "sepia" };
 
 // Highlight text segments within a string
-function applyHighlights(text: string, highlights: Array<{ text: string; color?: string }>): ReactNode[] {
+function applyHighlights(text: string, highlights: Array<{ id?: string; text: string; color?: string }>): ReactNode[] {
   if (!highlights.length) return [text];
 
   const parts: ReactNode[] = [];
@@ -84,6 +85,7 @@ function applyHighlights(text: string, highlights: Array<{ text: string; color?:
     parts.push(
       <mark
         key={`hl-${keyIdx++}`}
+        data-highlight-id={hl.id}
         style={{
           backgroundColor: `${color.hex}18`,
           borderBottom: `2.5px solid ${color.hex}`,
@@ -144,6 +146,7 @@ const ReaderPage = () => {
   const [tocTab, setTocTab] = useState<"toc" | "notes" | "quotes">("toc");
   const [noteEdit, setNoteEdit] = useState<{ id: string; text: string; note: string } | null>(null);
   const [noteValue, setNoteValue] = useState("");
+  const [editingHighlight, setEditingHighlight] = useState<{ id: string; tapX: number; tapY: number } | null>(null);
   const [scrollPercent, setScrollPercent] = useState(0);
   const saveProgressTimeout = useRef<ReturnType<typeof setTimeout>>();
   const hasRestoredPosition = useRef(false);
@@ -271,6 +274,37 @@ const ReaderPage = () => {
     enabled: !!user && !!id,
   });
 
+
+  // Tap on existing highlight
+  useEffect(() => {
+    const container = contentRef.current;
+    if (!container) return;
+    const handler = (e: MouseEvent) => {
+      const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]");
+      if (!mark) return;
+      // Only trigger on plain tap, not text selection drag
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.toString().trim()) return;
+      e.preventDefault();
+      const hId = mark.getAttribute("data-highlight-id")!;
+      setEditingHighlight({ id: hId, tapX: e.clientX, tapY: e.clientY });
+    };
+    container.addEventListener("click", handler);
+    return () => container.removeEventListener("click", handler);
+  }, [highlights]);
+
+  // Close highlight edit menu on outside click
+  useEffect(() => {
+    if (!editingHighlight) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-highlight-menu]")) return;
+      setEditingHighlight(null);
+    };
+    // Use timeout so the opening click doesn't immediately close it
+    const t = setTimeout(() => document.addEventListener("click", handler), 0);
+    return () => { clearTimeout(t); document.removeEventListener("click", handler); };
+  }, [editingHighlight]);
 
   // Save quote
   const handleQuote = () => {
@@ -565,14 +599,38 @@ const ReaderPage = () => {
         )}
       </article>
 
-      {/* Selection toolbar */}
-      {selection && (
+      {/* Selection toolbar (new text selection) */}
+      {selection && !editingHighlight && (
         <SelectionToolbar
           rect={selection.rect}
           text={selection.text}
           onQuote={handleQuote}
         />
       )}
+
+      {/* Highlight edit menu (tap on existing highlight) */}
+      {editingHighlight && (() => {
+        const hl = highlights.find((h) => h.id === editingHighlight.id);
+        if (!hl) return null;
+        return (
+          <HighlightEditMenu
+            tapX={editingHighlight.tapX}
+            tapY={editingHighlight.tapY}
+            highlight={hl}
+            onChangeColor={(hId, color) => {
+              updateHighlight.mutate({ highlightId: hId, updates: { color } });
+            }}
+            onRemoveHighlight={(hId) => {
+              deleteHighlight.mutate(hId);
+            }}
+            onNote={(h) => {
+              setNoteValue(h.note ?? "");
+              setNoteEdit({ id: h.id, text: h.text, note: h.note ?? "" });
+            }}
+            onClose={() => setEditingHighlight(null)}
+          />
+        );
+      })()}
 
       {/* TOC / Notes / Quotes Sheet */}
       <Sheet open={showToc} onOpenChange={setShowToc}>
