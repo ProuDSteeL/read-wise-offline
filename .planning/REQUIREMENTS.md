@@ -35,10 +35,10 @@
 
 ### Quizzes
 
-- [ ] **QUIZ-01**: Multiple-choice quiz with 3-5 questions per summary, accessible after reading
-- [ ] **QUIZ-02**: Flashcards for key concepts — front shows question/concept, flip reveals answer
-- [ ] **QUIZ-03**: Admin can create quiz questions and flashcards per book in admin form
-- [ ] **QUIZ-04**: Quiz results and flashcard progress saved and displayed in user profile stats
+- [x] **QUIZ-01**: Multiple-choice quiz with 3-5 questions per summary, accessible after reading
+- [x] **QUIZ-02**: Flashcards for key concepts — front shows question/concept, flip reveals answer
+- [x] **QUIZ-03**: Admin can create quiz questions and flashcards per book in admin form
+- [x] **QUIZ-04**: Quiz results and flashcard progress saved and displayed in user profile stats
 
 ### Offline
 
@@ -114,10 +114,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONT-02 | Phase 4 | Complete |
 | CONT-03 | Phase 4 | Complete |
 | CONT-04 | Phase 4 | Complete |
-| QUIZ-01 | Phase 5 | Pending |
-| QUIZ-02 | Phase 5 | Pending |
-| QUIZ-03 | Phase 5 | Pending |
-| QUIZ-04 | Phase 5 | Pending |
+| QUIZ-01 | Phase 5 | Complete |
+| QUIZ-02 | Phase 5 | Complete |
+| QUIZ-03 | Phase 5 | Complete |
+| QUIZ-04 | Phase 5 | Complete |
 | OFFL-04 | Phase 6 | Pending |
 | OFFL-05 | Phase 6 | Pending |
 | OFFL-06 | Phase 6 | Pending |
