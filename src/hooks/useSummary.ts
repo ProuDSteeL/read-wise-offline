@@ -4,24 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const FREE_READS_LIMIT = 10;
 
-function truncateSummary(content: string, targetPercent: number = 0.5): string {
+function truncateSummary(content: string): string {
   if (!content) return "";
   const paragraphs = content.split(/\n\n+/);
-  if (paragraphs.length <= 1) return content;
-
-  const totalLength = content.length;
-  const targetLength = totalLength * targetPercent;
-
-  let accumulated = 0;
-  const kept: string[] = [];
-
-  for (const p of paragraphs) {
-    kept.push(p);
-    accumulated += p.length + 2;
-    if (accumulated >= targetLength) break;
-  }
-
-  return kept.join("\n\n");
+  if (paragraphs.length <= 2) return paragraphs[0] ?? "";
+  // Show first 2 paragraphs max
+  return paragraphs.slice(0, 2).join("\n\n");
 }
 
 export const useSummary = (bookId: string) => {
