@@ -581,6 +581,7 @@ const ReaderPage = () => {
       {selection && (
         <SelectionToolbar
           rect={selection.rect}
+          text={selection.text}
           onQuote={handleQuote}
         />
       )}
