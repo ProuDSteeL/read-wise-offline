@@ -566,7 +566,7 @@ const ReaderPage = () => {
               <p className="mb-4 text-muted-foreground">{wrapWithHighlights(children)}</p>
             ),
             blockquote: ({ children }) => (
-              <blockquote className="my-4 border-l-4 border-primary/40 pl-4 italic text-muted-foreground">
+              <blockquote className="my-4 rounded-r-xl border-l-4 border-primary bg-primary/10 py-3 pl-4 pr-3 italic text-foreground">
                 {children}
               </blockquote>
             ),
