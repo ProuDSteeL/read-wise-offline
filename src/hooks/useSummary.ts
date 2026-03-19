@@ -6,7 +6,6 @@ const FREE_READS_LIMIT = 10;
 
 function truncateSummary(content: string): string {
   if (!content) return "";
-  // Split by any blank line or heading marker
   const lines = content.split(/\n/);
   const sections: string[] = [];
   let current = "";
@@ -19,7 +18,6 @@ function truncateSummary(content: string): string {
     }
   }
   if (current.trim()) sections.push(current.trim());
-  // Show title + first section only
   if (sections.length <= 1) return sections[0]?.slice(0, 200) ?? "";
   return sections.slice(0, 2).join("\n\n");
 }
@@ -30,7 +28,6 @@ export const useSummary = (bookId: string) => {
   return useQuery({
     queryKey: ["summary", bookId],
     queryFn: async () => {
-      // Fetch summary directly
       const { data: summary, error } = await supabase
         .from("summaries")
         .select("id, book_id, content, audio_url, audio_size_bytes, created_at, updated_at")
@@ -39,42 +36,47 @@ export const useSummary = (bookId: string) => {
       if (error) throw error;
       if (!summary) return null;
 
-      // Track this book open
-      if (user) {
-        await supabase.from("user_progress").upsert(
-          { user_id: user.id, book_id: bookId, progress_percent: 0, scroll_position: 0 },
-          { onConflict: "user_id,book_id" }
-        );
+      if (!user) {
+        return { ...summary, truncated: true, content: truncateSummary(summary.content ?? ""), freeReadsUsed: 0, freeReadsLimit: FREE_READS_LIMIT };
       }
 
       // Check subscription
-      let isPro = false;
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("subscription_type, subscription_expires_at")
-          .eq("id", user.id)
-          .maybeSingle();
-        const subType = profile?.subscription_type;
-        const expires = profile?.subscription_expires_at;
-        isPro = (subType === "pro_monthly" || subType === "pro_yearly") &&
-          (!expires || new Date(expires) > new Date());
-      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("subscription_type, subscription_expires_at")
+        .eq("id", user.id)
+        .maybeSingle();
+      const subType = profile?.subscription_type;
+      const expires = profile?.subscription_expires_at;
+      const isPro = (subType === "pro_monthly" || subType === "pro_yearly") &&
+        (!expires || new Date(expires) > new Date());
 
       if (isPro) {
         return { ...summary, truncated: false, freeReadsUsed: 0, freeReadsLimit: FREE_READS_LIMIT };
       }
 
-      // Count free reads
+      // Check existing progress BEFORE tracking
       const { data: progressRows } = await supabase
         .from("user_progress")
         .select("book_id")
         .eq("user_id", user.id);
 
       const freeReadsUsed = progressRows?.length ?? 0;
+      const alreadyOpened = progressRows?.some((r) => r.book_id === bookId) ?? false;
 
-      if (freeReadsUsed < FREE_READS_LIMIT) {
+      // Already opened this book — always show full content
+      if (alreadyOpened) {
         return { ...summary, truncated: false, freeReadsUsed, freeReadsLimit: FREE_READS_LIMIT };
+      }
+
+      // New book — check if within limit
+      if (freeReadsUsed < FREE_READS_LIMIT) {
+        // Track the open
+        await supabase.from("user_progress").upsert(
+          { user_id: user.id, book_id: bookId, progress_percent: 0, scroll_position: 0 },
+          { onConflict: "user_id,book_id" }
+        );
+        return { ...summary, truncated: false, freeReadsUsed: freeReadsUsed + 1, freeReadsLimit: FREE_READS_LIMIT };
       }
 
       // Exceeded limit: truncate
