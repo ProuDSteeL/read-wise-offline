@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Bookmark, Copy, Share2, StickyNote, Palette, Languages } from "lucide-react";
+import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Copy, Share2, StickyNote, Palette, Languages } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
@@ -141,7 +141,7 @@ const ReaderPage = () => {
   );
   const [showSettings, setShowSettings] = useState(false);
   const [showToc, setShowToc] = useState(false);
-  const [tocTab, setTocTab] = useState<"toc" | "bookmarks" | "quotes">("toc");
+  const [tocTab, setTocTab] = useState<"toc" | "notes" | "quotes">("toc");
   const [noteEdit, setNoteEdit] = useState<{ id: string; text: string; note: string } | null>(null);
   const [noteValue, setNoteValue] = useState("");
   const [scrollPercent, setScrollPercent] = useState(0);
@@ -574,7 +574,7 @@ const ReaderPage = () => {
         />
       )}
 
-      {/* TOC / Bookmarks / Quotes Sheet */}
+      {/* TOC / Notes / Quotes Sheet */}
       <Sheet open={showToc} onOpenChange={setShowToc}>
         <SheetContent side="left" className="w-[320px] p-0 flex flex-col">
           <SheetHeader className="sr-only">
@@ -583,8 +583,8 @@ const ReaderPage = () => {
 
           {/* Tab bar */}
           <div className="flex border-b border-border/40 shrink-0">
-            {(["toc", "bookmarks", "quotes"] as const).map((tab) => {
-              const label = tab === "toc" ? "ОГЛАВЛЕНИЕ" : tab === "bookmarks" ? "ЗАКЛАДКИ" : "ЦИТАТЫ";
+            {(["toc", "notes", "quotes"] as const).map((tab) => {
+              const label = tab === "toc" ? "ОГЛАВЛЕНИЕ" : tab === "notes" ? "ЗАМЕТКИ" : "ЦИТАТЫ";
               const isActive = (tocTab ?? "toc") === tab;
               return (
                 <button
@@ -629,15 +629,33 @@ const ReaderPage = () => {
               </div>
             )}
 
-            {/* ЗАКЛАДКИ */}
-            {(tocTab ?? "toc") === "bookmarks" && (
-              <div className="px-3 py-3">
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  <Bookmark className="mx-auto mb-2 h-5 w-5 text-muted-foreground/50" />
-                  Закладки скоро появятся
-                </p>
-              </div>
-            )}
+            {/* ЗАМЕТКИ */}
+            {(tocTab ?? "toc") === "notes" && (() => {
+              const withNotes = highlights.filter((h) => h.note);
+              return (
+                <div className="px-3 py-3 space-y-2">
+                  {withNotes.length === 0 && (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      <StickyNote className="mx-auto mb-2 h-5 w-5 text-muted-foreground/50" />
+                      Добавьте заметку к цитате
+                    </p>
+                  )}
+                  {withNotes.map((h) => {
+                    const color = getColor(h.color);
+                    return (
+                      <div
+                        key={h.id}
+                        className="rounded-xl bg-secondary/50 p-3"
+                        style={{ borderLeft: `3px solid ${color.hex}` }}
+                      >
+                        <p className="text-sm leading-relaxed text-foreground">{h.note}</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground line-clamp-1">«{h.text}»</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* ЦИТАТЫ */}
             {(tocTab ?? "toc") === "quotes" && (
