@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Play, Pause, SkipForward, SkipBack, X } from "lucide-react";
+import { Play, Pause, SkipForward, SkipBack, X, Moon } from "lucide-react";
 import { useAudio } from "@/contexts/AudioContext";
+import { MINI_SPEEDS } from "@/lib/audioConstants";
 
 const formatTime = (s: number) => {
   const m = Math.floor(s / 60);
@@ -8,7 +9,7 @@ const formatTime = (s: number) => {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 };
 
-const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+const SPEEDS = MINI_SPEEDS;
 
 interface MiniAudioPlayerProps {
   onClose?: () => void;
@@ -16,7 +17,7 @@ interface MiniAudioPlayerProps {
 }
 
 const MiniAudioPlayer = ({ onClose, onExpand }: MiniAudioPlayerProps) => {
-  const { state, togglePlay, skip, setSpeed, stop } = useAudio();
+  const { state, togglePlay, skip, setSpeed, stop, sleepTimer, sleepRemaining } = useAudio();
   const [expanded, setExpanded] = useState(false);
 
   const { playing, currentTime, duration, speed, bookTitle } = state;
@@ -85,6 +86,12 @@ const MiniAudioPlayer = ({ onClose, onExpand }: MiniAudioPlayerProps) => {
             )}
             <p className="text-[10px] text-muted-foreground">
               {formatTime(currentTime)} / {formatTime(duration)}
+              {sleepTimer && (
+                <span className="ml-1 text-primary">
+                  <Moon className="mr-0.5 inline h-2.5 w-2.5" />
+                  {formatTime(sleepRemaining)}
+                </span>
+              )}
             </p>
           </button>
 
