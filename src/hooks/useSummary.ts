@@ -6,10 +6,22 @@ const FREE_READS_LIMIT = 10;
 
 function truncateSummary(content: string): string {
   if (!content) return "";
-  const paragraphs = content.split(/\n\n+/);
-  if (paragraphs.length <= 2) return paragraphs[0] ?? "";
-  // Show first 2 paragraphs max
-  return paragraphs.slice(0, 2).join("\n\n");
+  // Split by any blank line or heading marker
+  const lines = content.split(/\n/);
+  const sections: string[] = [];
+  let current = "";
+  for (const line of lines) {
+    if (line.startsWith("#") && current.trim()) {
+      sections.push(current.trim());
+      current = line + "\n";
+    } else {
+      current += line + "\n";
+    }
+  }
+  if (current.trim()) sections.push(current.trim());
+  // Show title + first section only
+  if (sections.length <= 1) return sections[0]?.slice(0, 200) ?? "";
+  return sections.slice(0, 2).join("\n\n");
 }
 
 export const useSummary = (bookId: string) => {
