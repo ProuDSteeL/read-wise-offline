@@ -15,7 +15,8 @@ const FlashCard = ({ front, back, flipped, onFlip }: FlashCardProps) => {
 
   return (
     <div
-      className="perspective-[1000px] h-64 w-full cursor-pointer"
+      className="h-64 w-full cursor-pointer"
+      style={{ perspective: "1000px" }}
       onClick={onFlip}
       role="button"
       aria-label="Flip card"
@@ -23,17 +24,25 @@ const FlashCard = ({ front, back, flipped, onFlip }: FlashCardProps) => {
       onKeyDown={handleKeyDown}
     >
       <div
-        className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
-          flipped ? "[transform:rotateY(180deg)]" : ""
-        }`}
+        className="relative h-full w-full transition-transform duration-500"
+        style={{
+          transformStyle: "preserve-3d",
+          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+        }}
       >
         {/* Front face */}
-        <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-card p-6 shadow-elevated [backface-visibility:hidden]">
+        <div
+          className="absolute inset-0 flex items-center justify-center rounded-2xl bg-card p-6 shadow-elevated"
+          style={{ backfaceVisibility: "hidden" }}
+        >
           <p className="text-center text-base font-bold text-foreground">{front}</p>
         </div>
 
         {/* Back face */}
-        <div className="absolute inset-0 flex items-center justify-center rounded-2xl gradient-primary p-6 shadow-elevated [backface-visibility:hidden] [transform:rotateY(180deg)]">
+        <div
+          className="absolute inset-0 flex items-center justify-center rounded-2xl gradient-primary p-6 shadow-elevated"
+          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+        >
           <p className="text-center text-sm leading-relaxed text-primary-foreground font-normal">
             {back}
           </p>
