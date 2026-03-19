@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
@@ -140,6 +142,8 @@ const ReaderPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showToc, setShowToc] = useState(false);
   const [tocTab, setTocTab] = useState<"toc" | "bookmarks" | "quotes">("toc");
+  const [noteEdit, setNoteEdit] = useState<{ id: string; text: string; note: string } | null>(null);
+  const [noteValue, setNoteValue] = useState("");
   const [scrollPercent, setScrollPercent] = useState(0);
   const saveProgressTimeout = useRef<ReturnType<typeof setTimeout>>();
   const hasRestoredPosition = useRef(false);
@@ -687,11 +691,8 @@ const ReaderPage = () => {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                const note = prompt("Заметка к цитате:", h.note ?? "");
-                                if (note !== null) {
-                                  updateHighlight.mutate({ highlightId: h.id, updates: { note } });
-                                  toast({ title: note ? "Заметка сохранена" : "Заметка удалена" });
-                                }
+                                setNoteValue(h.note ?? "");
+                                setNoteEdit({ id: h.id, text: h.text, note: h.note ?? "" });
                               }}
                             >
                               <StickyNote className="mr-2 h-4 w-4" />
@@ -748,6 +749,65 @@ const ReaderPage = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Note edit dialog */}
+      <Dialog open={!!noteEdit} onOpenChange={(open) => { if (!open) setNoteEdit(null); }}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-md rounded-2xl p-5 gap-3">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-left">
+              {noteEdit?.note ? "Редактировать заметку" : "Добавить заметку"}
+            </DialogTitle>
+            <DialogDescription className="text-left text-sm text-muted-foreground line-clamp-2">
+              «{noteEdit?.text}»
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            autoFocus
+            value={noteValue}
+            onChange={(e) => setNoteValue(e.target.value)}
+            placeholder="Ваша заметка..."
+            className="min-h-[100px] resize-none rounded-xl text-sm"
+          />
+          <div className="flex gap-2 justify-end">
+            {noteEdit?.note && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => {
+                  updateHighlight.mutate({ highlightId: noteEdit.id, updates: { note: "" } });
+                  toast({ title: "Заметка удалена" });
+                  setNoteEdit(null);
+                }}
+              >
+                Удалить
+              </Button>
+            )}
+            <div className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl"
+              onClick={() => setNoteEdit(null)}
+            >
+              Отмена
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-xl"
+              onClick={() => {
+                if (noteEdit) {
+                  updateHighlight.mutate({ highlightId: noteEdit.id, updates: { note: noteValue } });
+                  toast({ title: "Заметка сохранена" });
+                }
+                setNoteEdit(null);
+              }}
+            >
+              Сохранить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Mini audio player */}
       {showAudioPlayer && summary?.audio_url && canListenAudio && (
