@@ -11,7 +11,7 @@ const KeyIdeaCard = ({ index, title, content, className }: KeyIdeaCardProps) => 
   return (
     <div
       className={cn(
-        "flex w-[280px] shrink-0 flex-col gap-3 rounded-2xl gradient-primary p-5 text-primary-foreground shadow-elevated",
+        "flex w-full flex-col gap-3 rounded-2xl gradient-primary p-5 text-primary-foreground shadow-elevated",
         className
       )}
     >

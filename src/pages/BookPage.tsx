@@ -15,6 +15,8 @@ import { useDownloads } from "@/hooks/useDownloads";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import { useAudio } from "@/contexts/AudioContext";
 import DownloadDialog from "@/components/DownloadDialog";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import KeyIdeaCard from "@/components/KeyIdeaCard";
 
 const BookPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -28,8 +30,8 @@ const BookPage = () => {
   const audioCtx = useAudio();
   const { canDownload, canListenAudio } = useAccessControl();
   const queryClient = useQueryClient();
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [activeIdeaIdx, setActiveIdeaIdx] = useState(0);
-  const ideaScrollRef = useRef<HTMLDivElement>(null);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [authorExpanded, setAuthorExpanded] = useState(false);
   const viewCounted = useRef(false);
@@ -131,14 +133,12 @@ const BookPage = () => {
     bookmarkMutation.mutate();
   };
 
-  const handleIdeaScroll = () => {
-    if (!ideaScrollRef.current) return;
-    const el = ideaScrollRef.current;
-    const scrollLeft = el.scrollLeft;
-    const cardWidth = el.firstElementChild?.clientWidth ?? 280;
-    const idx = Math.round(scrollLeft / (cardWidth + 12));
-    setActiveIdeaIdx(idx);
-  };
+  useEffect(() => {
+    if (!carouselApi) return;
+    const onSelect = () => setActiveIdeaIdx(carouselApi.selectedScrollSnap());
+    carouselApi.on("select", onSelect);
+    return () => { carouselApi.off("select", onSelect); };
+  }, [carouselApi]);
 
   if (isLoading) {
     return (
@@ -228,6 +228,36 @@ const BookPage = () => {
           )}
         </section>
 
+        {/* Key ideas — Embla carousel with dots */}
+        {keyIdeas && keyIdeas.length > 0 && (
+          <section>
+            <h2 className="text-base font-semibold text-foreground mb-3">Ключевые идеи</h2>
+            <Carousel setApi={setCarouselApi} className="w-full">
+              <CarouselContent>
+                {keyIdeas.map((idea) => (
+                  <CarouselItem key={idea.id}>
+                    <KeyIdeaCard
+                      index={idea.display_order + 1}
+                      title={idea.title}
+                      content={idea.content}
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+            <div className="mt-3 flex justify-center gap-2">
+              {keyIdeas.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === activeIdeaIdx ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/20"
+                  }`}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Why read — numbered list in card */}
         {(() => {
           if (!book.why_read) return null;
@@ -266,38 +296,6 @@ const BookPage = () => {
                 {authorExpanded ? "Свернуть" : "Читать далее"}
               </button>
             )}
-          </section>
-        )}
-
-        {/* Key ideas — swipeable carousel with dots */}
-        {keyIdeas && keyIdeas.length > 0 && (
-          <section className="rounded-2xl bg-card p-5 shadow-card">
-            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full gradient-accent px-3 py-1 text-xs font-semibold text-primary-foreground">
-              ✦ Ключевые мысли
-            </div>
-            <div
-              ref={ideaScrollRef}
-              onScroll={handleIdeaScroll}
-              className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory -mx-5 px-5"
-            >
-              {keyIdeas.map((idea) => (
-                <div key={idea.id} className="w-full shrink-0 snap-center">
-                  <p className="text-sm font-semibold text-foreground mb-1">{idea.title}</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{idea.content}</p>
-                </div>
-              ))}
-            </div>
-            {/* Dots */}
-            <div className="mt-3 flex justify-center gap-1.5">
-              {keyIdeas.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === activeIdeaIdx ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/20"
-                  }`}
-                />
-              ))}
-            </div>
           </section>
         )}
 
