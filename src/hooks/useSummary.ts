@@ -36,57 +36,9 @@ export const useSummary = (bookId: string) => {
       if (error) throw error;
       if (!summary) return null;
 
-      if (!user) {
-        return { ...summary, truncated: true, content: truncateSummary(summary.content ?? ""), freeReadsUsed: 0, freeReadsLimit: FREE_READS_LIMIT };
-      }
-
-      // Check subscription
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("subscription_type, subscription_expires_at")
-        .eq("id", user.id)
-        .maybeSingle();
-      const subType = profile?.subscription_type;
-      const expires = profile?.subscription_expires_at;
-      const isPro = (subType === "pro_monthly" || subType === "pro_yearly") &&
-        (!expires || new Date(expires) > new Date());
-
-      if (isPro) {
-        return { ...summary, truncated: false, freeReadsUsed: 0, freeReadsLimit: FREE_READS_LIMIT };
-      }
-
-      // Check existing progress BEFORE tracking
-      const { data: progressRows } = await supabase
-        .from("user_progress")
-        .select("book_id")
-        .eq("user_id", user.id);
-
-      const freeReadsUsed = progressRows?.length ?? 0;
-      const alreadyOpened = progressRows?.some((r) => r.book_id === bookId) ?? false;
-
-      // Already opened this book — always show full content
-      if (alreadyOpened) {
-        return { ...summary, truncated: false, freeReadsUsed, freeReadsLimit: FREE_READS_LIMIT };
-      }
-
-      // New book — check if within limit
-      if (freeReadsUsed < FREE_READS_LIMIT) {
-        // Track the open
-        await supabase.from("user_progress").upsert(
-          { user_id: user.id, book_id: bookId, progress_percent: 0, scroll_position: 0 },
-          { onConflict: "user_id,book_id" }
-        );
-        return { ...summary, truncated: false, freeReadsUsed: freeReadsUsed + 1, freeReadsLimit: FREE_READS_LIMIT };
-      }
-
-      // Exceeded limit: truncate
-      return {
-        ...summary,
-        content: truncateSummary(summary.content ?? ""),
-        truncated: true,
-        freeReadsUsed,
-        freeReadsLimit: FREE_READS_LIMIT,
-      };
+      // TODO: re-enable content gating before launch
+      // All content is currently unrestricted for development
+      return { ...summary, truncated: false, freeReadsUsed: 0, freeReadsLimit: FREE_READS_LIMIT };
     },
     enabled: !!bookId,
   });
