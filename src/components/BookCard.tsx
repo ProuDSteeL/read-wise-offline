@@ -51,7 +51,7 @@ const BookCard = ({
           {title}
         </h3>
         <p className="text-[11px] text-muted-foreground">{author}</p>
-        {readTimeMin && (
+        {readTimeMin != null && readTimeMin > 0 && (
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
             <Clock className="h-3 w-3" />
             <span>{readTimeMin} мин</span>

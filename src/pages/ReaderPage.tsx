@@ -528,20 +528,20 @@ const ReaderPage = () => {
           {summary.content}
         </ReactMarkdown>
         {isTruncated && (
-          <>
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
-            <div className="relative">
+          <div className="relative -mt-32">
+            <div className="pointer-events-none h-32 bg-gradient-to-t from-background to-transparent" />
+            <div className="bg-background pb-8 pt-4 text-center">
               {summary.freeReadsUsed != null && summary.freeReadsLimit != null && (
-                <p className="mb-2 text-center text-sm text-muted-foreground">
-                  {`\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u043E ${summary.freeReadsUsed} \u0438\u0437 ${summary.freeReadsLimit} \u0431\u0435\u0441\u043F\u043B\u0430\u0442\u043D\u044B\u0445 \u0441\u0430\u043C\u043C\u0430\u0440\u0438`}
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Использовано {summary.freeReadsUsed} из {summary.freeReadsLimit} бесплатных саммари
                 </p>
               )}
               <PaywallPrompt
                 inline
-                message={"\u0427\u0438\u0442\u0430\u0439\u0442\u0435 \u043F\u043E\u043B\u043D\u0443\u044E \u0432\u0435\u0440\u0441\u0438\u044E \u0441 \u043F\u043E\u0434\u043F\u0438\u0441\u043A\u043E\u0439 Pro"}
+                message="Читайте полную версию с подпиской Pro"
               />
             </div>
-          </>
+          </div>
         )}
       </article>
 
