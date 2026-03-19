@@ -279,8 +279,8 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
           speed: newSpeed,
         });
         localStorage.setItem("audio-speed", String(newSpeed));
-      } catch {
-        // Silently fail -- user likely not Pro or no audio available
+      } catch (err) {
+        console.error("[AudioContext] play() failed:", err);
       } finally {
         if (fetchingRef.current === opts.bookId) {
           fetchingRef.current = null;
@@ -371,8 +371,8 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
           duration: 0,
           speed: state.speed,
         });
-      } catch {
-        // Silently fail -- user likely not Pro or no audio available
+      } catch (err) {
+        console.error("[AudioContext] load() failed:", err);
       } finally {
         if (fetchingRef.current === opts.bookId) {
           fetchingRef.current = null;
