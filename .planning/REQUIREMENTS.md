@@ -43,8 +43,8 @@
 ### Offline
 
 - [ ] **OFFL-04**: Downloads page showing list of downloaded books with storage size and delete option
-- [ ] **OFFL-05**: Chunked audio downloads with visible progress bar
-- [ ] **OFFL-06**: Offline banner indicator displayed when user reads without internet connection
+- [x] **OFFL-05**: Chunked audio downloads with visible progress bar
+- [x] **OFFL-06**: Offline banner indicator displayed when user reads without internet connection
 
 ### Growth
 
@@ -119,8 +119,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUIZ-03 | Phase 5 | Complete |
 | QUIZ-04 | Phase 5 | Complete |
 | OFFL-04 | Phase 6 | Pending |
-| OFFL-05 | Phase 6 | Pending |
-| OFFL-06 | Phase 6 | Pending |
+| OFFL-05 | Phase 6 | Complete |
+| OFFL-06 | Phase 6 | Complete |
 | GROW-01 | Phase 7 | Pending |
 | GROW-02 | Phase 7 | Pending |
 | GROW-03 | Phase 7 | Pending |

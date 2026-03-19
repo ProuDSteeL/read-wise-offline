@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: completed
-stopped_at: Phase 5 fully verified and polished
-last_updated: "2026-03-19T21:30:00.000Z"
-last_activity: 2026-03-19 -- Phase 05 complete with post-plan polish (flashcard flip fix, dynamic tags, admin redesign)
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-19T21:59:26.044Z"
+last_activity: 2026-03-19 -- Phase 06 Plan 01 complete (download progress + offline banner)
 progress:
   total_phases: 7
   completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
-  percent: 91
+  total_plans: 13
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Доступные саммари нон-фикшн книг на русском языке с полным офлайн-доступом
-**Current focus:** Phase 5 fully done — ready for Phase 6
+**Current focus:** Phase 6 — Offline Hardening
 
 ## Current Position
 
-Phase: 5 of 7 (Quizzes & Learning) — VERIFIED & POLISHED
-Plan: 3 of 3 + post-plan polish
-Status: Phase 5 complete
-Last activity: 2026-03-19 -- Phase 05 verified, bugs fixed, UX polish applied
+Phase: 6 of 7 (Offline Hardening)
+Plan: 1 of 2 complete
+Status: Executing phase 6
+Last activity: 2026-03-19 -- Phase 06 Plan 01 complete (download progress + offline banner)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 05 P01 | 6min | 2 tasks | 6 files |
 | Phase 05 P02 | 3min | 2 tasks | 7 files |
 | Phase 05 P03 | 6min | 2 tasks | 8 files |
+| Phase 06 P01 | 4min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,7 @@ Recent decisions affecting current work:
 - [Phase 05]: Admin tag management with global delete from AdminBookList
 - [Phase 05]: AdminBookList redesigned with search, status/tag filters, sorting
 - [Phase 05]: RLS policies for quiz/flashcard tables use profiles.role (not user_roles)
+- [Phase 06]: Extracted getDownloadDisplayState/roundProgress as pure functions for testability
 
 ### Pending Todos
 
@@ -115,6 +117,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T21:30:00.000Z
-Stopped at: Phase 5 fully verified and polished
-Resume file: .planning/ROADMAP.md (Phase 6 next)
+Last session: 2026-03-19T21:59:26.037Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
