@@ -315,29 +315,32 @@ export type Database = {
       }
       user_progress: {
         Row: {
-          audio_position: number | null
+          audio_position_ms: number | null
           book_id: string
           id: string
-          last_position: string | null
+          scroll_position: number | null
           progress_percent: number | null
+          last_read_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          audio_position?: number | null
+          audio_position_ms?: number | null
           book_id: string
           id?: string
-          last_position?: string | null
+          scroll_position?: number | null
           progress_percent?: number | null
+          last_read_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          audio_position?: number | null
+          audio_position_ms?: number | null
           book_id?: string
           id?: string
-          last_position?: string | null
+          scroll_position?: number | null
           progress_percent?: number | null
+          last_read_at?: string | null
           updated_at?: string
           user_id?: string
         }
