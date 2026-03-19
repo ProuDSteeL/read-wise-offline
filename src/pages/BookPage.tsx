@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Download } from "lucide-react";
+import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Download, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import BookCard from "@/components/BookCard";
@@ -17,6 +17,9 @@ import { useAudio } from "@/contexts/AudioContext";
 import DownloadDialog from "@/components/DownloadDialog";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import KeyIdeaCard from "@/components/KeyIdeaCard";
+import BookLearningProgress from "@/components/BookLearningProgress";
+import { useQuiz } from "@/hooks/useQuiz";
+import { useFlashcards } from "@/hooks/useFlashcards";
 
 const BookPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,6 +38,9 @@ const BookPage = () => {
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [authorExpanded, setAuthorExpanded] = useState(false);
   const viewCounted = useRef(false);
+  const { data: quizQuestions } = useQuiz(id!);
+  const { data: flashcards } = useFlashcards(id!);
+  const hasLearningContent = (quizQuestions?.length ?? 0) > 0 || (flashcards?.length ?? 0) > 0;
 
   // views_count column doesn't exist in DB, skip view counting
   useEffect(() => {
@@ -280,6 +286,20 @@ const BookPage = () => {
           </section>
           );
         })()}
+
+        {/* Learning CTA + progress */}
+        {hasLearningContent && (
+          <section className="space-y-2">
+            <Button
+              className="w-full h-12 rounded-full gap-2 text-sm font-bold"
+              onClick={() => navigate(`/book/${id}/learn`)}
+            >
+              <Target className="h-4 w-4" />
+              Пройти тест
+            </Button>
+            {user && <BookLearningProgress bookId={id!} />}
+          </section>
+        )}
 
         {/* About author — collapsible */}
         {book.about_author && (

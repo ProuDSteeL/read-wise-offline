@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell, Crown } from "lucide-react";
+import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell, Crown, Target, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -163,16 +163,18 @@ const ProfilePage = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
         {[
           { value: String(stats?.readCount ?? 0), label: "Прочитано", icon: BookOpen },
           { value: `${stats?.totalHours ?? 0} ч`, label: "Время", icon: Clock },
           { value: String(stats?.streak ?? 0), label: "Серия дней", icon: Flame },
+          { value: String(stats?.quizzesPassed ?? 0), label: "Квизы", icon: Target },
+          { value: String(stats?.cardsMastered ?? 0), label: "Карточки", icon: Brain },
         ].map(({ value, label, icon: Icon }) => (
-          <div key={label} className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-4 shadow-card">
+          <div key={label} className="flex min-w-[100px] flex-col items-center gap-1.5 rounded-2xl bg-card p-4 shadow-card">
             <Icon className="h-4 w-4 text-sage" />
             <span className="text-xl font-extrabold text-foreground">{value}</span>
-            <span className="text-[11px] text-muted-foreground">{label}</span>
+            <span className="text-[11px] text-muted-foreground whitespace-nowrap">{label}</span>
           </div>
         ))}
       </div>

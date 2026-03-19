@@ -63,7 +63,20 @@ export const useProfileStats = () => {
         }
       }
 
-      return { readCount, totalHours, streak };
+      // Quizzes passed: count of quiz_results rows
+      const { count: quizzesPassed } = await supabase
+        .from("quiz_results")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id);
+
+      // Cards mastered: count of flashcard_progress rows where mastered = true
+      const { count: cardsMastered } = await supabase
+        .from("flashcard_progress")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("mastered", true);
+
+      return { readCount, totalHours, streak, quizzesPassed: quizzesPassed ?? 0, cardsMastered: cardsMastered ?? 0 };
     },
     enabled: !!user,
   });

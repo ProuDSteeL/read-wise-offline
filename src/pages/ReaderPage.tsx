@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Copy, Share2, StickyNote, Palette, Languages } from "lucide-react";
+import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Copy, Share2, StickyNote, Palette, Languages, Target } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
@@ -597,6 +597,23 @@ const ReaderPage = () => {
           </div>
         )}
       </article>
+
+      {/* End-of-reading CTA */}
+      {!isTruncated && (
+        <div className="mx-auto max-w-md px-5 pb-6">
+          <div className="rounded-2xl bg-card p-5 shadow-card text-center space-y-3">
+            <Target className="mx-auto h-8 w-8 text-primary" />
+            <h3 className="text-xl font-bold text-foreground">Проверьте знания</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">Пройдите тест и закрепите прочитанное</p>
+            <Button
+              className="w-full rounded-full h-12 text-sm font-bold"
+              onClick={() => navigate(`/book/${id}/learn`)}
+            >
+              Пройти тест
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Selection toolbar (new text selection) */}
       {selection && !editingHighlight && (
