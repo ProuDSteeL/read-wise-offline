@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: in-progress
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-19T20:17:19.977Z"
-last_activity: 2026-03-19 -- Completed 04-02-PLAN.md (per-collection book rows, verified continue reading/stats/admin)
+status: completed
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-03-19T20:23:04.431Z"
+last_activity: 2026-03-19 -- Completed 05-01-PLAN.md (quiz/flashcard DB schema, hooks, 22 tests)
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 11
-  completed_plans: 9
-  percent: 100
+  completed_plans: 10
+  percent: 82
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 5 of 7 (Quizzes & Learning)
-Plan: 1 of 3 in current phase
-Status: Completed 05-01-PLAN.md
-Last activity: 2026-03-19 -- Completed 05-01-PLAN.md (quiz/flashcard DB schema, hooks, 22 tests)
+Plan: 2 of 3 in current phase
+Status: Completed 05-02-PLAN.md
+Last activity: 2026-03-19 -- Completed 05-02-PLAN.md (LearningPage with quiz flow, flashcard deck, route)
 
-Progress: [████████░░] 82%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [████████░░] 82%
 | Phase 04 P02 | 3min | 3 tasks | 2 files |
 | Phase 04 P01 | 2min | 3 tasks | 4 files |
 | Phase 05 P01 | 6min | 2 tasks | 6 files |
+| Phase 05 P02 | 3min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Used flat option columns instead of JSONB for quiz answers
 - [Phase 05]: Best-score-only save pattern for quiz results (upsert only if higher)
 - [Phase 05]: Denormalized book_id on flashcard_progress for efficient per-book queries
+- [Phase 05]: Quiz state machine uses local useState with 3 phases: ready/in-progress/completed
+- [Phase 05]: Disabled carousel drag when flashcard is flipped to prevent swipe-while-reading
 
 ### Pending Todos
 
@@ -101,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T20:16:20Z
-Stopped at: Completed 05-01-PLAN.md
-Resume file: .planning/phases/05-quizzes-learning/05-02-PLAN.md
+Last session: 2026-03-19T20:23:04.423Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: None
