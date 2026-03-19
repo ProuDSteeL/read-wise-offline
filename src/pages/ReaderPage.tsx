@@ -424,7 +424,7 @@ const ReaderPage = () => {
   const isTruncated = summary?.truncated === true;
 
   return (
-    <div className={`relative min-h-screen ${themeClasses[theme]} bg-background text-foreground transition-colors duration-300`}>
+    <div className={`relative min-h-screen pb-24 ${themeClasses[theme]} bg-background text-foreground transition-colors duration-300`}>
       {/* Progress bar */}
       <div className="fixed top-0 left-0 right-0 z-30 h-0.5 bg-muted">
         <div className="h-full bg-primary transition-[width] duration-150" style={{ width: `${scrollPercent}%` }} />
