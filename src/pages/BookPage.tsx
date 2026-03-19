@@ -204,6 +204,26 @@ const BookPage = () => {
       <div className="text-center px-4 space-y-1">
         <h1 className="text-xl font-extrabold tracking-tight text-foreground">{book.title}</h1>
         <p className="text-sm text-muted-foreground">{book.author}</p>
+        {/* Rating — inline under author */}
+        {user && (
+          <div className="flex items-center justify-center gap-0.5 pt-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => rateMutation.mutate(star)}
+                className="tap-highlight p-0.5"
+              >
+                <Star
+                  className={`h-5 w-5 transition-colors ${
+                    (userRating ?? 0) >= star
+                      ? "fill-amber-400 text-amber-400"
+                      : "text-muted-foreground/20"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Stats row — SmartReading style */}
@@ -341,29 +361,6 @@ const BookPage = () => {
           </section>
         )}
 
-        {/* Rating */}
-        {user && (
-          <section className="space-y-2">
-            <h2 className="text-lg font-bold text-foreground">Рейтинг</h2>
-            <div className="flex gap-1.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => rateMutation.mutate(star)}
-                  className="tap-highlight p-0.5"
-                >
-                  <Star
-                    className={`h-8 w-8 transition-all ${
-                      (userRating ?? 0) >= star
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-muted-foreground/20"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
 
       {/* Sticky bottom bar — SmartReading style */}
