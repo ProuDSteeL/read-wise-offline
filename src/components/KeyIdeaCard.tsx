@@ -11,15 +11,15 @@ const KeyIdeaCard = ({ index, title, content, className }: KeyIdeaCardProps) => 
   return (
     <div
       className={cn(
-        "flex w-full flex-col gap-3 rounded-2xl gradient-primary p-5 text-primary-foreground shadow-elevated",
+        "flex w-full flex-col gap-3 rounded-2xl bg-card p-5 shadow-card",
         className
       )}
     >
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 text-xs font-bold">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
         {index}
       </span>
-      <h4 className="text-base font-semibold leading-snug">{title}</h4>
-      <p className="text-sm leading-relaxed opacity-85">{content}</p>
+      <h4 className="text-base font-semibold leading-snug text-foreground">{title}</h4>
+      <p className="text-sm leading-relaxed text-muted-foreground">{content}</p>
     </div>
   );
 };
