@@ -2,7 +2,7 @@
 phase: 4
 slug: content-collections
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-19
 ---
@@ -38,20 +38,28 @@ created: 2026-03-19
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | CONT-01 | visual/integration | Manual: verify carousel renders on BookPage | N/A | ⬜ pending |
-| 04-01-02 | 01 | 1 | CONT-02 | functional | Manual: verify admin reorder buttons work | N/A | ⬜ pending |
-| 04-02-01 | 02 | 1 | CONT-03 | visual | Manual: verify continue reading section on homepage | N/A | ⬜ pending |
-| 04-02-02 | 02 | 1 | CONT-04 | visual | Manual: verify 3-stat cards on ProfilePage | N/A | ⬜ pending |
-| 04-02-03 | 02 | 1 | COLL-01 | functional | Manual: verify admin collections CRUD | N/A | ⬜ pending |
-| 04-02-04 | 02 | 1 | COLL-02 | visual/integration | Manual: verify collection sections on homepage | N/A | ⬜ pending |
+| 04-01-00 | 01 | 1 | CONT-01, CONT-02 | unit | `npx vitest run src/test/key-ideas-carousel.test.ts src/test/admin-key-ideas.test.ts -x` | No -- Wave 0 creates these | pending |
+| 04-01-01 | 01 | 1 | CONT-01 | unit + tsc | `npx tsc --noEmit && npx vitest run src/test/key-ideas-carousel.test.ts -x` | Yes (after Task 0) | pending |
+| 04-01-02 | 01 | 1 | CONT-02 | unit + grep | `grep -n "moveIdea\|ChevronUp\|ChevronDown" src/pages/AdminBookForm.tsx && npx vitest run src/test/admin-key-ideas.test.ts -x` | Yes (after Task 0) | pending |
+| 04-02-00 | 02 | 1 | COLL-02 | unit | `npx vitest run src/test/collection-sections.test.ts -x` | No -- Wave 0 creates this | pending |
+| 04-02-01 | 02 | 1 | COLL-02 | unit + tsc | `npx tsc --noEmit && npx vitest run src/test/collection-sections.test.ts -x` | Yes (after Task 0) | pending |
+| 04-02-02 | 02 | 1 | CONT-03, CONT-04, COLL-01 | grep | `grep -c "useUserProgress\|ContinueCard" src/pages/Index.tsx && grep -c "useProfileStats\|readCount" src/pages/ProfilePage.tsx` | N/A (verification-only) | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending -- green -- red -- flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-*Existing infrastructure covers all phase requirements.*
+Wave 0 creates test files that do not yet exist. These are created by Task 0 in each plan before implementation begins.
+
+| Test File | Plan | Requirement | Created By |
+|-----------|------|-------------|------------|
+| `src/test/key-ideas-carousel.test.ts` | 04-01 | CONT-01 | Plan 01, Task 0 |
+| `src/test/admin-key-ideas.test.ts` | 04-01 | CONT-02 | Plan 01, Task 0 |
+| `src/test/collection-sections.test.ts` | 04-02 | COLL-02 | Plan 02, Task 0 |
+
+CONT-03, CONT-04, and COLL-01 are verification-only tasks (confirming existing implementations). They use grep-based automated checks as their best proxy since they require authenticated Supabase sessions and real data for full testing.
 
 ---
 
@@ -69,11 +77,11 @@ created: 2026-03-19
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** pending execution of Wave 0 tasks
