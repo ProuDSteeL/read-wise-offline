@@ -171,9 +171,9 @@ const OfflineReaderPage = () => {
                 </div>
 
                 <div className="flex items-center justify-center gap-8">
-                  <button onClick={() => audio.skip(-15)} className="relative tap-highlight text-foreground">
-                    <SkipBack className="h-5 w-5" />
-                    <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold leading-none ml-0.5">15</span>
+                  <button onClick={() => audio.skip(-15)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-secondary tap-highlight text-foreground">
+                    <SkipBack className="h-4 w-4" />
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">15</span>
                   </button>
                   <button
                     onClick={audio.togglePlay}
@@ -181,9 +181,9 @@ const OfflineReaderPage = () => {
                   >
                     {audio.state.playing ? <Pause className="h-6 w-6" /> : <Play className="ml-0.5 h-6 w-6" />}
                   </button>
-                  <button onClick={() => audio.skip(15)} className="relative tap-highlight text-foreground">
-                    <SkipForward className="h-5 w-5" />
-                    <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold leading-none mr-0.5">15</span>
+                  <button onClick={() => audio.skip(15)} className="relative flex h-10 w-10 items-center justify-center rounded-full bg-secondary tap-highlight text-foreground">
+                    <SkipForward className="h-4 w-4" />
+                    <span className="absolute -top-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">15</span>
                   </button>
                 </div>
 
