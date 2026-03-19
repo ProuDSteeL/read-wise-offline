@@ -43,6 +43,16 @@ export function setupMediaSession(
     audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 15);
   });
 
+  // Android shows previoustrack/nexttrack buttons in notification widget
+  // instead of seekbackward/seekforward — map them to ±15s skip
+  navigator.mediaSession.setActionHandler("previoustrack", () => {
+    audio.currentTime = Math.max(0, audio.currentTime - 15);
+  });
+
+  navigator.mediaSession.setActionHandler("nexttrack", () => {
+    audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 15);
+  });
+
   navigator.mediaSession.setActionHandler("seekto", (details) => {
     if (details.seekTime != null) {
       audio.currentTime = details.seekTime;
