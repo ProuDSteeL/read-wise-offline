@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, WifiOff, Play, Pause, SkipBack, SkipForward, Gauge, Moon, ChevronUp, ChevronDown } from "lucide-react";
-import { getTextOffline, getAudioOffline, getBookMeta } from "@/lib/offlineStorage";
+import { getTextOffline, getBookMeta } from "@/lib/offlineStorage";
+import { useAudio } from "@/contexts/AudioContext";
+import { SLEEP_OPTIONS, SPEEDS } from "@/lib/audioConstants";
 import { Slider } from "@/components/ui/slider";
 import ReactMarkdown from "react-markdown";
 
@@ -14,42 +16,18 @@ const formatTime = (s: number) => {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 };
 
-const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
-const SLEEP_OPTIONS = [
-  { label: "Выкл", minutes: 0 },
-  { label: "5 мин", minutes: 5 },
-  { label: "15 мин", minutes: 15 },
-  { label: "30 мин", minutes: 30 },
-  { label: "60 мин", minutes: 60 },
-];
-
 const OfflineReaderPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const audio = useAudio();
   const [content, setContent] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ title: string; author: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-
-  // Audio state
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [speed, setSpeed] = useState(() => {
-    const saved = localStorage.getItem("audio-speed");
-    return saved ? parseFloat(saved) : 1;
-  });
 
   // Player UI
   const [playerExpanded, setPlayerExpanded] = useState(false);
   const [showSpeedPanel, setShowSpeedPanel] = useState(false);
   const [showSleepPanel, setShowSleepPanel] = useState(false);
-
-  // Sleep timer
-  const [sleepMinutes, setSleepMinutes] = useState(0);
-  const [sleepRemaining, setSleepRemaining] = useState(0);
-  const sleepInterval = useRef<ReturnType<typeof setInterval>>();
 
   // Reader settings
   const theme = (localStorage.getItem("reader-theme") as ReaderTheme) || "light";
@@ -60,106 +38,24 @@ const OfflineReaderPage = () => {
   // Load offline data
   useEffect(() => {
     if (!id) return;
-    Promise.all([getTextOffline(id), getBookMeta(id), getAudioOffline(id)]).then(
-      ([text, bookMeta, audio]) => {
+    Promise.all([getTextOffline(id), getBookMeta(id)]).then(
+      ([text, bookMeta]) => {
         setContent(text);
         if (bookMeta) setMeta({ title: bookMeta.title, author: bookMeta.author });
-        setAudioUrl(audio);
         setLoading(false);
+
+        // Load audio through AudioContext (it will try offline first via getAudioOffline)
+        if (bookMeta?.hasAudio) {
+          audio.load({
+            bookId: id,
+            bookTitle: bookMeta.title,
+            author: bookMeta.author,
+            coverUrl: bookMeta.coverUrl,
+          });
+        }
       }
     );
-    return () => {
-      audioRef.current?.pause();
-    };
   }, [id]);
-
-  // Setup audio element
-  useEffect(() => {
-    if (!audioUrl) return;
-    const audio = new Audio(audioUrl);
-    audio.playbackRate = speed;
-    audioRef.current = audio;
-
-    // Restore saved position
-    const savedPos = localStorage.getItem(`offline-audio-pos-${id}`);
-    
-    audio.addEventListener("loadedmetadata", () => {
-      setDuration(audio.duration);
-      if (savedPos) {
-        audio.currentTime = parseFloat(savedPos);
-      }
-    });
-
-    audio.addEventListener("timeupdate", () => {
-      setCurrentTime(audio.currentTime);
-      // Save position every update
-      localStorage.setItem(`offline-audio-pos-${id}`, String(audio.currentTime));
-    });
-
-    audio.addEventListener("ended", () => setPlaying(false));
-
-    return () => {
-      audio.pause();
-      audio.src = "";
-      URL.revokeObjectURL(audioUrl);
-    };
-  }, [audioUrl, id]);
-
-  // Sleep timer
-  useEffect(() => {
-    clearInterval(sleepInterval.current);
-    if (sleepMinutes <= 0) {
-      setSleepRemaining(0);
-      return;
-    }
-    setSleepRemaining(sleepMinutes * 60);
-    sleepInterval.current = setInterval(() => {
-      setSleepRemaining((prev) => {
-        if (prev <= 1) {
-          audioRef.current?.pause();
-          setPlaying(false);
-          setSleepMinutes(0);
-          clearInterval(sleepInterval.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(sleepInterval.current);
-  }, [sleepMinutes]);
-
-  const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (playing) {
-      audio.pause();
-      setPlaying(false);
-    } else {
-      audio.play().catch(() => {});
-      setPlaying(true);
-    }
-  }, [playing]);
-
-  const handleSeek = useCallback((value: number[]) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = value[0];
-    setCurrentTime(value[0]);
-  }, []);
-
-  const handleSkip = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + seconds));
-  }, []);
-
-  const handleSetSpeed = useCallback((s: number) => {
-    const audio = audioRef.current;
-    if (audio) audio.playbackRate = s;
-    setSpeed(s);
-    localStorage.setItem("audio-speed", String(s));
-    setShowSpeedPanel(false);
-  }, []);
 
   if (loading) {
     return (
@@ -183,7 +79,7 @@ const OfflineReaderPage = () => {
       {/* Content */}
       <article
         className={`mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground`}
-        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8, paddingBottom: audioUrl ? "10rem" : undefined }}
+        style={{ fontSize: `${fontSize}px`, lineHeight: 1.8, paddingBottom: audio.isActive ? "10rem" : undefined }}
       >
         {content ? (
           <ReactMarkdown
@@ -226,26 +122,32 @@ const OfflineReaderPage = () => {
       </article>
 
       {/* Sticky bottom audio player */}
-      {audioUrl && (
+      {audio.isActive && (
         <div className="fixed bottom-0 inset-x-0 z-30 safe-bottom">
           <div className="border-t border-border/60 bg-background/95 backdrop-blur-xl">
-            {/* Mini bar — always visible */}
+            {/* Mini bar */}
             <button
               onClick={() => setPlayerExpanded(!playerExpanded)}
               className="flex w-full items-center gap-3 px-4 py-2"
             >
               <button
-                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                onClick={(e) => { e.stopPropagation(); audio.togglePlay(); }}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
               >
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+                {audio.state.playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
               </button>
               <div className="flex-1 min-w-0">
                 <p className="truncate text-xs font-medium text-foreground">{meta?.title}</p>
                 <p className="text-[10px] text-muted-foreground">
-                  {formatTime(currentTime)} / {formatTime(duration)}
+                  {formatTime(audio.state.currentTime)} / {formatTime(audio.state.duration)}
                 </p>
               </div>
+              {audio.sleepTimer && (
+                <span className="text-[10px] text-primary font-medium">
+                  <Moon className="inline h-3 w-3 mr-0.5" />
+                  {formatTime(audio.sleepRemaining)}
+                </span>
+              )}
               {playerExpanded
                 ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                 : <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />}
@@ -254,83 +156,80 @@ const OfflineReaderPage = () => {
             {/* Expanded controls */}
             {playerExpanded && (
               <div className="animate-fade-in space-y-3 px-4 pb-4">
-                {/* Seek bar */}
                 <div className="space-y-1">
                   <Slider
-                    value={[currentTime]}
-                    max={duration || 100}
+                    value={[audio.state.currentTime]}
+                    max={audio.state.duration || 100}
                     step={1}
-                    onValueChange={handleSeek}
+                    onValueChange={(v) => audio.seek(v[0])}
                     className="w-full"
                   />
                   <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>{formatTime(currentTime)}</span>
-                    <span>-{formatTime(Math.max(0, duration - currentTime))}</span>
+                    <span>{formatTime(audio.state.currentTime)}</span>
+                    <span>-{formatTime(Math.max(0, audio.state.duration - audio.state.currentTime))}</span>
                   </div>
                 </div>
 
-                {/* Main controls */}
                 <div className="flex items-center justify-center gap-8">
-                  <button onClick={() => handleSkip(-15)} className="tap-highlight text-foreground">
+                  <button onClick={() => audio.skip(-15)} className="tap-highlight text-foreground">
                     <SkipBack className="h-5 w-5" />
                   </button>
                   <button
-                    onClick={togglePlay}
+                    onClick={audio.togglePlay}
                     className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-elevated tap-highlight"
                   >
-                    {playing ? <Pause className="h-6 w-6" /> : <Play className="ml-0.5 h-6 w-6" />}
+                    {audio.state.playing ? <Pause className="h-6 w-6" /> : <Play className="ml-0.5 h-6 w-6" />}
                   </button>
-                  <button onClick={() => handleSkip(15)} className="tap-highlight text-foreground">
+                  <button onClick={() => audio.skip(15)} className="tap-highlight text-foreground">
                     <SkipForward className="h-5 w-5" />
                   </button>
                 </div>
 
-                {/* Speed + Sleep */}
                 <div className="flex items-center justify-center gap-4">
                   <button
                     onClick={() => { setShowSpeedPanel(!showSpeedPanel); setShowSleepPanel(false); }}
                     className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-foreground tap-highlight"
                   >
                     <Gauge className="h-3.5 w-3.5" />
-                    {speed}×
+                    {audio.state.speed}x
                   </button>
                   <button
                     onClick={() => { setShowSleepPanel(!showSleepPanel); setShowSpeedPanel(false); }}
                     className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium tap-highlight ${
-                      sleepMinutes > 0 ? "bg-primary/10 text-primary" : "bg-secondary text-foreground"
+                      audio.sleepTimer ? "bg-primary/10 text-primary" : "bg-secondary text-foreground"
                     }`}
                   >
                     <Moon className="h-3.5 w-3.5" />
-                    {sleepMinutes > 0 ? formatTime(sleepRemaining) : "Сон"}
+                    {audio.sleepTimer ? formatTime(audio.sleepRemaining) : "Сон"}
                   </button>
                 </div>
 
-                {/* Speed panel */}
                 {showSpeedPanel && (
                   <div className="animate-fade-in flex flex-wrap justify-center gap-2 rounded-xl bg-card p-3 shadow-card">
                     {SPEEDS.map((s) => (
                       <button
                         key={s}
-                        onClick={() => handleSetSpeed(s)}
+                        onClick={() => { audio.setSpeed(s); setShowSpeedPanel(false); }}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                          speed === s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                          audio.state.speed === s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
                         }`}
                       >
-                        {s}×
+                        {s}x
                       </button>
                     ))}
                   </div>
                 )}
 
-                {/* Sleep panel */}
                 {showSleepPanel && (
                   <div className="animate-fade-in flex flex-wrap justify-center gap-2 rounded-xl bg-card p-3 shadow-card">
                     {SLEEP_OPTIONS.map(({ label, minutes }) => (
                       <button
                         key={minutes}
-                        onClick={() => { setSleepMinutes(minutes); setShowSleepPanel(false); }}
+                        onClick={() => { audio.setSleepTimer(minutes); setShowSleepPanel(false); }}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                          sleepMinutes === minutes ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                          audio.sleepTimer && audio.sleepTimer.totalMinutes === minutes
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-muted-foreground"
                         }`}
                       >
                         {label}
