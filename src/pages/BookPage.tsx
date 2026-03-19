@@ -38,6 +38,7 @@ const BookPage = () => {
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
   const [authorExpanded, setAuthorExpanded] = useState(false);
   const viewCounted = useRef(false);
+  const prevHadDownload = useRef(false);
   const { data: quizQuestions } = useQuiz(id!);
   const { data: flashcards } = useFlashcards(id!);
   const hasLearningContent = (quizQuestions?.length ?? 0) > 0 || (flashcards?.length ?? 0) > 0;
@@ -46,6 +47,15 @@ const BookPage = () => {
   useEffect(() => {
     // no-op
   }, [id]);
+
+  // Auto-close download dialog when download completes (removed from activeDownloads map)
+  useEffect(() => {
+    const hasDownload = activeDownloads.has(id!);
+    if (prevHadDownload.current && !hasDownload) {
+      setShowDownloadDialog(false);
+    }
+    prevHadDownload.current = hasDownload;
+  }, [activeDownloads, id]);
 
   const { data: userRating } = useQuery({
     queryKey: ["user_rating", user?.id, id],
@@ -402,6 +412,8 @@ const BookPage = () => {
         textContent={summary?.content}
         alreadyDownloaded={isDownloaded(id!) ? { hasText: isDownloaded(id!)!.hasText, hasAudio: isDownloaded(id!)!.hasAudio } : null}
         downloading={activeDownloads.has(id!)}
+        downloadProgress={activeDownloads.get(id!)?.progress}
+        downloadStatus={activeDownloads.get(id!)?.status}
         onDownload={(type) => {
           downloadBook(
             id!,
@@ -411,7 +423,6 @@ const BookPage = () => {
             summary?.audio_url,
             summary?.audio_size_bytes ?? 0
           );
-          setShowDownloadDialog(false);
         }}
       />
     </div>
