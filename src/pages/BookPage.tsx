@@ -307,20 +307,6 @@ const BookPage = () => {
           </section>
         )}
 
-        {/* Learning CTA + progress */}
-        {hasLearningContent && (
-          <section className="space-y-2">
-            <Button
-              className="w-full h-12 rounded-full gap-2 text-sm font-bold"
-              onClick={() => navigate(`/book/${id}/learn`)}
-            >
-              <Target className="h-4 w-4" />
-              Пройти тест
-            </Button>
-            {user && <BookLearningProgress bookId={id!} />}
-          </section>
-        )}
-
         {/* About author — collapsible */}
         {book.about_author && (
           <section>
@@ -336,6 +322,20 @@ const BookPage = () => {
                 {authorExpanded ? "Свернуть" : "Читать далее"}
               </button>
             )}
+          </section>
+        )}
+
+        {/* Learning CTA + progress */}
+        {hasLearningContent && (
+          <section className="space-y-2">
+            <Button
+              className="w-full h-12 rounded-full gap-2 text-sm font-bold"
+              onClick={() => navigate(`/book/${id}/learn`)}
+            >
+              <Target className="h-4 w-4" />
+              Пройти тест
+            </Button>
+            {user && <BookLearningProgress bookId={id!} />}
           </section>
         )}
 
