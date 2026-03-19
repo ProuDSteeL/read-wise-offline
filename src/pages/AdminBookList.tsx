@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Library } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Eye, EyeOff, Library, Tag, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -13,6 +14,7 @@ const AdminBookList = () => {
   const { user } = useAuth();
   const { data: isAdmin, isLoading: checkingAdmin } = useIsAdmin();
   const queryClient = useQueryClient();
+  const [showTags, setShowTags] = useState(false);
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["admin-books"],
@@ -42,6 +44,33 @@ const AdminBookList = () => {
     },
     onError: (err: any) => {
       toast({ title: "Ошибка удаления", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Collect all unique tags from books
+  const allTags = Array.from(
+    new Set((books ?? []).flatMap((b) => b.tags ?? []))
+  ).sort((a, b) => a.localeCompare(b, "ru"));
+
+  const deleteTagMutation = useMutation({
+    mutationFn: async (tag: string) => {
+      const booksWithTag = (books ?? []).filter((b) => b.tags?.includes(tag));
+      for (const book of booksWithTag) {
+        const newTags = (book.tags ?? []).filter((t) => t !== tag);
+        const { error } = await supabase
+          .from("books")
+          .update({ tags: newTags })
+          .eq("id", book.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-books"] });
+      queryClient.invalidateQueries({ queryKey: ["books"] });
+      toast({ title: "Тег удалён из всех книг" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Ошибка", description: err.message, variant: "destructive" });
     },
   });
 
@@ -83,6 +112,9 @@ const AdminBookList = () => {
           <h1 className="text-lg font-bold text-foreground">Управление книгами</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowTags(!showTags)} className={`gap-1 rounded-xl ${showTags ? "bg-primary/10 border-primary" : ""}`}>
+            <Tag className="h-4 w-4" /> Теги
+          </Button>
           <Button size="sm" variant="outline" onClick={() => navigate("/admin/collections")} className="gap-1 rounded-xl">
             <Library className="h-4 w-4" /> Коллекции
           </Button>
@@ -91,6 +123,44 @@ const AdminBookList = () => {
           </Button>
         </div>
       </div>
+
+      {showTags && (
+        <div className="mx-4 mt-3 rounded-xl bg-card p-4 shadow-card space-y-3 animate-fade-in">
+          <p className="text-xs font-medium text-muted-foreground">
+            Все теги ({allTags.length})
+          </p>
+          {allTags.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Тегов пока нет</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {allTags.map((tag) => {
+                const count = (books ?? []).filter((b) => b.tags?.includes(tag)).length;
+                return (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-foreground"
+                  >
+                    {tag}
+                    <span className="text-muted-foreground">({count})</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Удалить тег «${tag}» из всех книг (${count})?`)) {
+                          deleteTagMutation.mutate(tag);
+                        }
+                      }}
+                      className="rounded-full p-0.5 text-destructive hover:bg-destructive/10"
+                      aria-label={`Удалить тег ${tag}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="p-4 space-y-3">
         {isLoading ? (
