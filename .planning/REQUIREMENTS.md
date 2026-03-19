@@ -28,8 +28,8 @@
 
 ### Content & Admin
 
-- [ ] **CONT-01**: Key ideas displayed as swipeable carousel on book page (5-10 cards)
-- [ ] **CONT-02**: Admin can upload key ideas with title + text per card and drag-and-drop reordering
+- [x] **CONT-01**: Key ideas displayed as swipeable carousel on book page (5-10 cards)
+- [x] **CONT-02**: Admin can upload key ideas with title + text per card and drag-and-drop reordering
 - [x] **CONT-03**: "Continue reading" section on homepage shows user's unfinished summaries with progress
 - [x] **CONT-04**: Reading statistics in profile: books read, total reading time, reading streaks
 
@@ -110,8 +110,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-08 | Phase 2 | Complete |
 | READ-09 | Phase 2 | Complete |
 | READ-10 | Phase 2 | Complete |
-| CONT-01 | Phase 4 | Pending |
-| CONT-02 | Phase 4 | Pending |
+| CONT-01 | Phase 4 | Complete |
+| CONT-02 | Phase 4 | Complete |
 | CONT-03 | Phase 4 | Complete |
 | CONT-04 | Phase 4 | Complete |
 | QUIZ-01 | Phase 5 | Pending |
