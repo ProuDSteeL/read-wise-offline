@@ -2,8 +2,8 @@
 phase: 5
 slug: quizzes-learning
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-19
 ---
 
@@ -36,12 +36,11 @@ created: 2026-03-19
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 05-01-01 | 01 | 1 | QUIZ-01 | unit | `npx vitest run` | ❌ W0 | ⬜ pending |
-| 05-01-02 | 01 | 1 | QUIZ-02 | unit | `npx vitest run` | ❌ W0 | ⬜ pending |
-| 05-01-03 | 01 | 1 | QUIZ-03 | unit | `npx vitest run` | ❌ W0 | ⬜ pending |
-| 05-01-04 | 01 | 1 | QUIZ-04 | unit | `npx vitest run` | ❌ W0 | ⬜ pending |
+| Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Test File | Status |
+|---------|------|------|-------------|-----------|-------------------|-----------|--------|
+| 05-01-02 | 01 | 1 | QUIZ-01, QUIZ-02 | unit | `npx vitest run src/test/quiz-logic.test.ts src/test/flashcard-logic.test.ts -x` | Created in 05-01 Task 2 | ⬜ pending |
+| 05-03-01 | 03 | 2 | QUIZ-03 | unit | `npx vitest run src/test/admin-quiz-form.test.ts -x` | Created in 05-03 Task 1 | ⬜ pending |
+| 05-03-02 | 03 | 2 | QUIZ-04 | unit | `npx vitest run src/test/profile-stats-quiz.test.ts -x` | Created in 05-03 Task 2 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -49,11 +48,12 @@ created: 2026-03-19
 
 ## Wave 0 Requirements
 
-- [ ] Test stubs for quiz and flashcard components
-- [ ] Test stubs for quiz/flashcard hooks
-- [ ] Test stubs for admin quiz/flashcard form
+Test files are created inline within their respective plan tasks (TDD approach):
 
-*If none: "Existing infrastructure covers all phase requirements."*
+- [x] `src/test/quiz-logic.test.ts` -- created in 05-01 Task 2 (covers QUIZ-01: score calculation, state transitions)
+- [x] `src/test/flashcard-logic.test.ts` -- created in 05-01 Task 2 (covers QUIZ-02: flip state, mastery tracking)
+- [x] `src/test/admin-quiz-form.test.ts` -- created in 05-03 Task 1 (covers QUIZ-03: form validation rules)
+- [x] `src/test/profile-stats-quiz.test.ts` -- created in 05-03 Task 2 (covers QUIZ-04: aggregate stat queries)
 
 ---
 
@@ -69,11 +69,11 @@ created: 2026-03-19
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
