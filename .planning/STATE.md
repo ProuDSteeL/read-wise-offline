@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-19T20:23:04.431Z"
-last_activity: 2026-03-19 -- Completed 05-01-PLAN.md (quiz/flashcard DB schema, hooks, 22 tests)
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-03-19T20:25:51.757Z"
+last_activity: 2026-03-19 -- Completed 05-02-PLAN.md (LearningPage with quiz flow, flashcard deck, route)
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 10
-  percent: 82
+  completed_plans: 11
+  percent: 91
 ---
 
 # Project State
@@ -60,6 +60,7 @@ Progress: [█████████░] 91%
 | Phase 04 P01 | 2min | 3 tasks | 4 files |
 | Phase 05 P01 | 6min | 2 tasks | 6 files |
 | Phase 05 P02 | 3min | 2 tasks | 7 files |
+| Phase 05 P03 | 6min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Denormalized book_id on flashcard_progress for efficient per-book queries
 - [Phase 05]: Quiz state machine uses local useState with 3 phases: ready/in-progress/completed
 - [Phase 05]: Disabled carousel drag when flashcard is flipped to prevent swipe-while-reading
+- [Phase 05]: Restructured AdminBookForm into 4 top-level Radix Tabs with nested markdown editor tabs
+- [Phase 05]: 50/50 weighted progress: quiz completion + flashcard mastery when both exist
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T20:23:04.423Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-19T20:25:51.750Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
