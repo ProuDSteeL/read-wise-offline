@@ -210,7 +210,9 @@ const ReaderPage = () => {
       supabase.from("user_progress").upsert(
         { user_id: user.id, book_id: id, progress_percent: 0, scroll_position: 0 },
         { onConflict: "user_id,book_id" }
-      );
+      ).then(({ error }) => {
+        if (error) console.error("user_progress upsert failed:", error.message, error.code, error.details);
+      });
     }
   }, [user, id, summary]);
 
