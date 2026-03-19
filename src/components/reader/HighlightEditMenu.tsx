@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Copy,
   StickyNote,
@@ -8,6 +8,7 @@ import {
   Search,
   Share2,
   Settings,
+  Trash2,
   X,
   Check,
 } from "lucide-react";
@@ -45,13 +46,14 @@ const L2_ITEMS = [
   { id: "search", label: "ВЕБ ПОИСК", Icon: Search },
   { id: "share", label: "ПОДЕЛИТЬСЯ", Icon: Share2 },
   { id: "settings", label: "НАСТРОИТЬ", Icon: Settings },
+  { id: "delete", label: "УДАЛИТЬ", Icon: Trash2 },
 ] as const;
 
 const MENU_W = 260;
 const COLOR_ROW_H = 48;
 const ACTION_ROW_H = 64;
 const L2_ROW_H = 44;
-const L2_H = L2_ROW_H + L2_ITEMS.length * L2_ROW_H; // back + items
+const L2_H = L2_ROW_H + L2_ITEMS.length * L2_ROW_H + 1; // back + items + separator
 
 export default function HighlightEditMenu({
   tapY,
@@ -122,6 +124,10 @@ export default function HighlightEditMenu({
         break;
       case "settings":
         toast({ title: "Настройки скоро появятся" });
+        break;
+      case "delete":
+        onRemoveHighlight(highlight.id);
+        onClose();
         break;
     }
   }
@@ -227,18 +233,22 @@ export default function HighlightEditMenu({
 
           <div className="mx-3 h-px bg-border/40" />
 
-          {L2_ITEMS.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => handleL2(id)}
-              className="flex w-full items-center gap-3 px-4 transition-colors active:bg-secondary"
-              style={{ height: L2_ROW_H }}
-            >
-              <Icon size={18} className="text-foreground/80 shrink-0" />
-              <span className="text-xs font-semibold text-foreground/80 tracking-wide">
-                {label}
-              </span>
-            </button>
+          {L2_ITEMS.map(({ id, label, Icon }, i) => (
+            <React.Fragment key={id}>
+              {id === "delete" && <div className="mx-3 h-px bg-border/40" />}
+              <button
+                onClick={() => handleL2(id)}
+                className={`flex w-full items-center gap-3 px-4 transition-colors active:bg-secondary ${
+                  id === "delete" ? "text-destructive" : ""
+                }`}
+                style={{ height: L2_ROW_H }}
+              >
+                <Icon size={18} className={`shrink-0 ${id === "delete" ? "text-destructive" : "text-foreground/80"}`} />
+                <span className={`text-xs font-semibold tracking-wide ${id === "delete" ? "text-destructive" : "text-foreground/80"}`}>
+                  {label}
+                </span>
+              </button>
+            </React.Fragment>
           ))}
         </div>
       </div>
