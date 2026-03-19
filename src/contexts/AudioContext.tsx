@@ -155,10 +155,13 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(sleepIntervalRef.current);
   }, [sleepTimer?.endTime]);
 
-  // Save position debounced
+  // Save position debounced — localStorage always, DB when online
   const savePosition = useCallback(
     (time: number, bookId: string) => {
-      if (!user || !bookId) return;
+      if (!bookId) return;
+      // Always save to localStorage (works offline)
+      localStorage.setItem(`audio-pos-${bookId}`, String(time));
+      if (!user) return;
       clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
         supabase.from("user_progress").upsert(
@@ -252,19 +255,25 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         };
         audio.addEventListener("loadedmetadata", onLoaded);
 
-        // If no position provided, load from DB
-        if (opts.position == null && user) {
-          supabase
-            .from("user_progress")
-            .select("audio_position_ms")
-            .eq("user_id", user.id)
-            .eq("book_id", opts.bookId)
-            .maybeSingle()
-            .then(({ data }) => {
-              if (data?.audio_position_ms && audio.src.includes(url)) {
-                audio.currentTime = Number(data.audio_position_ms);
-              }
-            });
+        // If no position provided, restore from localStorage or DB
+        if (opts.position == null) {
+          const localPos = localStorage.getItem(`audio-pos-${opts.bookId}`);
+          if (localPos) {
+            const pos = Number(localPos);
+            if (pos > 0) audio.currentTime = pos;
+          } else if (user) {
+            supabase
+              .from("user_progress")
+              .select("audio_position_ms")
+              .eq("user_id", user.id)
+              .eq("book_id", opts.bookId)
+              .maybeSingle()
+              .then(({ data }) => {
+                if (data?.audio_position_ms) {
+                  audio.currentTime = Number(data.audio_position_ms);
+                }
+              });
+          }
         }
 
         setState({
@@ -346,18 +355,24 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         };
         audio.addEventListener("loadedmetadata", onLoaded);
 
-        if (opts.position == null && user) {
-          supabase
-            .from("user_progress")
-            .select("audio_position_ms")
-            .eq("user_id", user.id)
-            .eq("book_id", opts.bookId)
-            .maybeSingle()
-            .then(({ data }) => {
-              if (data?.audio_position_ms && audio.src.includes(url)) {
-                audio.currentTime = Number(data.audio_position_ms);
-              }
-            });
+        if (opts.position == null) {
+          const localPos = localStorage.getItem(`audio-pos-${opts.bookId}`);
+          if (localPos) {
+            const pos = Number(localPos);
+            if (pos > 0) audio.currentTime = pos;
+          } else if (user) {
+            supabase
+              .from("user_progress")
+              .select("audio_position_ms")
+              .eq("user_id", user.id)
+              .eq("book_id", opts.bookId)
+              .maybeSingle()
+              .then(({ data }) => {
+                if (data?.audio_position_ms) {
+                  audio.currentTime = Number(data.audio_position_ms);
+                }
+              });
+          }
         }
 
         setState({
@@ -413,12 +428,15 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
   const stop = useCallback(() => {
     const audio = audioRef.current;
     if (audio) {
-      // Save final position
-      if (user && state.bookId) {
-        supabase.from("user_progress").upsert(
-          { user_id: user.id, book_id: state.bookId, audio_position_ms: audio.currentTime },
-          { onConflict: "user_id,book_id" }
-        );
+      // Save final position to localStorage + DB
+      if (state.bookId) {
+        localStorage.setItem(`audio-pos-${state.bookId}`, String(audio.currentTime));
+        if (user) {
+          supabase.from("user_progress").upsert(
+            { user_id: user.id, book_id: state.bookId, audio_position_ms: audio.currentTime },
+            { onConflict: "user_id,book_id" }
+          );
+        }
       }
       audio.pause();
     }
