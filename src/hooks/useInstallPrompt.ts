@@ -5,27 +5,57 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const DISMISS_KEY = "pwa-install-dismissed-at";
-const DISMISS_DAYS = 7;
+export const DISMISS_KEY = "pwa-install-dismissed-at";
+export const DISMISS_DAYS = 7;
+export const VISIT_COUNT_KEY = "pwa-visit-count";
+export const VISIT_THRESHOLD = 3;
 
-export const useInstallPrompt = () => {
+export function shouldShowInstallPrompt(
+  isLoggedIn: boolean,
+  visitCount: number,
+  dismissedAt: number | null,
+  now: number = Date.now()
+): boolean {
+  if (!isLoggedIn) return false;
+  if (visitCount < VISIT_THRESHOLD) return false;
+  if (dismissedAt !== null) {
+    const daysSince = (now - dismissedAt) / (1000 * 60 * 60 * 24);
+    if (daysSince < DISMISS_DAYS) return false;
+  }
+  return true;
+}
+
+export function incrementVisitCount(currentCount: number): number {
+  return currentCount + 1;
+}
+
+export const useInstallPrompt = (isLoggedIn: boolean) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  // Increment visit count on mount
+  useEffect(() => {
+    const count = incrementVisitCount(
+      Number(localStorage.getItem(VISIT_COUNT_KEY) || "0")
+    );
+    localStorage.setItem(VISIT_COUNT_KEY, String(count));
+  }, []);
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
-      // Check if user dismissed recently
       const dismissedAt = localStorage.getItem(DISMISS_KEY);
-      if (dismissedAt) {
-        const daysSince = (Date.now() - Number(dismissedAt)) / (1000 * 60 * 60 * 24);
-        if (daysSince < DISMISS_DAYS) return;
-      }
+      const visitCount = Number(localStorage.getItem(VISIT_COUNT_KEY) || "0");
+      if (!shouldShowInstallPrompt(
+        isLoggedIn,
+        visitCount,
+        dismissedAt ? Number(dismissedAt) : null
+      )) return;
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
+  }, [isLoggedIn]);
 
   const promptInstall = useCallback(async () => {
     if (!deferredPrompt) return;

@@ -53,7 +53,7 @@ const Index = () => {
   const { user } = useAuth();
   const { data: progress } = useUserProgress();
   const { data: recommendations } = useRecommendations();
-  const { canInstall, promptInstall, dismiss: dismissInstall } = useInstallPrompt();
+  const { canInstall, promptInstall, dismiss: dismissInstall } = useInstallPrompt(!!user);
   const continueBooks = progress?.filter(
     (p) => p.progress_percent && p.progress_percent > 0 && p.progress_percent < 100
   );
