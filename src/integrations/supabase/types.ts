@@ -182,6 +182,83 @@ export type Database = {
           },
         ]
       }
+      flashcard_progress: {
+        Row: {
+          id: string
+          user_id: string
+          flashcard_id: string
+          book_id: string
+          mastered: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          flashcard_id: string
+          book_id: string
+          mastered?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          flashcard_id?: string
+          book_id?: string
+          mastered?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcard_progress_flashcard_id_fkey"
+            columns: ["flashcard_id"]
+            isOneToOne: false
+            referencedRelation: "flashcards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flashcard_progress_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flashcards: {
+        Row: {
+          id: string
+          book_id: string
+          front: string
+          back: string
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          book_id: string
+          front: string
+          back: string
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          book_id?: string
+          front?: string
+          back?: string
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       key_ideas: {
         Row: {
           book_id: string
@@ -279,6 +356,88 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      quiz_questions: {
+        Row: {
+          id: string
+          book_id: string
+          question: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          correct_option: number
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          book_id: string
+          question: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          correct_option: number
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          book_id?: string
+          question?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          correct_option?: number
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_results: {
+        Row: {
+          id: string
+          user_id: string
+          book_id: string
+          score: number
+          total_questions: number
+          completed_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          book_id: string
+          score: number
+          total_questions: number
+          completed_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          book_id?: string
+          score?: number
+          total_questions?: number
+          completed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_results_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {
