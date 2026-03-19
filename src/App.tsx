@@ -14,7 +14,7 @@ import ShelvesPage from "./pages/ShelvesPage";
 import ProfilePage from "./pages/ProfilePage";
 import BookPage from "./pages/BookPage";
 import ReaderPage from "./pages/ReaderPage";
-import AudioPlayerPage from "./pages/AudioPlayerPage";
+import GlobalAudioPlayer from "./components/GlobalAudioPlayer";
 import DownloadsPage from "./pages/DownloadsPage";
 import OfflineReaderPage from "./pages/OfflineReaderPage";
 import AdminBookForm from "./pages/AdminBookForm";
@@ -51,7 +51,7 @@ const AppRoutes = () => {
       </Route>
       <Route path="/book/:id" element={<BookPage />} />
       <Route path="/book/:id/read" element={<ReaderPage />} />
-      <Route path="/book/:id/listen" element={<AudioPlayerPage />} />
+      {/* Audio player is now a bottom sheet in AppLayout */}
       <Route path="/offline/read/:id" element={<OfflineReaderPage />} />
       <Route path="/admin/books" element={<AdminBookList />} />
       <Route path="/admin/book/new" element={<AdminBookForm />} />
@@ -73,6 +73,7 @@ const App = () => (
         <AuthProvider>
           <AudioProvider>
             <AppRoutes />
+            <GlobalAudioPlayer />
           </AudioProvider>
         </AuthProvider>
       </BrowserRouter>

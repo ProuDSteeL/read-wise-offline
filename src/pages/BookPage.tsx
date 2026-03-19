@@ -13,6 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { useSummary } from "@/hooks/useSummary";
 import { useDownloads } from "@/hooks/useDownloads";
 import { useAccessControl } from "@/hooks/useAccessControl";
+import { useAudio } from "@/contexts/AudioContext";
 import DownloadDialog from "@/components/DownloadDialog";
 
 const BookPage = () => {
@@ -24,6 +25,7 @@ const BookPage = () => {
   const { data: similarBooks } = useSimilarBooks(book);
   const { data: summary } = useSummary(id!);
   const { isDownloaded, download: downloadBook, activeDownloads } = useDownloads();
+  const audioCtx = useAudio();
   const { canDownload, canListenAudio } = useAccessControl();
   const queryClient = useQueryClient();
   const [activeIdeaIdx, setActiveIdeaIdx] = useState(0);
@@ -359,7 +361,9 @@ const BookPage = () => {
           {summary?.audio_url && canListenAudio && (
             <Button
               className="h-12 flex-1 gap-2 rounded-full text-sm font-bold gradient-accent border-0 hover:opacity-90"
-              onClick={() => navigate(`/book/${id}/listen`)}
+              onClick={() => {
+                if (id) audioCtx.play({ bookId: id, bookTitle: book?.title, author: book?.author, coverUrl: book?.cover_url });
+              }}
             >
               <Headphones className="h-4 w-4" />
               Слушать

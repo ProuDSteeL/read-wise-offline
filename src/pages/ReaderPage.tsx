@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } f
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Copy, Share2, StickyNote, Palette, Languages } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
-import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAudio } from "@/contexts/AudioContext";
@@ -885,16 +884,7 @@ const ReaderPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Mini audio player */}
-      {showAudioPlayer && summary?.audio_url && canListenAudio && (
-        <>
-          <div className="h-24" />
-          <MiniAudioPlayer
-            onClose={() => setShowAudioPlayer(false)}
-            onExpand={() => navigate(`/book/${id}/listen`)}
-          />
-        </>
-      )}
+      {/* Mini audio player is now global in AppLayout */}
     </div>
   );
 };
