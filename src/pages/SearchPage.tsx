@@ -35,7 +35,10 @@ const SearchPage = () => {
   let displayBooks = isSearching ? results : allBooks;
 
   if (activeCategory && displayBooks) {
-    displayBooks = displayBooks.filter((b) => b.tags?.includes(activeCategory));
+    const catLower = activeCategory.toLowerCase();
+    displayBooks = displayBooks.filter((b) =>
+      b.tags?.some((t) => t.toLowerCase() === catLower)
+    );
   }
 
   if (displayBooks) {
