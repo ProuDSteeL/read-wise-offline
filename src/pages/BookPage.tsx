@@ -260,7 +260,7 @@ const BookPage = () => {
         {/* Key ideas — Embla carousel with dots */}
         {keyIdeas && keyIdeas.length > 0 && (
           <section>
-            <h2 className="text-base font-semibold text-foreground mb-3">Ключевые идеи</h2>
+            <h2 className="text-base font-semibold text-sage mb-3">Ключевые идеи</h2>
             <Carousel setApi={setCarouselApi} className="w-full">
               <CarouselContent>
                 {keyIdeas.map((idea) => (
