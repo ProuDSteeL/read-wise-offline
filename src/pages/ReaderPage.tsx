@@ -209,7 +209,7 @@ const ReaderPage = () => {
     if (user && id && summary?.content) {
       supabase.from("user_progress").upsert(
         { user_id: user.id, book_id: id, progress_percent: 0, scroll_position: 0 },
-        { onConflict: "user_id,book_id", ignoreDuplicates: true }
+        { onConflict: "user_id,book_id" }
       );
     }
   }, [user, id, summary]);
