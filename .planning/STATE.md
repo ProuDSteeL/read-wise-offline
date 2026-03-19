@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-03-19T20:25:51.757Z"
-last_activity: 2026-03-19 -- Completed 05-02-PLAN.md (LearningPage with quiz flow, flashcard deck, route)
+stopped_at: Phase 5 fully verified and polished
+last_updated: "2026-03-19T21:30:00.000Z"
+last_activity: 2026-03-19 -- Phase 05 complete with post-plan polish (flashcard flip fix, dynamic tags, admin redesign)
 progress:
   total_phases: 7
   completed_phases: 5
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Доступные саммари нон-фикшн книг на русском языке с полным офлайн-доступом
-**Current focus:** Phase 5 - Quizzes & Learning
+**Current focus:** Phase 5 fully done — ready for Phase 6
 
 ## Current Position
 
-Phase: 5 of 7 (Quizzes & Learning)
-Plan: 2 of 3 in current phase
-Status: Completed 05-02-PLAN.md
-Last activity: 2026-03-19 -- Completed 05-02-PLAN.md (LearningPage with quiz flow, flashcard deck, route)
+Phase: 5 of 7 (Quizzes & Learning) — VERIFIED & POLISHED
+Plan: 3 of 3 + post-plan polish
+Status: Phase 5 complete
+Last activity: 2026-03-19 -- Phase 05 verified, bugs fixed, UX polish applied
 
-Progress: [█████████░] 91%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -95,6 +95,14 @@ Recent decisions affecting current work:
 - [Phase 05]: Disabled carousel drag when flashcard is flipped to prevent swipe-while-reading
 - [Phase 05]: Restructured AdminBookForm into 4 top-level Radix Tabs with nested markdown editor tabs
 - [Phase 05]: 50/50 weighted progress: quiz completion + flashcard mastery when both exist
+- [Phase 05]: Flashcard 3D flip uses inline styles (perspective, backfaceVisibility) for browser compat
+- [Phase 05]: gradient-primary CSS class added for card backgrounds
+- [Phase 05]: Key ideas moved after "Зачем читать?" section on BookPage
+- [Phase 05]: Rating moved inline under book title with smaller stars
+- [Phase 05]: Dynamic tags from DB replace hardcoded categories on SearchPage
+- [Phase 05]: Admin tag management with global delete from AdminBookList
+- [Phase 05]: AdminBookList redesigned with search, status/tag filters, sorting
+- [Phase 05]: RLS policies for quiz/flashcard tables use profiles.role (not user_roles)
 
 ### Pending Todos
 
@@ -107,6 +115,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T20:25:51.750Z
-Stopped at: Completed 05-03-PLAN.md
-Resume file: None
+Last session: 2026-03-19T21:30:00.000Z
+Stopped at: Phase 5 fully verified and polished
+Resume file: .planning/ROADMAP.md (Phase 6 next)
