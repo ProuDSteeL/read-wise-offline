@@ -19,6 +19,20 @@ interface KeyIdeaInput {
   content: string;
 }
 
+interface QuizQuestionInput {
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: number;
+}
+
+interface FlashcardInput {
+  front: string;
+  back: string;
+}
+
 const AdminBookForm = () => {
   const navigate = useNavigate();
   const { id: editId } = useParams<{ id: string }>();
@@ -43,6 +57,9 @@ const AdminBookForm = () => {
   const [status, setStatus] = useState<"draft" | "published" | "archived">("draft");
   const [readTimeAuto, setReadTimeAuto] = useState(false);
   const mdFileRef = useRef<HTMLInputElement>(null);
+
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestionInput[]>([]);
+  const [flashcardInputs, setFlashcardInputs] = useState<FlashcardInput[]>([]);
 
   // Load existing book data for edit mode
   const { data: existingBook, isLoading: loadingBook } = useQuery({
@@ -69,6 +86,26 @@ const AdminBookForm = () => {
     queryKey: ["admin-summary", editId],
     queryFn: async () => {
       const { data, error } = await supabase.from("summaries").select("*").eq("book_id", editId!).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEditMode,
+  });
+
+  const { data: existingQuizQuestions } = useQuery({
+    queryKey: ["admin-quiz-questions", editId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("quiz_questions").select("*").eq("book_id", editId!).order("display_order");
+      if (error) throw error;
+      return data;
+    },
+    enabled: isEditMode,
+  });
+
+  const { data: existingFlashcards } = useQuery({
+    queryKey: ["admin-flashcards", editId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("flashcards").select("*").eq("book_id", editId!).order("display_order");
       if (error) throw error;
       return data;
     },
@@ -123,6 +160,21 @@ const AdminBookForm = () => {
     }
   }, [existingSummary]);
 
+  useEffect(() => {
+    if (existingQuizQuestions?.length) {
+      setQuizQuestions(existingQuizQuestions.map(q => ({
+        question: q.question, option_a: q.option_a, option_b: q.option_b,
+        option_c: q.option_c, option_d: q.option_d, correct_option: q.correct_option,
+      })));
+    }
+  }, [existingQuizQuestions]);
+
+  useEffect(() => {
+    if (existingFlashcards?.length) {
+      setFlashcardInputs(existingFlashcards.map(f => ({ front: f.front, back: f.back })));
+    }
+  }, [existingFlashcards]);
+
   const handleCoverChange = (file: File | null) => {
     setCoverFile(file);
     if (file) {
@@ -145,6 +197,18 @@ const AdminBookForm = () => {
     const updated = [...keyIdeas];
     [updated[from], updated[to]] = [updated[to], updated[from]];
     setKeyIdeas(updated);
+  };
+
+  const moveQuestion = (from: number, to: number) => {
+    const updated = [...quizQuestions];
+    [updated[from], updated[to]] = [updated[to], updated[from]];
+    setQuizQuestions(updated);
+  };
+
+  const moveFlashcard = (from: number, to: number) => {
+    const updated = [...flashcardInputs];
+    [updated[from], updated[to]] = [updated[to], updated[from]];
+    setFlashcardInputs(updated);
   };
 
   const handleMdUpload = (file: File | null) => {
@@ -262,6 +326,44 @@ const AdminBookForm = () => {
         if (ideasErr) throw ideasErr;
       }
 
+      // Delete + re-insert quiz questions
+      if (isEditMode) {
+        await supabase.from("quiz_questions").delete().eq("book_id", bookId);
+      }
+      const validQuestions = quizQuestions.filter(q => q.question.trim() && q.option_a.trim() && q.option_b.trim() && q.option_c.trim() && q.option_d.trim());
+      if (validQuestions.length > 0) {
+        const { error: qErr } = await supabase.from("quiz_questions").insert(
+          validQuestions.map((q, i) => ({
+            book_id: bookId,
+            question: q.question,
+            option_a: q.option_a,
+            option_b: q.option_b,
+            option_c: q.option_c,
+            option_d: q.option_d,
+            correct_option: q.correct_option,
+            display_order: i,
+          }))
+        );
+        if (qErr) throw qErr;
+      }
+
+      // Delete + re-insert flashcards
+      if (isEditMode) {
+        await supabase.from("flashcards").delete().eq("book_id", bookId);
+      }
+      const validFlashcards = flashcardInputs.filter(f => f.front.trim() && f.back.trim());
+      if (validFlashcards.length > 0) {
+        const { error: fErr } = await supabase.from("flashcards").insert(
+          validFlashcards.map((f, i) => ({
+            book_id: bookId,
+            front: f.front,
+            back: f.back,
+            display_order: i,
+          }))
+        );
+        if (fErr) throw fErr;
+      }
+
       // Upsert summary
       if (summaryContent.trim() || audioUrl) {
         const summaryPayload = {
@@ -334,226 +436,305 @@ const AdminBookForm = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 p-4 pb-8">
-        {/* Cover upload */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Обложка</label>
-          <div className="flex items-end gap-4">
-            {coverPreview ? (
-              <img src={coverPreview} alt="Preview" className="h-32 w-auto rounded-xl object-cover shadow-card" />
-            ) : (
-              <div className="flex h-32 w-24 items-center justify-center rounded-xl bg-secondary">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-              </div>
-            )}
-            <Input
-              type="file"
-              accept="image/*"
-              className="text-xs"
-              onChange={(e) => handleCoverChange(e.target.files?.[0] || null)}
-            />
-          </div>
-        </div>
+        <Tabs defaultValue="info" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
+            <TabsTrigger value="info" className="text-xs">Инфо</TabsTrigger>
+            <TabsTrigger value="content" className="text-xs">Контент</TabsTrigger>
+            <TabsTrigger value="key-ideas" className="text-xs">Идеи</TabsTrigger>
+            <TabsTrigger value="quiz-flashcards" className="text-xs">Квиз и карточки</TabsTrigger>
+          </TabsList>
 
-        {/* Title & Author */}
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-foreground">Название *</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Атомные привычки" className="rounded-xl bg-secondary border-0" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-foreground">Автор *</label>
-            <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Джеймс Клир" className="rounded-xl bg-secondary border-0" />
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-foreground">Описание</label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="О чём эта книга..." rows={3} className="rounded-xl bg-secondary border-0 resize-none" />
-        </div>
-
-        {/* Categories */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Категории</label>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => toggleCategory(cat)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  selectedCategories.includes(cat)
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Read time */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-foreground">Чтение (мин)</label>
-          <Input type="number" value={readTime} onChange={(e) => { setReadTime(e.target.value); setReadTimeAuto(true); }} placeholder="15" className="rounded-xl bg-secondary border-0" />
-          <p className="text-[10px] text-muted-foreground">Авто: ~200 слов/мин</p>
-        </div>
-
-        {/* Why read */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Зачем читать</label>
-          {whyRead.map((reason, i) => (
-            <div key={i} className="flex gap-2">
-              <Input
-                value={reason}
-                onChange={(e) => {
-                  const updated = [...whyRead];
-                  updated[i] = e.target.value;
-                  setWhyRead(updated);
-                }}
-                placeholder={`Причина ${i + 1}`}
-                className="rounded-xl bg-secondary border-0"
-              />
-              {whyRead.length > 1 && (
-                <button type="button" onClick={() => setWhyRead(whyRead.filter((_, j) => j !== i))} className="text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          ))}
-          <Button type="button" variant="ghost" size="sm" onClick={() => setWhyRead([...whyRead, ""])} className="gap-1 text-xs">
-            <Plus className="h-3 w-3" /> Добавить
-          </Button>
-        </div>
-
-        {/* About author */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-foreground">Об авторе</label>
-          <Textarea value={aboutAuthor} onChange={(e) => setAboutAuthor(e.target.value)} placeholder="Биография автора..." rows={2} className="rounded-xl bg-secondary border-0 resize-none" />
-        </div>
-
-        {/* Summary (Markdown) */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-foreground">Саммари (Markdown)</label>
-            <Button type="button" variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => mdFileRef.current?.click()}>
-              <FileUp className="h-3 w-3" /> Загрузить .md
-            </Button>
-            <input
-              ref={mdFileRef}
-              type="file"
-              accept=".md,.txt,.markdown"
-              className="hidden"
-              onChange={(e) => handleMdUpload(e.target.files?.[0] || null)}
-            />
-          </div>
-          <Tabs defaultValue="editor" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="editor">Редактор</TabsTrigger>
-              <TabsTrigger value="preview">Превью</TabsTrigger>
-            </TabsList>
-            <TabsContent value="editor">
-              <Textarea
-                value={summaryContent}
-                onChange={(e) => setSummaryContent(e.target.value)}
-                placeholder="# Введение&#10;&#10;Текст саммари в формате Markdown..."
-                rows={12}
-                className="rounded-xl bg-secondary border-0 resize-none font-mono text-xs"
-              />
-            </TabsContent>
-            <TabsContent value="preview">
-              <div className="min-h-[200px] rounded-xl bg-secondary p-4 text-sm leading-relaxed font-serif">
-                {summaryContent.trim() ? (
-                  <ReactMarkdown
-                    components={{
-                      h1: ({ children }) => <h1 className="mb-3 mt-6 text-xl font-bold">{children}</h1>,
-                      h2: ({ children }) => <h2 className="mb-2 mt-5 text-lg font-bold">{children}</h2>,
-                      h3: ({ children }) => <h3 className="mb-2 mt-4 text-base font-semibold">{children}</h3>,
-                      p: ({ children }) => <p className="mb-3 text-muted-foreground">{children}</p>,
-                      blockquote: ({ children }) => <blockquote className="my-3 border-l-4 border-primary/40 pl-3 italic text-muted-foreground">{children}</blockquote>,
-                      strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                    }}
-                  >
-                    {summaryContent}
-                  </ReactMarkdown>
+          <TabsContent value="info" className="space-y-6">
+            {/* Cover upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Обложка</label>
+              <div className="flex items-end gap-4">
+                {coverPreview ? (
+                  <img src={coverPreview} alt="Preview" className="h-32 w-auto rounded-xl object-cover shadow-card" />
                 ) : (
-                  <p className="text-muted-foreground italic">Введите текст саммари для предпросмотра</p>
+                  <div className="flex h-32 w-24 items-center justify-center rounded-xl bg-secondary">
+                    <Upload className="h-6 w-6 text-muted-foreground" />
+                  </div>
                 )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  className="text-xs"
+                  onChange={(e) => handleCoverChange(e.target.files?.[0] || null)}
+                />
               </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Audio upload */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Аудио саммари</label>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-              <Music className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="flex-1">
-              <Input
-                type="file"
-                accept="audio/*"
-                className="text-xs"
-                onChange={(e) => handleAudioChange(e.target.files?.[0] || null)}
-              />
-              {audioFileName && (
-                <p className="mt-1 text-xs text-muted-foreground">{audioFileName}</p>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* Key ideas */}
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-foreground">Ключевые идеи</label>
-          {keyIdeas.map((idea, i) => (
-            <div key={i} className="space-y-2 rounded-xl bg-card p-3 shadow-card">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-primary">Идея {i + 1}</span>
-                <div className="flex items-center gap-1">
-                  <button type="button" disabled={i === 0} onClick={() => moveIdea(i, i - 1)} className="text-muted-foreground disabled:opacity-30">
-                    <ChevronUp className="h-3.5 w-3.5" />
+            {/* Title & Author */}
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Название *</label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Атомные привычки" className="rounded-xl bg-secondary border-0" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-foreground">Автор *</label>
+                <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Джеймс Клир" className="rounded-xl bg-secondary border-0" />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-foreground">Описание</label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="О чём эта книга..." rows={3} className="rounded-xl bg-secondary border-0 resize-none" />
+            </div>
+
+            {/* Categories */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Категории</label>
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      selectedCategories.includes(cat)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground"
+                    }`}
+                  >
+                    {cat}
                   </button>
-                  <button type="button" disabled={i === keyIdeas.length - 1} onClick={() => moveIdea(i, i + 1)} className="text-muted-foreground disabled:opacity-30">
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                  {keyIdeas.length > 1 && (
-                    <button type="button" onClick={() => setKeyIdeas(keyIdeas.filter((_, j) => j !== i))} className="text-destructive ml-1">
-                      <Trash2 className="h-3.5 w-3.5" />
+                ))}
+              </div>
+            </div>
+
+            {/* Read time */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-foreground">Чтение (мин)</label>
+              <Input type="number" value={readTime} onChange={(e) => { setReadTime(e.target.value); setReadTimeAuto(true); }} placeholder="15" className="rounded-xl bg-secondary border-0" />
+              <p className="text-[10px] text-muted-foreground">Авто: ~200 слов/мин</p>
+            </div>
+
+            {/* Why read */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Зачем читать</label>
+              {whyRead.map((reason, i) => (
+                <div key={i} className="flex gap-2">
+                  <Input
+                    value={reason}
+                    onChange={(e) => {
+                      const updated = [...whyRead];
+                      updated[i] = e.target.value;
+                      setWhyRead(updated);
+                    }}
+                    placeholder={`Причина ${i + 1}`}
+                    className="rounded-xl bg-secondary border-0"
+                  />
+                  {whyRead.length > 1 && (
+                    <button type="button" onClick={() => setWhyRead(whyRead.filter((_, j) => j !== i))} className="text-destructive">
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </div>
-              </div>
-              <Input
-                value={idea.title}
-                onChange={(e) => {
-                  const updated = [...keyIdeas];
-                  updated[i] = { ...updated[i], title: e.target.value };
-                  setKeyIdeas(updated);
-                }}
-                placeholder="Заголовок идеи"
-                className="rounded-lg bg-secondary border-0 text-sm"
-              />
-              <Textarea
-                value={idea.content}
-                onChange={(e) => {
-                  const updated = [...keyIdeas];
-                  updated[i] = { ...updated[i], content: e.target.value };
-                  setKeyIdeas(updated);
-                }}
-                placeholder="Содержание идеи..."
-                rows={3}
-                className="rounded-lg bg-secondary border-0 resize-none text-sm"
-              />
+              ))}
+              <Button type="button" variant="ghost" size="sm" onClick={() => setWhyRead([...whyRead, ""])} className="gap-1 text-xs">
+                <Plus className="h-3 w-3" /> Добавить
+              </Button>
             </div>
-          ))}
-          <Button type="button" variant="ghost" size="sm" onClick={() => setKeyIdeas([...keyIdeas, { title: "", content: "" }])} className="gap-1 text-xs">
-            <Plus className="h-3 w-3" /> Добавить идею
-          </Button>
-        </div>
+
+            {/* About author */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-foreground">Об авторе</label>
+              <Textarea value={aboutAuthor} onChange={(e) => setAboutAuthor(e.target.value)} placeholder="Биография автора..." rows={2} className="rounded-xl bg-secondary border-0 resize-none" />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="content" className="space-y-6">
+            {/* Summary (Markdown) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-foreground">Саммари (Markdown)</label>
+                <Button type="button" variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => mdFileRef.current?.click()}>
+                  <FileUp className="h-3 w-3" /> Загрузить .md
+                </Button>
+                <input
+                  ref={mdFileRef}
+                  type="file"
+                  accept=".md,.txt,.markdown"
+                  className="hidden"
+                  onChange={(e) => handleMdUpload(e.target.files?.[0] || null)}
+                />
+              </div>
+              <Tabs defaultValue="editor" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="editor">Редактор</TabsTrigger>
+                  <TabsTrigger value="preview">Превью</TabsTrigger>
+                </TabsList>
+                <TabsContent value="editor">
+                  <Textarea
+                    value={summaryContent}
+                    onChange={(e) => setSummaryContent(e.target.value)}
+                    placeholder="# Введение&#10;&#10;Текст саммари в формате Markdown..."
+                    rows={12}
+                    className="rounded-xl bg-secondary border-0 resize-none font-mono text-xs"
+                  />
+                </TabsContent>
+                <TabsContent value="preview">
+                  <div className="min-h-[200px] rounded-xl bg-secondary p-4 text-sm leading-relaxed font-serif">
+                    {summaryContent.trim() ? (
+                      <ReactMarkdown
+                        components={{
+                          h1: ({ children }) => <h1 className="mb-3 mt-6 text-xl font-bold">{children}</h1>,
+                          h2: ({ children }) => <h2 className="mb-2 mt-5 text-lg font-bold">{children}</h2>,
+                          h3: ({ children }) => <h3 className="mb-2 mt-4 text-base font-semibold">{children}</h3>,
+                          p: ({ children }) => <p className="mb-3 text-muted-foreground">{children}</p>,
+                          blockquote: ({ children }) => <blockquote className="my-3 border-l-4 border-primary/40 pl-3 italic text-muted-foreground">{children}</blockquote>,
+                          strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                        }}
+                      >
+                        {summaryContent}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="text-muted-foreground italic">Введите текст саммари для предпросмотра</p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            {/* Audio upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Аудио саммари</label>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
+                  <Music className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="audio/*"
+                    className="text-xs"
+                    onChange={(e) => handleAudioChange(e.target.files?.[0] || null)}
+                  />
+                  {audioFileName && (
+                    <p className="mt-1 text-xs text-muted-foreground">{audioFileName}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="key-ideas" className="space-y-3">
+            {/* Key ideas */}
+            <label className="text-sm font-medium text-foreground">Ключевые идеи</label>
+            {keyIdeas.map((idea, i) => (
+              <div key={i} className="space-y-2 rounded-xl bg-card p-3 shadow-card">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-primary">Идея {i + 1}</span>
+                  <div className="flex items-center gap-1">
+                    <button type="button" disabled={i === 0} onClick={() => moveIdea(i, i - 1)} className="text-muted-foreground disabled:opacity-30">
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" disabled={i === keyIdeas.length - 1} onClick={() => moveIdea(i, i + 1)} className="text-muted-foreground disabled:opacity-30">
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                    {keyIdeas.length > 1 && (
+                      <button type="button" onClick={() => setKeyIdeas(keyIdeas.filter((_, j) => j !== i))} className="text-destructive ml-1">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <Input
+                  value={idea.title}
+                  onChange={(e) => {
+                    const updated = [...keyIdeas];
+                    updated[i] = { ...updated[i], title: e.target.value };
+                    setKeyIdeas(updated);
+                  }}
+                  placeholder="Заголовок идеи"
+                  className="rounded-lg bg-secondary border-0 text-sm"
+                />
+                <Textarea
+                  value={idea.content}
+                  onChange={(e) => {
+                    const updated = [...keyIdeas];
+                    updated[i] = { ...updated[i], content: e.target.value };
+                    setKeyIdeas(updated);
+                  }}
+                  placeholder="Содержание идеи..."
+                  rows={3}
+                  className="rounded-lg bg-secondary border-0 resize-none text-sm"
+                />
+              </div>
+            ))}
+            <Button type="button" variant="ghost" size="sm" onClick={() => setKeyIdeas([...keyIdeas, { title: "", content: "" }])} className="gap-1 text-xs">
+              <Plus className="h-3 w-3" /> Добавить идею
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="quiz-flashcards">
+            <div className="space-y-4">
+              {/* Quiz questions sub-section */}
+              <p className="text-xs font-medium text-muted-foreground">Вопросы квиза</p>
+              {quizQuestions.map((q, i) => (
+                <div key={i} className="space-y-2 rounded-xl bg-card p-3 shadow-card">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-primary">Вопрос {i + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" disabled={i === 0} onClick={() => moveQuestion(i, i - 1)} className="text-muted-foreground disabled:opacity-30" aria-label="Переместить вверх">
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" disabled={i === quizQuestions.length - 1} onClick={() => moveQuestion(i, i + 1)} className="text-muted-foreground disabled:opacity-30" aria-label="Переместить вниз">
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" onClick={() => setQuizQuestions(quizQuestions.filter((_, j) => j !== i))} className="text-destructive ml-1" aria-label="Удалить вопрос">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <Input value={q.question} onChange={(e) => { const u = [...quizQuestions]; u[i] = {...u[i], question: e.target.value}; setQuizQuestions(u); }} placeholder="Текст вопроса" className="rounded-lg bg-secondary border-0 text-sm" />
+                  {[
+                    { key: "option_a" as const, label: "Вариант A" },
+                    { key: "option_b" as const, label: "Вариант B" },
+                    { key: "option_c" as const, label: "Вариант C" },
+                    { key: "option_d" as const, label: "Вариант D" },
+                  ].map(({ key, label }, optIdx) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <input type="radio" name={`correct-${i}`} checked={q.correct_option === optIdx} onChange={() => { const u = [...quizQuestions]; u[i] = {...u[i], correct_option: optIdx}; setQuizQuestions(u); }} className="accent-primary" />
+                      <Input value={q[key]} onChange={(e) => { const u = [...quizQuestions]; u[i] = {...u[i], [key]: e.target.value}; setQuizQuestions(u); }} placeholder={label} className="rounded-lg bg-secondary border-0 text-sm flex-1" />
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <Button type="button" variant="ghost" size="sm" onClick={() => setQuizQuestions([...quizQuestions, { question: "", option_a: "", option_b: "", option_c: "", option_d: "", correct_option: 0 }])} className="gap-1 text-xs">
+                <Plus className="h-3 w-3" /> Добавить вопрос
+              </Button>
+
+              {/* Flashcards sub-section */}
+              <p className="text-xs font-medium text-muted-foreground mt-4">Карточки</p>
+              {flashcardInputs.map((f, i) => (
+                <div key={i} className="space-y-2 rounded-xl bg-card p-3 shadow-card">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-primary">Карточка {i + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" disabled={i === 0} onClick={() => moveFlashcard(i, i - 1)} className="text-muted-foreground disabled:opacity-30" aria-label="Переместить вверх">
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" disabled={i === flashcardInputs.length - 1} onClick={() => moveFlashcard(i, i + 1)} className="text-muted-foreground disabled:opacity-30" aria-label="Переместить вниз">
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" onClick={() => setFlashcardInputs(flashcardInputs.filter((_, j) => j !== i))} className="text-destructive ml-1" aria-label="Удалить карточку">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <Textarea value={f.front} onChange={(e) => { const u = [...flashcardInputs]; u[i] = {...u[i], front: e.target.value}; setFlashcardInputs(u); }} placeholder="Лицевая сторона (вопрос/концепт)" rows={2} className="rounded-lg bg-secondary border-0 resize-none text-sm" />
+                  <Textarea value={f.back} onChange={(e) => { const u = [...flashcardInputs]; u[i] = {...u[i], back: e.target.value}; setFlashcardInputs(u); }} placeholder="Обратная сторона (ответ/объяснение)" rows={2} className="rounded-lg bg-secondary border-0 resize-none text-sm" />
+                </div>
+              ))}
+              <Button type="button" variant="ghost" size="sm" onClick={() => setFlashcardInputs([...flashcardInputs, { front: "", back: "" }])} className="gap-1 text-xs">
+                <Plus className="h-3 w-3" /> Добавить карточку
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Submit */}
         <div className="space-y-3 pt-2">
