@@ -15,6 +15,7 @@ import ProfilePage from "./pages/ProfilePage";
 import BookPage from "./pages/BookPage";
 import ReaderPage from "./pages/ReaderPage";
 import GlobalAudioPlayer from "./components/GlobalAudioPlayer";
+import OfflineBanner from "./components/OfflineBanner";
 import DownloadsPage from "./pages/DownloadsPage";
 import OfflineReaderPage from "./pages/OfflineReaderPage";
 import AdminBookForm from "./pages/AdminBookForm";
@@ -76,6 +77,7 @@ const App = () => (
           <AudioProvider>
             <AppRoutes />
             <GlobalAudioPlayer />
+            <OfflineBanner />
           </AudioProvider>
         </AuthProvider>
       </BrowserRouter>
