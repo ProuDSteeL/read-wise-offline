@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +16,7 @@ import BookPage from "./pages/BookPage";
 import ReaderPage from "./pages/ReaderPage";
 import GlobalAudioPlayer from "./components/GlobalAudioPlayer";
 import OfflineBanner from "./components/OfflineBanner";
+import OfflineFallback from "./pages/OfflineFallback";
 import DownloadsPage from "./pages/DownloadsPage";
 import OfflineReaderPage from "./pages/OfflineReaderPage";
 import AdminBookForm from "./pages/AdminBookForm";
@@ -37,7 +38,7 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/downloads" element={<DownloadsPage />} />
         <Route path="/offline/read/:id" element={<OfflineReaderPage />} />
-        <Route path="*" element={<Navigate to="/downloads" replace />} />
+        <Route path="*" element={<OfflineFallback />} />
       </Routes>
     );
   }
