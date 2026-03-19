@@ -90,11 +90,12 @@ Plans:
   2. User can study key concepts via flashcards that show a question/concept on the front and reveal the answer on flip
   3. Admin can create quiz questions and flashcards per book in the admin form
   4. Quiz results and flashcard progress appear in the user's profile statistics
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — DB migration (4 tables + RLS) + Supabase types + useQuiz/useFlashcards hooks (QUIZ-01, QUIZ-02, QUIZ-03, QUIZ-04)
+- [ ] 05-02-PLAN.md — LearningPage with quiz flow + flashcard deck + route registration (QUIZ-01, QUIZ-02)
+- [ ] 05-03-PLAN.md — AdminBookForm quiz/flashcard tab + BookPage/ReaderPage CTAs + ProfilePage stats (QUIZ-03, QUIZ-04)
 
 ### Phase 6: Offline Hardening
 **Goal**: Users can download books for offline reading with full visibility into storage usage
@@ -135,6 +136,6 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 | 2. Reader Enhancement | 0/1 | Not started | - |
 | 3. Audio Player Polish | 2/2 | Complete | 2026-03-19 |
 | 4. Content & Collections | 0/2 | Not started | - |
-| 5. Quizzes & Learning | 0/? | Not started | - |
+| 5. Quizzes & Learning | 0/3 | Not started | - |
 | 6. Offline Hardening | 0/? | Not started | - |
 | 7. Growth & Discovery | 0/? | Not started | - |
