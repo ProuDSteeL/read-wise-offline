@@ -55,11 +55,13 @@ Exceptions:
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px (text-sm) | 400 (normal) | 1.625 (leading-relaxed) | Flashcard back text, answer option text, quiz review body |
-| Label | 16px (text-base) | 600 (semibold) | 1.375 (leading-snug) | Flashcard front text, option labels, progress labels |
+| Label | 16px (text-base) | 700 (bold) | 1.375 (leading-snug) | Flashcard front text, option labels, progress labels |
 | Heading | 20px (text-xl) | 700 (bold) | 1.2 | Learning page title, results score display |
-| Display | 28px (text-2xl) | 800 (extrabold) | 1.1 | Score number on results screen (e.g. "4/5") |
+| Display | 28px (text-2xl) | 700 (bold) | 1.1 | Score number on results screen (e.g. "4/5") |
 
 Font family: Inter (sans) for all quiz/learning UI. Literata (serif) is reader-only.
+
+Weight rationale: 2 weights only (400 normal, 700 bold). Label, Heading, and Display are differentiated by font size (16px, 20px, 28px) rather than weight variation.
 
 ---
 
@@ -128,7 +130,7 @@ Dark mode: use green-500/15 and red-500/15 as background tints instead of green-
 
 | State | What User Sees | Interaction |
 |-------|---------------|-------------|
-| Ready | "Start Quiz" button, question count badge | Tap "Start Quiz" to begin |
+| Ready | "Начать тест" button, question count badge | Tap "Начать тест" to begin |
 | In-progress | One question with 4 option cards, progress dots | Tap option to select answer |
 | Feedback (1.2s) | Selected answer highlighted correct/wrong, correct answer revealed | No interaction, auto-advance after 1200ms |
 | Completed | Score display (e.g. "4/5"), full review of all questions | "Retake" button or "Back" to return |
@@ -157,13 +159,13 @@ Carousel navigation: Swipe left/right to change card. Embla handles tap-vs-swipe
 
 ### Admin Creation
 
-| Element | Interaction |
-|---------|-------------|
-| 4th tab in AdminBookForm | "Квиз и карточки" tab label |
-| Quiz section | "Add question" button, text input for question, 4 text inputs for options, radio to mark correct |
-| Flashcard section | "Add card" button, textarea for front, textarea for back |
-| Reorder | ChevronUp/ChevronDown buttons per item (existing pattern) |
-| Delete | Trash icon per question/card with confirmation |
+| Element | Interaction | Accessibility |
+|---------|-------------|---------------|
+| 4th tab in AdminBookForm | "Квиз и карточки" tab label | Handled by Radix Tabs |
+| Quiz section | "Add question" button, text input for question, 4 text inputs for options, radio to mark correct | Standard form labels |
+| Flashcard section | "Add card" button, textarea for front, textarea for back | Standard form labels |
+| Reorder | ChevronUp/ChevronDown buttons per item (existing pattern) | `aria-label="Переместить вверх"` / `aria-label="Переместить вниз"` |
+| Delete | Trash icon per question/card with confirmation | `aria-label="Удалить вопрос"` or `aria-label="Удалить карточку"` |
 
 ---
 
@@ -174,7 +176,7 @@ All copy in Russian (project language).
 | Element | Copy |
 |---------|------|
 | Primary CTA (BookPage) | "Пройти тест" |
-| Primary CTA (Learning ready) | "Начать" |
+| Primary CTA (Learning ready) | "Начать тест" |
 | Flashcard tab label | "Карточки" |
 | Quiz tab label | "Квиз" |
 | Admin tab label | "Квиз и карточки" |
@@ -215,14 +217,14 @@ Tab Content Area:
   Quiz mode:
     [Progress dots: ● ● ○ ○ ○]
     [Question text]
-    [Option A card]  ← full-width, rounded-xl, p-4
+    [Option A card]  <- full-width, rounded-xl, p-4
     [Option B card]
     [Option C card]
     [Option D card]
 
   Flashcard mode:
     [Card counter: 3 / 8]
-    [Flashcard in Embla carousel]  ← h-64, rounded-2xl
+    [Flashcard in Embla carousel]  <- h-64, rounded-2xl
     [Rating buttons: Знал | Не знал]
     [Prev / Next navigation]
     [Progress: 5 из 8 изучено]
@@ -231,25 +233,25 @@ Tab Content Area:
 ### Quiz Results Screen
 
 ```
-[Score display: 4 из 5]  ← text-2xl extrabold
+[Score display: 4 из 5]  <- text-2xl font-bold
 [Progress bar: 80%]
 ─────────────────────────────
-[Question 1 — Верно ✓]
+[Question 1 -- Верно]
   Your answer: [highlighted green]
-[Question 2 — Неверно ✗]
+[Question 2 -- Неверно]
   Your answer: [highlighted red]
   Correct: [highlighted green]
 ...
 ─────────────────────────────
-[Пройти заново]  ← primary button
-[Назад к книге]  ← ghost button
+[Пройти заново]  <- primary button
+[Назад к книге]  <- ghost button
 ```
 
 ### BookPage Progress Bar
 
 ```
-[Пройти тест]  ← primary button, full-width
-[thin progress bar below]  ← h-1.5, rounded-full, sage fill
+[Пройти тест]  <- primary button, full-width
+[thin progress bar below]  <- h-1.5, rounded-full, sage fill
 ```
 
 Progress bar: uses shadcn `Progress` component. Fill color: sage green (`bg-sage` / accent). Track: `bg-secondary`. Height: 6px (h-1.5). Border radius: full.
@@ -290,6 +292,8 @@ No third-party registries. No new shadcn components to install -- all already pr
 - Rating buttons: distinct focus styles, not just color differentiation
 - Tab navigation: handled by Radix Tabs (ARIA-compliant out of the box)
 - Color contrast: correct/wrong feedback uses both color AND icon (Check/X) -- not color-alone
+- Admin reorder buttons: `aria-label="Переместить вверх"` on ChevronUp, `aria-label="Переместить вниз"` on ChevronDown
+- Admin delete button: `aria-label="Удалить вопрос"` or `aria-label="Удалить карточку"` on Trash icon buttons
 
 ---
 
