@@ -31,17 +31,16 @@ Declared values (must be multiples of 4):
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px | Icon gaps, dot indicator gaps (gap-1) |
-| sm | 8px | Compact element spacing, card internal gaps |
+| xs | 4px | Icon gaps (gap-1) |
+| sm | 8px | Compact element spacing, card internal gaps, carousel dot gaps (gap-2) |
 | md | 16px | Default element spacing, section padding (px-4, p-4) |
 | lg | 24px | Section vertical spacing (space-y-6) |
 | xl | 32px | Layout gaps between major homepage sections |
 | 2xl | 48px | Page-level vertical padding |
 | 3xl | 64px | Not used in this phase |
+| 4xl | 112px | MiniAudioPlayer clearance (pb-28) -- component is 80px tall + 32px breathing room |
 
-Exceptions:
-- Carousel dot indicators use 6px (gap-1.5) between dots -- acceptable deviation
-- Bottom padding pb-28 (112px) on pages with MiniAudioPlayer to prevent content overlap with fixed bottom player
+Exceptions: none -- all values are multiples of 4.
 
 ---
 
@@ -49,14 +48,15 @@ Exceptions:
 
 | Role | Size | Weight | Line Height | Usage in Phase 4 |
 |------|------|--------|-------------|-------------------|
-| Body | 14px (text-sm) | 400 (normal) | 1.5 (leading-relaxed) | Key idea card content, continue card metadata, stat labels |
 | Label | 11px (text-[11px]) | 400 (normal) | 1.4 | Stat card labels ("Прочитано", "Время", "Серия дней") |
-| Heading | 17px (text-[17px]) | 700 (bold) | 1.3 (leading-snug) | Section headers (SectionHeader component) |
-| Subheading | 16px (text-base) | 600 (semibold) | 1.3 (leading-snug) | Key idea card titles |
+| Body | 14px (text-sm) | 400 (normal) | 1.5 (leading-relaxed) | Key idea card content, continue card metadata, stat labels |
+| Subheading | 16px (text-base) | 600 (semibold) | 1.3 (leading-snug) | Key idea card titles, section headers (SectionHeader component) |
+| Display | 20px (text-xl) | 600 (semibold) | 1.3 (leading-snug) | Stat card values (existing ProfilePage pattern) |
 
 Notes:
-- Font weights used: 400 (body/labels) and 600-700 (headings/titles) -- pre-existing pattern
-- Stat card values use text-xl (20px) font-extrabold (800) -- existing ProfilePage pattern, retain as-is
+- Font weights used: 400 (body/labels) and 600 (headings/titles/stats) -- exactly 2 weights
+- Section headers (previously 17px bold) consolidated to 16px semibold -- 1px difference was imperceptible
+- Stat card values (previously text-xl font-extrabold 800) changed to text-xl font-semibold 600 for weight scale consistency
 - All typography tokens already established in prior phases, no new tokens introduced
 
 ---
@@ -126,7 +126,7 @@ No new components needed. All UI is built from existing components.
 | Navigation | Dot indicators below carousel (no arrow buttons on mobile) |
 | Dot indicator: inactive | `w-1.5 h-1.5 rounded-full bg-muted-foreground/20` |
 | Dot indicator: active | `w-5 h-1.5 rounded-full bg-primary transition-all` |
-| Dot container | `mt-3 flex justify-center gap-1.5` |
+| Dot container | `mt-3 flex justify-center gap-2` |
 | State sync | Embla `onSelect` callback updates `activeIdx` via `api.selectedScrollSnap()` |
 | Animation | Embla defaults (no custom easing) |
 | Empty state | Hide entire key ideas section (no carousel rendered) |
