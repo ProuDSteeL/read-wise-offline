@@ -59,10 +59,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Audio continues playing when the user locks their phone or switches to another app, with play/pause/skip controls visible on the lock screen
   2. User can set a sleep timer (15/30/45/60 min) and playback automatically stops when the timer expires
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Extend AudioContext with Media Session API, centralized sleep timer, offline loading + update AudioPlayerPage + unit tests (AUDIO-03, AUDIO-04)
+- [ ] 03-02-PLAN.md — Refactor OfflineReaderPage to use AudioContext + MiniAudioPlayer sleep timer indicator + manual verification (AUDIO-03, AUDIO-04)
 
 ### Phase 4: Content & Collections
 **Goal**: Users discover content through key ideas, personalized homepage sections, reading stats, and curated collections
@@ -132,7 +133,7 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 |-------|----------------|--------|-----------|
 | 1. Security Hardening | 0/3 | Not started | - |
 | 2. Reader Enhancement | 0/1 | Not started | - |
-| 3. Audio Player Polish | 0/? | Not started | - |
+| 3. Audio Player Polish | 0/2 | Not started | - |
 | 4. Content & Collections | 0/? | Not started | - |
 | 5. Quizzes & Learning | 0/? | Not started | - |
 | 6. Offline Hardening | 0/? | Not started | - |
