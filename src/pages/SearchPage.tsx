@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import BookCard from "@/components/BookCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchBooks, usePublishedBooks } from "@/hooks/useBooks";
-
-const ALL_CATEGORIES = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы", "Наука", "Саморазвитие"];
+import { useTags } from "@/hooks/useTags";
 
 type SortKey = "newest" | "fastest";
 
@@ -30,6 +29,7 @@ const SearchPage = () => {
 
   const { data: results, isLoading } = useSearchBooks(query);
   const { data: allBooks } = usePublishedBooks();
+  const allTags = useTags();
 
   const isSearching = query.length >= 2;
   let displayBooks = isSearching ? results : allBooks;
@@ -85,7 +85,7 @@ const SearchPage = () => {
       </div>
 
       <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
-        {ALL_CATEGORIES.map((cat) => (
+        {allTags.map((cat) => (
           <button
             key={cat}
             onClick={() => handleCategoryClick(cat)}

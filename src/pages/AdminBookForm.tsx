@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { useTags } from "@/hooks/useTags";
 
-const CATEGORIES = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы", "Наука", "Саморазвитие"];
+const DEFAULT_CATEGORIES = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы", "Наука", "Саморазвитие"];
 
 interface KeyIdeaInput {
   title: string;
@@ -60,6 +61,8 @@ const AdminBookForm = () => {
 
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestionInput[]>([]);
   const [flashcardInputs, setFlashcardInputs] = useState<FlashcardInput[]>([]);
+  const [customTag, setCustomTag] = useState("");
+  const existingTags = useTags();
 
   // Load existing book data for edit mode
   const { data: existingBook, isLoading: loadingBook } = useQuery({
@@ -487,20 +490,70 @@ const AdminBookForm = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Категории</label>
               <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => toggleCategory(cat)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      selectedCategories.includes(cat)
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-secondary-foreground"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {/* Merge defaults + existing tags from DB, deduplicate */}
+                {Array.from(new Set([...DEFAULT_CATEGORIES, ...existingTags, ...selectedCategories].map(t => t.toLowerCase())))
+                  .sort((a, b) => a.localeCompare(b, "ru"))
+                  .map((catLower) => {
+                    const display = selectedCategories.find(s => s.toLowerCase() === catLower)
+                      || existingTags.find(t => t.toLowerCase() === catLower)
+                      || DEFAULT_CATEGORIES.find(d => d.toLowerCase() === catLower)
+                      || catLower;
+                    const isActive = selectedCategories.some(s => s.toLowerCase() === catLower);
+                    return (
+                      <button
+                        key={catLower}
+                        type="button"
+                        onClick={() => {
+                          if (isActive) {
+                            setSelectedCategories(selectedCategories.filter(s => s.toLowerCase() !== catLower));
+                          } else {
+                            setSelectedCategories([...selectedCategories, display]);
+                          }
+                        }}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-secondary-foreground"
+                        }`}
+                      >
+                        {display}
+                      </button>
+                    );
+                  })}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  placeholder="Новый тег..."
+                  className="rounded-xl bg-secondary border-0 text-sm flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const tag = customTag.trim();
+                      if (tag && !selectedCategories.some(s => s.toLowerCase() === tag.toLowerCase())) {
+                        setSelectedCategories([...selectedCategories, tag]);
+                      }
+                      setCustomTag("");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const tag = customTag.trim();
+                    if (tag && !selectedCategories.some(s => s.toLowerCase() === tag.toLowerCase())) {
+                      setSelectedCategories([...selectedCategories, tag]);
+                    }
+                    setCustomTag("");
+                  }}
+                  disabled={!customTag.trim()}
+                  className="text-xs"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
             </div>
 
