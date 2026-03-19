@@ -8,12 +8,10 @@ import { useSearchBooks, usePublishedBooks } from "@/hooks/useBooks";
 
 const ALL_CATEGORIES = ["Бизнес", "Психология", "Продуктивность", "Здоровье", "Лидерство", "Финансы", "Наука", "Саморазвитие"];
 
-type SortKey = "newest" | "popular" | "rating" | "fastest";
+type SortKey = "newest" | "fastest";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "newest", label: "Новые" },
-  { key: "popular", label: "Популярные" },
-  { key: "rating", label: "По рейтингу" },
   { key: "fastest", label: "Быстрые" },
 ];
 
@@ -39,8 +37,6 @@ const SearchPage = () => {
   if (displayBooks) {
     displayBooks = [...displayBooks].sort((a, b) => {
       switch (sortBy) {
-        case "popular": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "rating": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case "fastest": return (a.read_time_minutes ?? 999) - (b.read_time_minutes ?? 999);
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }

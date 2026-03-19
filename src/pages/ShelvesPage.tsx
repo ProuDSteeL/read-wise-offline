@@ -75,8 +75,7 @@ const ShelvesPage = () => {
         .from("user_shelves")
         .select("*, books(*)")
         .eq("user_id", user!.id)
-        .eq("shelf_type", activeShelf!)
-        .order("created_at", { ascending: false });
+        .eq("shelf_type", activeShelf!);
       if (error) throw error;
       return data.map((d: any) => ({ ...d.books, _join_id: d.id })) as (Book & { _join_id: string })[];
     },

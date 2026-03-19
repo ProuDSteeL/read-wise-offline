@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 const ResetPasswordPage = () => {
   const [password, setPassword] = useState("");
@@ -36,19 +36,19 @@ const ResetPasswordPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast.error("Пароли не совпадают");
+      toast({ title: "Пароли не совпадают", variant: "destructive" });
       return;
     }
     if (password.length < 6) {
-      toast.error("Пароль должен быть не менее 6 символов");
+      toast({ title: "Пароль должен быть не менее 6 символов", variant: "destructive" });
       return;
     }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      toast.error(error.message);
+      toast({ title: error.message, variant: "destructive" });
     } else {
-      toast.success("Пароль успешно обновлён");
+      toast({ title: "Пароль успешно обновлён" });
       navigate("/");
     }
     setLoading(false);

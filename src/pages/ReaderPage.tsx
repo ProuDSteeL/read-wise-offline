@@ -316,7 +316,7 @@ const ReaderPage = () => {
     mutationFn: async ({ text, note, color }: { text: string; note?: string; color: string }) => {
       const { data, error } = await supabase.from("user_highlights").insert({
         user_id: user!.id, book_id: id!, text, note: note || null, color,
-      } as any).select().single();
+      }).select().single();
       if (error) throw error;
       return data as HighlightData;
     },

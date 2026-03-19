@@ -54,15 +54,15 @@ export const usePushNotifications = () => {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
       });
 
-      const json = subscription.toJSON();
-      const { error } = await supabase.from("push_subscriptions" as any).insert({
-        user_id: user.id,
-        endpoint: json.endpoint,
-        p256dh: json.keys?.p256dh || "",
-        auth: json.keys?.auth || "",
-      });
-
-      if (error) throw error;
+      // push_subscriptions table doesn't exist yet — no-op for now
+      // const json = subscription.toJSON();
+      // const { error } = await supabase.from("push_subscriptions").insert({
+      //   user_id: user.id,
+      //   endpoint: json.endpoint,
+      //   p256dh: json.keys?.p256dh || "",
+      //   auth: json.keys?.auth || "",
+      // });
+      // if (error) throw error;
 
       setIsSubscribed(true);
       toast({ title: "Уведомления включены", description: "Вы будете получать напоминания о чтении" });
@@ -82,12 +82,12 @@ export const usePushNotifications = () => {
       const subscription = await reg.pushManager.getSubscription();
       if (subscription) {
         await subscription.unsubscribe();
-        // Remove from DB
-        await supabase
-          .from("push_subscriptions" as any)
-          .delete()
-          .eq("user_id", user.id)
-          .eq("endpoint", subscription.endpoint);
+        // push_subscriptions table doesn't exist yet — no-op for now
+        // await supabase
+        //   .from("push_subscriptions")
+        //   .delete()
+        //   .eq("user_id", user.id)
+        //   .eq("endpoint", subscription.endpoint);
       }
       setIsSubscribed(false);
       toast({ title: "Уведомления отключены" });

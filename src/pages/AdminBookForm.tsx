@@ -32,7 +32,6 @@ const AdminBookForm = () => {
   const [description, setDescription] = useState("");
   const [aboutAuthor, setAboutAuthor] = useState("");
   const [readTime, setReadTime] = useState("");
-  const [listenTime, setListenTime] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [whyRead, setWhyRead] = useState<string[]>([""]);
   const [keyIdeas, setKeyIdeas] = useState<KeyIdeaInput[]>([{ title: "", content: "" }]);
@@ -394,17 +393,11 @@ const AdminBookForm = () => {
           </div>
         </div>
 
-        {/* Read/Listen time */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-foreground">Чтение (мин)</label>
-            <Input type="number" value={readTime} onChange={(e) => { setReadTime(e.target.value); setReadTimeAuto(true); }} placeholder="15" className="rounded-xl bg-secondary border-0" />
-            <p className="text-[10px] text-muted-foreground">Авто: ~200 слов/мин</p>
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-foreground">Аудио (мин)</label>
-            <Input type="number" value={listenTime} onChange={(e) => setListenTime(e.target.value)} placeholder="20" className="rounded-xl bg-secondary border-0" />
-          </div>
+        {/* Read time */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-foreground">Чтение (мин)</label>
+          <Input type="number" value={readTime} onChange={(e) => { setReadTime(e.target.value); setReadTimeAuto(true); }} placeholder="15" className="rounded-xl bg-secondary border-0" />
+          <p className="text-[10px] text-muted-foreground">Авто: ~200 слов/мин</p>
         </div>
 
         {/* Why read */}

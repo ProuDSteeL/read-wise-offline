@@ -32,11 +32,6 @@ const AudioPlayerPage = () => {
   const audio = useAudio();
   const { canListenAudio } = useAccessControl();
 
-  // Freemium guard
-  if (!canListenAudio) {
-    return <PaywallPrompt message="Аудио доступно в подписке Pro" />;
-  }
-
   // Sleep timer
   const [sleepMinutes, setSleepMinutes] = useState(0);
   const [sleepRemaining, setSleepRemaining] = useState(0);
@@ -81,6 +76,11 @@ const AudioPlayerPage = () => {
   const handleSeek = (value: number[]) => {
     audio.seek(value[0]);
   };
+
+  // Freemium guard (after all hooks)
+  if (!canListenAudio) {
+    return <PaywallPrompt message="Аудио доступно в подписке Pro" />;
+  }
 
   if (isLoading) {
     return (

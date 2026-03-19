@@ -70,7 +70,6 @@ const OfflineReaderPage = () => {
     );
     return () => {
       audioRef.current?.pause();
-      // Revoke blob URL on unmount
     };
   }, [id]);
 
@@ -102,6 +101,7 @@ const OfflineReaderPage = () => {
     return () => {
       audio.pause();
       audio.src = "";
+      URL.revokeObjectURL(audioUrl);
     };
   }, [audioUrl, id]);
 

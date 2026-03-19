@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Mail, Lock, User } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 type AuthMode = "login" | "signup" | "forgot";
 
@@ -28,9 +28,9 @@ const AuthPage = () => {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) {
-        toast.error(error.message);
+        toast({ title: error.message, variant: "destructive" });
       } else {
-        toast.success("Письмо для сброса пароля отправлено на вашу почту");
+        toast({ title: "Письмо для сброса пароля отправлено на вашу почту" });
       }
       setLoading(false);
       return;
@@ -39,14 +39,14 @@ const AuthPage = () => {
     if (mode === "signup") {
       const { error } = await signUp(email, password, name);
       if (error) {
-        toast.error(error.message);
+        toast({ title: error.message, variant: "destructive" });
       } else {
-        toast.success("Проверьте почту для подтверждения аккаунта");
+        toast({ title: "Проверьте почту для подтверждения аккаунта" });
       }
     } else {
       const { error } = await signIn(email, password);
       if (error) {
-        toast.error("Неверный email или пароль");
+        toast({ title: "Неверный email или пароль", variant: "destructive" });
       } else {
         navigate("/");
       }

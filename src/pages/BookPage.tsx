@@ -227,19 +227,16 @@ const BookPage = () => {
         </section>
 
         {/* Why read — numbered list in card */}
-        {book.why_read && (() => {
+        {(() => {
+          if (!book.why_read) return null;
           let reasons: string[] = [];
           try { reasons = JSON.parse(book.why_read); } catch { reasons = book.why_read ? [book.why_read] : []; }
-          return reasons;
-        })().length > 0 && (
+          if (!reasons.length) return null;
+          return (
           <section className="rounded-2xl bg-card p-5 shadow-card">
             <h2 className="text-base font-bold text-foreground mb-3">Зачем читать?</h2>
             <ol className="space-y-3">
-              {(() => {
-                let reasons: string[] = [];
-                try { reasons = JSON.parse(book.why_read); } catch { reasons = book.why_read ? [book.why_read] : []; }
-                return reasons;
-              })().map((reason, i) => (
+              {reasons.map((reason, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-foreground">
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-sage">
                     {i + 1}
@@ -249,7 +246,8 @@ const BookPage = () => {
               ))}
             </ol>
           </section>
-        )}
+          );
+        })()}
 
         {/* About author — collapsible */}
         {book.about_author && (

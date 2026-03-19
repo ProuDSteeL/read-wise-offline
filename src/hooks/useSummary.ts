@@ -61,7 +61,7 @@ export const useSummary = (bookId: string) => {
           (!expires || new Date(expires) > new Date());
       }
 
-      if (isPro || !user) {
+      if (isPro) {
         return { ...summary, truncated: false, freeReadsUsed: 0, freeReadsLimit: FREE_READS_LIMIT };
       }
 
@@ -73,7 +73,7 @@ export const useSummary = (bookId: string) => {
 
       const freeReadsUsed = progressRows?.length ?? 0;
 
-      if (freeReadsUsed <= FREE_READS_LIMIT) {
+      if (freeReadsUsed < FREE_READS_LIMIT) {
         return { ...summary, truncated: false, freeReadsUsed, freeReadsLimit: FREE_READS_LIMIT };
       }
 
