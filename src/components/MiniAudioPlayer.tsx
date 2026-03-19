@@ -69,11 +69,13 @@ const MiniAudioPlayer = ({ onClose, onExpand }: MiniAudioPlayerProps) => {
           </button>
 
           {/* Skip buttons */}
-          <button onClick={() => skip(-15)} className="tap-highlight text-muted-foreground">
+          <button onClick={() => skip(-15)} className="relative tap-highlight text-muted-foreground">
             <SkipBack className="h-4 w-4" />
+            <span className="absolute inset-0 flex items-center justify-center text-[6px] font-bold leading-none ml-0.5">15</span>
           </button>
-          <button onClick={() => skip(15)} className="tap-highlight text-muted-foreground">
+          <button onClick={() => skip(15)} className="relative tap-highlight text-muted-foreground">
             <SkipForward className="h-4 w-4" />
+            <span className="absolute inset-0 flex items-center justify-center text-[6px] font-bold leading-none mr-0.5">15</span>
           </button>
 
           {/* Title & time — tap to open full player */}

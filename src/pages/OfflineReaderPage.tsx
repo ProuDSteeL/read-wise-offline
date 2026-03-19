@@ -171,8 +171,9 @@ const OfflineReaderPage = () => {
                 </div>
 
                 <div className="flex items-center justify-center gap-8">
-                  <button onClick={() => audio.skip(-15)} className="tap-highlight text-foreground">
+                  <button onClick={() => audio.skip(-15)} className="relative tap-highlight text-foreground">
                     <SkipBack className="h-5 w-5" />
+                    <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold leading-none ml-0.5">15</span>
                   </button>
                   <button
                     onClick={audio.togglePlay}
@@ -180,8 +181,9 @@ const OfflineReaderPage = () => {
                   >
                     {audio.state.playing ? <Pause className="h-6 w-6" /> : <Play className="ml-0.5 h-6 w-6" />}
                   </button>
-                  <button onClick={() => audio.skip(15)} className="tap-highlight text-foreground">
+                  <button onClick={() => audio.skip(15)} className="relative tap-highlight text-foreground">
                     <SkipForward className="h-5 w-5" />
+                    <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold leading-none mr-0.5">15</span>
                   </button>
                 </div>
 
