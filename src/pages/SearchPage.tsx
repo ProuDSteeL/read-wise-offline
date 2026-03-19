@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,14 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ];
 
 const SearchPage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const categoryFromUrl = searchParams.get("category");
-  const [query, setQuery] = useState(categoryFromUrl || "");
+  const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(categoryFromUrl);
+  useEffect(() => {
+    setActiveCategory(categoryFromUrl);
+  }, [categoryFromUrl]);
+
   const [sortBy, setSortBy] = useState<SortKey>("newest");
   const [showFilters, setShowFilters] = useState(false);
   const navigate = useNavigate();
@@ -44,7 +48,13 @@ const SearchPage = () => {
   }
 
   const handleCategoryClick = (cat: string) => {
-    setActiveCategory(activeCategory === cat ? null : cat);
+    const next = activeCategory === cat ? null : cat;
+    setActiveCategory(next);
+    if (next) {
+      setSearchParams({ category: next }, { replace: true });
+    } else {
+      setSearchParams({}, { replace: true });
+    }
   };
 
   return (

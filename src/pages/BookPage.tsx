@@ -243,9 +243,13 @@ const BookPage = () => {
           {book.tags && book.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
               {book.tags.map((cat) => (
-                <span key={cat} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground">
+                <button
+                  key={cat}
+                  onClick={() => navigate(`/search?category=${encodeURIComponent(cat)}`)}
+                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground tap-highlight transition-colors active:bg-primary/10"
+                >
                   {cat}
-                </span>
+                </button>
               ))}
             </div>
           )}
