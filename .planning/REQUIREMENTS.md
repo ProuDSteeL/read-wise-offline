@@ -13,8 +13,8 @@
 
 ### Audio Player
 
-- [ ] **AUDIO-03**: Background playback via Media Session API with lock screen controls (play/pause/skip)
-- [ ] **AUDIO-04**: Sleep timer with configurable duration (15/30/45/60 min) auto-stops playback
+- [x] **AUDIO-03**: Background playback via Media Session API with lock screen controls (play/pause/skip)
+- [x] **AUDIO-04**: Sleep timer with configurable duration (15/30/45/60 min) auto-stops playback
 
 ### Reader
 
@@ -101,8 +101,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Complete |
 | SEC-03 | Phase 1 | Complete |
-| AUDIO-03 | Phase 3 | Pending |
-| AUDIO-04 | Phase 3 | Pending |
+| AUDIO-03 | Phase 3 | Complete |
+| AUDIO-04 | Phase 3 | Complete |
 | READ-04 | Phase 2 | Complete |
 | READ-05 | Phase 2 | Complete |
 | READ-06 | Phase 2 | Complete |
