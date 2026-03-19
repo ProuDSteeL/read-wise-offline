@@ -94,9 +94,13 @@ export const useDownloads = () => {
           });
         }
 
-        // Download audio
+        // Download audio (need signed URL since bucket is private)
         if ((type === "audio" || type === "both") && audioUrl) {
-          audioSize = await saveAudioOffline(bookId, audioUrl, (loaded, total) => {
+          const { data: audioData } = await supabase.functions.invoke("get-audio-url", {
+            body: { bookId },
+          });
+          const signedAudioUrl = audioData?.signedUrl || audioUrl;
+          audioSize = await saveAudioOffline(bookId, signedAudioUrl, (loaded, total) => {
             const base = type === "both" ? 40 : 0;
             const range = type === "both" ? 55 : 90;
             const pct = total > 0 ? base + (loaded / total) * range : base + 50;
