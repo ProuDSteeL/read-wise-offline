@@ -19,6 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Quizzes & Learning** - Multiple-choice quizzes, flashcards, admin creation, and progress tracking
 - [ ] **Phase 6: Offline Hardening** - Downloads page, chunked audio downloads with progress, and offline indicator
 - [ ] **Phase 7: Growth & Discovery** - SEO meta tags, PWA install prompt, and promotional banners
+- [ ] **Phase 8: PWA Hardening** - Smart caching, install prompt gating, offline UX, manifest and icons
 
 ## Phase Details
 
@@ -124,12 +125,28 @@ Plans:
 Plans:
 - [ ] 07-01: TBD
 
+### Phase 8: PWA Hardening
+**Goal**: Full PWA experience with correct manifest, proper icons, smart caching, gated install prompt, and beautiful offline UX
+**Depends on**: Phase 6 (builds on offline infrastructure)
+**Requirements**: PWA-01, PWA-02, PWA-03, PWA-04
+**Success Criteria** (what must be TRUE):
+  1. Manifest uses name "Саммари" with proper icon sizes (192, 512) in PNG format with sage/green design
+  2. Maskable and standard icons are separate files with correct purpose declarations
+  3. Install prompt only appears for logged-in users after 3+ visits, with 7-day dismiss memory
+  4. Offline users see a branded fallback page with navigation to downloads instead of a bare redirect
+  5. Service worker caches Google Fonts (CacheFirst), Supabase API (StaleWhileRevalidate), and public covers (CacheFirst) but NOT signed audio URLs
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Manifest, icons, and caching config (PWA-01, PWA-04)
+- [ ] 08-02-PLAN.md — Install prompt gating + offline fallback page (PWA-02, PWA-03)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
-Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. Phase 4 depends on Phase 2. Phase 5 depends on Phase 4. Phase 6 depends on Phase 1.
+Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. Phase 4 depends on Phase 2. Phase 5 depends on Phase 4. Phase 6 depends on Phase 1. Phase 8 depends on Phase 6.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -140,3 +157,4 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 | 5. Quizzes & Learning | 0/3 | Not started | - |
 | 6. Offline Hardening | 0/2 | Not started | - |
 | 7. Growth & Discovery | 0/? | Not started | - |
+| 8. PWA Hardening | 0/2 | Not started | - |
