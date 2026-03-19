@@ -27,7 +27,7 @@ export const usePopularBooks = () => {
         .from("books")
         .select("*")
         .eq("status", "published")
-        .order("views_count", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(10);
       if (error) throw error;
       return data as Book[];
@@ -75,7 +75,7 @@ export const useKeyIdeas = (bookId: string) => {
         .from("key_ideas")
         .select("*")
         .eq("book_id", bookId)
-        .order("order_index", { ascending: true });
+        .order("display_order", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -91,7 +91,7 @@ export const useSearchBooks = (query: string) => {
         .from("books")
         .select("*")
         .eq("status", "published")
-        .or(`title.ilike.%${query}%,author.ilike.%${query}%,categories.cs.{"${query}"}`)
+        .or(`title.ilike.%${query}%,author.ilike.%${query}%`)
         .limit(20);
       if (error) throw error;
       return data as Book[];
@@ -108,7 +108,7 @@ export const useCollections = () => {
         .from("collections")
         .select("*")
         .eq("is_featured", true)
-        .order("order_index", { ascending: true });
+        .order("display_order", { ascending: true });
       if (error) throw error;
       return data;
     },

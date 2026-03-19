@@ -65,7 +65,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
         supabase.from("user_progress").upsert(
-          { user_id: user.id, book_id: bookId, audio_position: time },
+          { user_id: user.id, book_id: bookId, audio_position_ms: time },
           { onConflict: "user_id,book_id" }
         );
       }, 3000);
@@ -118,13 +118,13 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         if (position == null && user) {
           supabase
             .from("user_progress")
-            .select("audio_position")
+            .select("audio_position_ms")
             .eq("user_id", user.id)
             .eq("book_id", bookId)
             .maybeSingle()
             .then(({ data }) => {
-              if (data?.audio_position && audio.src.includes(signedUrl)) {
-                audio.currentTime = Number(data.audio_position);
+              if (data?.audio_position_ms && audio.src.includes(signedUrl)) {
+                audio.currentTime = Number(data.audio_position_ms);
               }
             });
         }
@@ -180,13 +180,13 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         if (position == null && user) {
           supabase
             .from("user_progress")
-            .select("audio_position")
+            .select("audio_position_ms")
             .eq("user_id", user.id)
             .eq("book_id", bookId)
             .maybeSingle()
             .then(({ data }) => {
-              if (data?.audio_position && audio.src.includes(signedUrl)) {
-                audio.currentTime = Number(data.audio_position);
+              if (data?.audio_position_ms && audio.src.includes(signedUrl)) {
+                audio.currentTime = Number(data.audio_position_ms);
               }
             });
         }
@@ -249,7 +249,7 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
       // Save final position
       if (user && state.bookId) {
         supabase.from("user_progress").upsert(
-          { user_id: user.id, book_id: state.bookId, audio_position: audio.currentTime },
+          { user_id: user.id, book_id: state.bookId, audio_position_ms: audio.currentTime },
           { onConflict: "user_id,book_id" }
         );
       }

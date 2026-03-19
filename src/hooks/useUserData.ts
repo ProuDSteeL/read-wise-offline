@@ -42,12 +42,12 @@ export const useShelfCounts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_shelves")
-        .select("shelf")
+        .select("shelf_type")
         .eq("user_id", user!.id);
       if (error) throw error;
       const counts = { favorite: 0, read: 0, want_to_read: 0 };
       data?.forEach((s) => {
-        if (s.shelf in counts) counts[s.shelf as keyof typeof counts]++;
+        if (s.shelf_type in counts) counts[s.shelf_type as keyof typeof counts]++;
       });
       return counts;
     },

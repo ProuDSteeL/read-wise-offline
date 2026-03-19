@@ -124,13 +124,11 @@ export const useDownloads = () => {
 
         // Track in DB
         if (user) {
-          const contentType = meta.hasText && meta.hasAudio ? "both" : meta.hasText ? "text" : "audio";
           await supabase.from("user_downloads").upsert(
             {
               user_id: user.id,
               book_id: bookId,
-              content_type: contentType,
-              size_bytes: meta.textSizeBytes + meta.audioSizeBytes,
+              file_size_bytes: meta.textSizeBytes + meta.audioSizeBytes,
             },
             { onConflict: "user_id,book_id" }
           );

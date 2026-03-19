@@ -18,91 +18,169 @@ export type Database = {
         Row: {
           about_author: string | null
           author: string
-          categories: string[] | null
           cover_url: string | null
           created_at: string
           description: string | null
           id: string
-          listen_time_min: number | null
-          rating: number | null
-          read_time_min: number | null
-          status: Database["public"]["Enums"]["book_status"]
+          read_time_minutes: number | null
+          search_vector: string | null
+          status: string
           tags: string[] | null
           title: string
           updated_at: string
-          views_count: number | null
-          why_read: Json | null
+          why_read: string | null
         }
         Insert: {
           about_author?: string | null
           author: string
-          categories?: string[] | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
-          listen_time_min?: number | null
-          rating?: number | null
-          read_time_min?: number | null
-          status?: Database["public"]["Enums"]["book_status"]
+          read_time_minutes?: number | null
+          search_vector?: string | null
+          status?: string
           tags?: string[] | null
           title: string
           updated_at?: string
-          views_count?: number | null
-          why_read?: Json | null
+          why_read?: string | null
         }
         Update: {
           about_author?: string | null
           author?: string
-          categories?: string[] | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
-          listen_time_min?: number | null
-          rating?: number | null
-          read_time_min?: number | null
-          status?: Database["public"]["Enums"]["book_status"]
+          read_time_minutes?: number | null
+          search_vector?: string | null
+          status?: string
           tags?: string[] | null
           title?: string
           updated_at?: string
-          views_count?: number | null
-          why_read?: Json | null
+          why_read?: string | null
+        }
+        Relationships: []
+      }
+      book_categories: {
+        Row: {
+          book_id: string
+          category_id: string
+        }
+        Insert: {
+          book_id: string
+          category_id: string
+        }
+        Update: {
+          book_id?: string
+          category_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_categories_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          icon: string | null
+          display_order: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          icon?: string | null
+          display_order?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          icon?: string | null
+          display_order?: number | null
+          created_at?: string
         }
         Relationships: []
       }
       collections: {
         Row: {
-          book_ids: string[] | null
           cover_url: string | null
           created_at: string
           description: string | null
           id: string
           is_featured: boolean | null
-          order_index: number | null
+          display_order: number | null
           title: string
         }
         Insert: {
-          book_ids?: string[] | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_featured?: boolean | null
-          order_index?: number | null
+          display_order?: number | null
           title: string
         }
         Update: {
-          book_ids?: string[] | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_featured?: boolean | null
-          order_index?: number | null
+          display_order?: number | null
           title?: string
         }
         Relationships: []
+      }
+      collection_books: {
+        Row: {
+          collection_id: string
+          book_id: string
+          display_order: number | null
+        }
+        Insert: {
+          collection_id: string
+          book_id: string
+          display_order?: number | null
+        }
+        Update: {
+          collection_id?: string
+          book_id?: string
+          display_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_books_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_books_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       key_ideas: {
         Row: {
@@ -110,7 +188,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
-          order_index: number
+          display_order: number
           title: string
         }
         Insert: {
@@ -118,7 +196,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
-          order_index?: number
+          display_order?: number
           title: string
         }
         Update: {
@@ -126,7 +204,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
-          order_index?: number
+          display_order?: number
           title?: string
         }
         Relationships: [
@@ -139,63 +217,102 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          id: string
+          user_id: string
+          yoomoney_payment_id: string | null
+          amount_rub: number | null
+          status: string | null
+          raw_webhook: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          yoomoney_payment_id?: string | null
+          amount_rub?: number | null
+          status?: string | null
+          raw_webhook?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          yoomoney_payment_id?: string | null
+          amount_rub?: number | null
+          status?: string | null
+          raw_webhook?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
+          display_name: string | null
           id: string
-          name: string | null
+          role: string | null
           subscription_expires_at: string | null
-          subscription_type: Database["public"]["Enums"]["subscription_type"]
+          subscription_type: string | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
-          id?: string
-          name?: string | null
+          display_name?: string | null
+          id: string
+          role?: string | null
           subscription_expires_at?: string | null
-          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          subscription_type?: string | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          display_name?: string | null
           id?: string
-          name?: string | null
+          role?: string | null
           subscription_expires_at?: string | null
-          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          subscription_type?: string | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
-      push_subscriptions: {
+      subscriptions: {
         Row: {
-          auth: string
-          created_at: string
-          endpoint: string
           id: string
-          p256dh: string
           user_id: string
+          tier: string | null
+          status: string | null
+          started_at: string | null
+          expires_at: string | null
+          yoomoney_payment_id: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          auth: string
-          created_at?: string
-          endpoint: string
           id?: string
-          p256dh: string
           user_id: string
+          tier?: string | null
+          status?: string | null
+          started_at?: string | null
+          expires_at?: string | null
+          yoomoney_payment_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          auth?: string
-          created_at?: string
-          endpoint?: string
           id?: string
-          p256dh?: string
           user_id?: string
+          tier?: string | null
+          status?: string | null
+          started_at?: string | null
+          expires_at?: string | null
+          yoomoney_payment_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -204,31 +321,31 @@ export type Database = {
           audio_size_bytes: number | null
           audio_url: string | null
           book_id: string
-          content: string | null
+          content: string
           created_at: string
           id: string
-          published_at: string | null
           updated_at: string
+          word_count: number | null
         }
         Insert: {
           audio_size_bytes?: number | null
           audio_url?: string | null
           book_id: string
-          content?: string | null
+          content: string
           created_at?: string
           id?: string
-          published_at?: string | null
           updated_at?: string
+          word_count?: number | null
         }
         Update: {
           audio_size_bytes?: number | null
           audio_url?: string | null
           book_id?: string
-          content?: string | null
+          content?: string
           created_at?: string
           id?: string
-          published_at?: string | null
           updated_at?: string
+          word_count?: number | null
         }
         Relationships: [
           {
@@ -243,26 +360,23 @@ export type Database = {
       user_downloads: {
         Row: {
           book_id: string
-          content_type: Database["public"]["Enums"]["download_content_type"]
           downloaded_at: string
           id: string
-          size_bytes: number | null
+          file_size_bytes: number | null
           user_id: string
         }
         Insert: {
           book_id: string
-          content_type?: Database["public"]["Enums"]["download_content_type"]
           downloaded_at?: string
           id?: string
-          size_bytes?: number | null
+          file_size_bytes?: number | null
           user_id: string
         }
         Update: {
           book_id?: string
-          content_type?: Database["public"]["Enums"]["download_content_type"]
           downloaded_at?: string
           id?: string
-          size_bytes?: number | null
+          file_size_bytes?: number | null
           user_id?: string
         }
         Relationships: [
@@ -282,6 +396,8 @@ export type Database = {
           created_at: string
           id: string
           note: string | null
+          position_start: number | null
+          position_end: number | null
           text: string
           user_id: string
         }
@@ -291,6 +407,8 @@ export type Database = {
           created_at?: string
           id?: string
           note?: string | null
+          position_start?: number | null
+          position_end?: number | null
           text: string
           user_id: string
         }
@@ -300,6 +418,8 @@ export type Database = {
           created_at?: string
           id?: string
           note?: string | null
+          position_start?: number | null
+          position_end?: number | null
           text?: string
           user_id?: string
         }
@@ -386,44 +506,23 @@ export type Database = {
           },
         ]
       }
-      user_roles: {
-        Row: {
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_shelves: {
         Row: {
           book_id: string
-          created_at: string
           id: string
-          shelf: Database["public"]["Enums"]["shelf_type"]
+          shelf_type: string
           user_id: string
         }
         Insert: {
           book_id: string
-          created_at?: string
           id?: string
-          shelf: Database["public"]["Enums"]["shelf_type"]
+          shelf_type: string
           user_id: string
         }
         Update: {
           book_id?: string
-          created_at?: string
           id?: string
-          shelf?: Database["public"]["Enums"]["shelf_type"]
+          shelf_type?: string
           user_id?: string
         }
         Relationships: [
@@ -441,20 +540,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "admin" | "user"
-      book_status: "draft" | "published" | "archived"
-      download_content_type: "text" | "audio" | "both"
-      shelf_type: "favorite" | "read" | "want_to_read"
-      subscription_type: "free" | "pro_monthly" | "pro_yearly"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -578,15 +667,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
-export const Constants = {
-  public: {
-    Enums: {
-      app_role: ["admin", "user"],
-      book_status: ["draft", "published", "archived"],
-      download_content_type: ["text", "audio", "both"],
-      shelf_type: ["favorite", "read", "want_to_read"],
-      subscription_type: ["free", "pro_monthly", "pro_yearly"],
-    },
-  },
-} as const

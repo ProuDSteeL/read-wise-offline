@@ -11,7 +11,7 @@ export const useSubscription = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("subscription_type, subscription_expires_at")
-        .eq("user_id", user!.id)
+        .eq("id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data;

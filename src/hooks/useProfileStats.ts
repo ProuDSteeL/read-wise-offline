@@ -12,20 +12,20 @@ export const useProfileStats = () => {
         .from("user_shelves")
         .select("id", { count: "exact" })
         .eq("user_id", user!.id)
-        .eq("shelf", "read");
+        .eq("shelf_type", "read");
 
       const readCount = readShelves?.length ?? 0;
 
       // Total reading time from books marked as read
       const { data: readBooks } = await supabase
         .from("user_shelves")
-        .select("books(read_time_min)")
+        .select("books(read_time_minutes)")
         .eq("user_id", user!.id)
-        .eq("shelf", "read");
+        .eq("shelf_type", "read");
 
       let totalMinutes = 0;
       readBooks?.forEach((r: any) => {
-        totalMinutes += r.books?.read_time_min ?? 0;
+        totalMinutes += r.books?.read_time_minutes ?? 0;
       });
       const totalHours = Math.round(totalMinutes / 60);
 

@@ -14,9 +14,9 @@ interface Collection {
   id: string;
   title: string;
   description: string | null;
-  book_ids: string[] | null;
   is_featured: boolean | null;
-  order_index: number | null;
+  display_order: number | null;
+  bookIds: string[];
 }
 
 const AdminCollections = () => {
@@ -39,9 +39,27 @@ const AdminCollections = () => {
       const { data, error } = await supabase
         .from("collections")
         .select("*")
-        .order("order_index", { ascending: true });
+        .order("display_order", { ascending: true });
       if (error) throw error;
-      return data as Collection[];
+
+      // Fetch book IDs for each collection via junction table
+      const collectionsWithBooks: Collection[] = [];
+      for (const col of data || []) {
+        const { data: cbData } = await supabase
+          .from("collection_books")
+          .select("book_id")
+          .eq("collection_id", col.id)
+          .order("display_order", { ascending: true });
+        collectionsWithBooks.push({
+          id: col.id,
+          title: col.title,
+          description: col.description,
+          is_featured: col.is_featured,
+          display_order: col.display_order,
+          bookIds: (cbData || []).map((cb: any) => cb.book_id),
+        });
+      }
+      return collectionsWithBooks;
     },
     enabled: !!isAdmin,
   });
@@ -51,15 +69,30 @@ const AdminCollections = () => {
       const payload = {
         title,
         description: description || null,
-        book_ids: selectedBookIds,
         is_featured: isFeatured,
       };
+      let collectionId: string;
       if (isNew) {
-        const { error } = await supabase.from("collections").insert(payload);
+        const { data, error } = await supabase.from("collections").insert(payload).select("id").single();
         if (error) throw error;
+        collectionId = data.id;
       } else {
         const { error } = await supabase.from("collections").update(payload).eq("id", editing!.id);
         if (error) throw error;
+        collectionId = editing!.id;
+        // Clear existing junction rows
+        await supabase.from("collection_books").delete().eq("collection_id", collectionId);
+      }
+      // Insert junction rows
+      if (selectedBookIds.length > 0) {
+        const { error: junctionError } = await supabase.from("collection_books").insert(
+          selectedBookIds.map((bookId, i) => ({
+            collection_id: collectionId,
+            book_id: bookId,
+            display_order: i,
+          }))
+        );
+        if (junctionError) throw junctionError;
       }
     },
     onSuccess: () => {
@@ -75,6 +108,7 @@ const AdminCollections = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      await supabase.from("collection_books").delete().eq("collection_id", id);
       const { error } = await supabase.from("collections").delete().eq("id", id);
       if (error) throw error;
     },
@@ -87,7 +121,7 @@ const AdminCollections = () => {
 
   const openNew = () => {
     setIsNew(true);
-    setEditing({ id: "", title: "", description: null, book_ids: [], is_featured: true, order_index: 0 });
+    setEditing({ id: "", title: "", description: null, is_featured: true, display_order: 0, bookIds: [] });
     setTitle("");
     setDescription("");
     setSelectedBookIds([]);
@@ -99,7 +133,7 @@ const AdminCollections = () => {
     setEditing(col);
     setTitle(col.title);
     setDescription(col.description || "");
-    setSelectedBookIds(col.book_ids || []);
+    setSelectedBookIds(col.bookIds || []);
     setIsFeatured(col.is_featured ?? true);
   };
 
@@ -257,7 +291,7 @@ const AdminCollections = () => {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground">{col.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {col.book_ids?.length ?? 0} книг
+                  {col.bookIds?.length ?? 0} книг
                   {col.is_featured ? " · На главной" : ""}
                 </p>
               </div>

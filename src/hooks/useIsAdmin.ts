@@ -8,13 +8,12 @@ export const useIsAdmin = () => {
     queryKey: ["is_admin", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("user_roles")
+        .from("profiles")
         .select("role")
-        .eq("user_id", user!.id)
-        .eq("role", "admin")
+        .eq("id", user!.id)
         .maybeSingle();
       if (error) throw error;
-      return !!data;
+      return data?.role === "admin";
     },
     enabled: !!user,
   });

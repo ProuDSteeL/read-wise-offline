@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Eye, Download } from "lucide-react";
+import { ArrowLeft, Clock, Headphones, BookOpen, BookMarked, Star, Share2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import BookCard from "@/components/BookCard";
@@ -32,27 +32,9 @@ const BookPage = () => {
   const [authorExpanded, setAuthorExpanded] = useState(false);
   const viewCounted = useRef(false);
 
-  // Increment views_count once per page visit
+  // views_count column doesn't exist in DB, skip view counting
   useEffect(() => {
-    if (!id || viewCounted.current) return;
-    viewCounted.current = true;
-
-    supabase
-      .from("books")
-      .select("views_count")
-      .eq("id", id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          supabase
-            .from("books")
-            .update({ views_count: (data.views_count ?? 0) + 1 })
-            .eq("id", id)
-            .then(() => {
-              queryClient.invalidateQueries({ queryKey: ["book", id] });
-            });
-        }
-      });
+    // no-op
   }, [id]);
 
   const { data: userRating } = useQuery({
@@ -109,7 +91,7 @@ const BookPage = () => {
         .select("id")
         .eq("user_id", user!.id)
         .eq("book_id", id!)
-        .eq("shelf", "want_to_read")
+        .eq("shelf_type", "want_to_read")
         .maybeSingle();
       return !!data;
     },
@@ -120,9 +102,9 @@ const BookPage = () => {
     mutationFn: async () => {
       if (isBookmarked) {
         await supabase.from("user_shelves").delete()
-          .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "want_to_read");
+          .eq("user_id", user!.id).eq("book_id", id!).eq("shelf_type", "want_to_read");
       } else {
-        await supabase.from("user_shelves").insert({ user_id: user!.id, book_id: id!, shelf: "want_to_read" });
+        await supabase.from("user_shelves").insert({ user_id: user!.id, book_id: id!, shelf_type: "want_to_read" });
       }
     },
     onMutate: async () => {
@@ -218,28 +200,10 @@ const BookPage = () => {
 
       {/* Stats row — SmartReading style */}
       <div className="mt-4 flex items-center justify-center gap-6">
-        {book.read_time_min ? (
+        {book.read_time_minutes ? (
           <div className="flex flex-col items-center gap-1">
             <BookOpen className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{book.read_time_min} минут</span>
-          </div>
-        ) : null}
-        {book.listen_time_min ? (
-          <div className="flex flex-col items-center gap-1">
-            <Headphones className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{book.listen_time_min} минут</span>
-          </div>
-        ) : null}
-        {book.views_count ? (
-          <div className="flex flex-col items-center gap-1">
-            <Eye className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{book.views_count}</span>
-          </div>
-        ) : null}
-        {book.rating && Number(book.rating) > 0 ? (
-          <div className="flex flex-col items-center gap-1">
-            <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
-            <span className="text-xs text-muted-foreground">{Number(book.rating).toFixed(1)}</span>
+            <span className="text-xs text-muted-foreground">{book.read_time_minutes} минут</span>
           </div>
         ) : null}
       </div>
@@ -248,9 +212,9 @@ const BookPage = () => {
         {/* About */}
         <section>
           <h2 className="text-lg font-bold text-foreground mb-3">О книге</h2>
-          {book.categories && book.categories.length > 0 && (
+          {book.tags && book.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
-              {book.categories.map((cat) => (
+              {book.tags.map((cat) => (
                 <span key={cat} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground">
                   {cat}
                 </span>
@@ -263,11 +227,19 @@ const BookPage = () => {
         </section>
 
         {/* Why read — numbered list in card */}
-        {book.why_read && Array.isArray(book.why_read) && (book.why_read as string[]).length > 0 && (
+        {book.why_read && (() => {
+          let reasons: string[] = [];
+          try { reasons = JSON.parse(book.why_read); } catch { reasons = book.why_read ? [book.why_read] : []; }
+          return reasons;
+        })().length > 0 && (
           <section className="rounded-2xl bg-card p-5 shadow-card">
             <h2 className="text-base font-bold text-foreground mb-3">Зачем читать?</h2>
             <ol className="space-y-3">
-              {(book.why_read as string[]).map((reason, i) => (
+              {(() => {
+                let reasons: string[] = [];
+                try { reasons = JSON.parse(book.why_read); } catch { reasons = book.why_read ? [book.why_read] : []; }
+                return reasons;
+              })().map((reason, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-foreground">
                   <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-sage">
                     {i + 1}
@@ -343,7 +315,7 @@ const BookPage = () => {
                   title={b.title}
                   author={b.author}
                   coverUrl={b.cover_url || "/placeholder.svg"}
-                  readTimeMin={b.read_time_min ?? undefined}
+                  readTimeMin={b.read_time_minutes ?? undefined}
                   onClick={() => navigate(`/book/${b.id}`)}
                 />
               ))}
@@ -386,7 +358,7 @@ const BookPage = () => {
             <BookOpen className="h-4 w-4" />
             Читать
           </Button>
-          {book.listen_time_min && book.listen_time_min > 0 && canListenAudio && (
+          {summary?.audio_url && canListenAudio && (
             <Button
               className="h-12 flex-1 gap-2 rounded-full text-sm font-bold gradient-accent border-0 hover:opacity-90"
               onClick={() => navigate(`/book/${id}/listen`)}

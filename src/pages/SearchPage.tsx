@@ -33,15 +33,15 @@ const SearchPage = () => {
   let displayBooks = isSearching ? results : allBooks;
 
   if (activeCategory && displayBooks) {
-    displayBooks = displayBooks.filter((b) => b.categories?.includes(activeCategory));
+    displayBooks = displayBooks.filter((b) => b.tags?.includes(activeCategory));
   }
 
   if (displayBooks) {
     displayBooks = [...displayBooks].sort((a, b) => {
       switch (sortBy) {
-        case "popular": return (b.views_count ?? 0) - (a.views_count ?? 0);
-        case "rating": return (Number(b.rating) || 0) - (Number(a.rating) || 0);
-        case "fastest": return (a.read_time_min ?? 999) - (b.read_time_min ?? 999);
+        case "popular": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "rating": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "fastest": return (a.read_time_minutes ?? 999) - (b.read_time_minutes ?? 999);
         default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
     });
@@ -131,7 +131,7 @@ const SearchPage = () => {
                 title={book.title}
                 author={book.author}
                 coverUrl={book.cover_url || "/placeholder.svg"}
-                readTimeMin={book.read_time_min ?? undefined}
+                readTimeMin={book.read_time_minutes ?? undefined}
                 className="w-full"
                 onClick={() => navigate(`/book/${book.id}`)}
               />

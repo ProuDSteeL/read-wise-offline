@@ -33,7 +33,7 @@ export const useSummary = (bookId: string) => {
       // Fetch summary directly
       const { data: summary, error } = await supabase
         .from("summaries")
-        .select("id, book_id, content, created_at, updated_at")
+        .select("id, book_id, content, audio_url, audio_size_bytes, created_at, updated_at")
         .eq("book_id", bookId)
         .maybeSingle();
       if (error) throw error;

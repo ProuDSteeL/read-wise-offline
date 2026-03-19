@@ -59,7 +59,7 @@ const AdminBookForm = () => {
   const { data: existingIdeas } = useQuery({
     queryKey: ["admin-key-ideas", editId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("key_ideas").select("*").eq("book_id", editId!).order("order_index");
+      const { data, error } = await supabase.from("key_ideas").select("*").eq("book_id", editId!).order("display_order");
       if (error) throw error;
       return data;
     },
@@ -83,11 +83,20 @@ const AdminBookForm = () => {
       setAuthor(existingBook.author);
       setDescription(existingBook.description || "");
       setAboutAuthor(existingBook.about_author || "");
-      setReadTime(existingBook.read_time_min?.toString() || "");
-      setListenTime(existingBook.listen_time_min?.toString() || "");
-      setSelectedCategories(existingBook.categories || []);
-      const why = existingBook.why_read as string[] | null;
-      setWhyRead(why?.length ? why : [""]);
+      setReadTime(existingBook.read_time_minutes?.toString() || "");
+      // listen_time_min column doesn't exist in DB, skip
+      setSelectedCategories(existingBook.tags || []);
+      const why = existingBook.why_read;
+      if (why) {
+        try {
+          const parsed = JSON.parse(why);
+          setWhyRead(Array.isArray(parsed) && parsed.length ? parsed : [""]);
+        } catch {
+          setWhyRead(why ? [why] : [""]);
+        }
+      } else {
+        setWhyRead([""]);
+      }
       setCoverPreview(existingBook.cover_url || null);
       setStatus(existingBook.status as "draft" | "published" | "archived");
     }
@@ -214,10 +223,9 @@ const AdminBookForm = () => {
         author,
         description: description || null,
         about_author: aboutAuthor || null,
-        read_time_min: readTime ? parseInt(readTime) : 0,
-        listen_time_min: listenTime ? parseInt(listenTime) : 0,
-        categories: selectedCategories,
-        why_read: whyRead.filter((r) => r.trim()),
+        read_time_minutes: readTime ? parseInt(readTime) : 0,
+        tags: selectedCategories,
+        why_read: JSON.stringify(whyRead.filter((r) => r.trim())),
         cover_url: coverUrl,
         status,
       };
@@ -249,7 +257,7 @@ const AdminBookForm = () => {
             book_id: bookId,
             title: idea.title,
             content: idea.content,
-            order_index: i,
+            display_order: i,
           }))
         );
         if (ideasErr) throw ideasErr;
@@ -259,10 +267,9 @@ const AdminBookForm = () => {
       if (summaryContent.trim() || audioUrl) {
         const summaryPayload = {
           book_id: bookId,
-          content: summaryContent || null,
+          content: summaryContent || "",
           audio_url: audioUrl,
           audio_size_bytes: audioSize,
-          published_at: status === "published" ? new Date().toISOString() : null,
         };
 
         if (isEditMode && existingSummary) {

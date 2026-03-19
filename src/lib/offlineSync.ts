@@ -27,7 +27,7 @@ export const syncOfflineProgress = async (userId: string) => {
   const results = await Promise.allSettled(
     keysToSync.map(({ bookId, position }) =>
       supabase.from("user_progress").upsert(
-        { user_id: userId, book_id: bookId, audio_position: position },
+        { user_id: userId, book_id: bookId, audio_position_ms: position },
         { onConflict: "user_id,book_id" }
       )
     )

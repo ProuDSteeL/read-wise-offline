@@ -6,40 +6,40 @@ export const useSimilarBooks = (book: Book | undefined) => {
   return useQuery({
     queryKey: ["similar_books", book?.id],
     queryFn: async () => {
-      if (!book?.categories?.length) {
-        // Fallback: return popular books excluding current
+      if (!book?.tags?.length) {
+        // Fallback: return recent books excluding current
         const { data } = await supabase
           .from("books")
           .select("*")
           .eq("status", "published")
           .neq("id", book!.id)
-          .order("views_count", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(6);
         return (data as Book[]) || [];
       }
 
-      // Find books sharing categories
+      // Find books sharing tags
       const { data } = await supabase
         .from("books")
         .select("*")
         .eq("status", "published")
         .neq("id", book!.id)
-        .overlaps("categories", book.categories)
-        .order("rating", { ascending: false })
+        .overlaps("tags", book.tags)
+        .order("created_at", { ascending: false })
         .limit(10);
 
       const results = (data as Book[]) || [];
 
-      // If too few, backfill with popular
+      // If too few, backfill with recent
       if (results.length < 4) {
         const existingIds = new Set([book!.id, ...results.map((b) => b.id)]);
-        const { data: popular } = await supabase
+        const { data: recent } = await supabase
           .from("books")
           .select("*")
           .eq("status", "published")
-          .order("views_count", { ascending: false })
+          .order("created_at", { ascending: false })
           .limit(10);
-        const backfill = (popular as Book[] || []).filter((b) => !existingIds.has(b.id));
+        const backfill = (recent as Book[] || []).filter((b) => !existingIds.has(b.id));
         return [...results, ...backfill].slice(0, 6);
       }
 

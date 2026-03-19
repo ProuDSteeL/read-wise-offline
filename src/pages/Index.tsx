@@ -27,20 +27,22 @@ const BookRowSkeleton = () => (
   </div>
 );
 
-const useCollectionBooks = (bookIds: string[] | null) => {
+const useCollectionBooks = (collectionId: string | null) => {
   return useQuery({
-    queryKey: ["collection_books", bookIds],
+    queryKey: ["collection_books", collectionId],
     queryFn: async () => {
-      if (!bookIds?.length) return [];
+      if (!collectionId) return [];
       const { data, error } = await supabase
-        .from("books")
-        .select("*")
-        .eq("status", "published")
-        .in("id", bookIds);
+        .from("collection_books")
+        .select("display_order, books(*)")
+        .eq("collection_id", collectionId)
+        .order("display_order", { ascending: true });
       if (error) throw error;
-      return data as Book[];
+      return (data || [])
+        .map((row: any) => row.books as Book)
+        .filter((b): b is Book => !!b && b.status === "published");
     },
-    enabled: !!bookIds?.length,
+    enabled: !!collectionId,
   });
 };
 
@@ -138,7 +140,7 @@ const Index = () => {
                 title={book.title}
                 author={book.author}
                 coverUrl={book.cover_url || "/placeholder.svg"}
-                readTimeMin={book.read_time_min ?? undefined}
+                readTimeMin={book.read_time_minutes ?? undefined}
                 progress={progressMap.get(book.id)}
                 onClick={() => navigate(`/book/${book.id}`)}
               />
@@ -165,7 +167,7 @@ const Index = () => {
                 title={book.title}
                 author={book.author}
                 coverUrl={book.cover_url || "/placeholder.svg"}
-                readTimeMin={book.read_time_min ?? undefined}
+                readTimeMin={book.read_time_minutes ?? undefined}
                 onClick={() => navigate(`/book/${book.id}`)}
               />
             ))}
@@ -186,7 +188,7 @@ const Index = () => {
                 title={book.title}
                 author={book.author}
                 coverUrl={book.cover_url || "/placeholder.svg"}
-                readTimeMin={book.read_time_min ?? undefined}
+                readTimeMin={book.read_time_minutes ?? undefined}
                 progress={progressMap.get(book.id)}
                 onClick={() => navigate(`/book/${book.id}`)}
               />
@@ -203,7 +205,7 @@ const Index = () => {
 };
 
 /* Banner carousel — swipeable with CSS scroll-snap */
-type CollectionItem = { id: string; title: string; description: string | null; book_ids: string[] | null };
+type CollectionItem = { id: string; title: string; description: string | null };
 
 const BannerCarousel = ({ collections }: { collections: CollectionItem[] }) => {
   const [activeIdx, setActiveIdx] = useState(0);
@@ -249,7 +251,7 @@ const BannerCarousel = ({ collections }: { collections: CollectionItem[] }) => {
 /* Featured banner like SmartReading promo cards */
 const FeaturedBanner = ({ collection }: { collection: CollectionItem }) => {
   const navigate = useNavigate();
-  const { data: books } = useCollectionBooks(collection.book_ids);
+  const { data: books } = useCollectionBooks(collection.id);
   const firstBook = books?.[0];
 
   return (

@@ -258,7 +258,7 @@ const ReaderPage = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("user_shelves").select("id")
-        .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "favorite")
+        .eq("user_id", user!.id).eq("book_id", id!).eq("shelf_type", "favorite")
         .maybeSingle();
       return !!data;
     },
@@ -294,9 +294,9 @@ const ReaderPage = () => {
     mutationFn: async () => {
       if (isFavorite) {
         await supabase.from("user_shelves").delete()
-          .eq("user_id", user!.id).eq("book_id", id!).eq("shelf", "favorite");
+          .eq("user_id", user!.id).eq("book_id", id!).eq("shelf_type", "favorite");
       } else {
-        await supabase.from("user_shelves").insert({ user_id: user!.id, book_id: id!, shelf: "favorite" });
+        await supabase.from("user_shelves").insert({ user_id: user!.id, book_id: id!, shelf_type: "favorite" });
       }
     },
     onMutate: async () => {
