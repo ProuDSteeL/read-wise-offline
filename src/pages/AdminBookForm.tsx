@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Upload, Loader2, Music, ChevronUp, ChevronDown, FileUp } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Upload, Loader2, Music, ChevronUp, ChevronDown, FileUp, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -489,32 +489,42 @@ const AdminBookForm = () => {
             {/* Categories */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Категории</label>
+              {/* Selected tags with remove button */}
+              {selectedCategories.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedCategories.map((cat) => (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                    >
+                      {cat}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCategories(selectedCategories.filter(s => s !== cat))}
+                        className="ml-0.5 rounded-full hover:bg-white/20 p-0.5"
+                        aria-label={`Удалить тег ${cat}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Available tags to add */}
               <div className="flex flex-wrap gap-2">
-                {/* Merge defaults + existing tags from DB, deduplicate */}
-                {Array.from(new Set([...DEFAULT_CATEGORIES, ...existingTags, ...selectedCategories].map(t => t.toLowerCase())))
+                {Array.from(new Set([...DEFAULT_CATEGORIES, ...existingTags].map(t => t.toLowerCase())))
                   .sort((a, b) => a.localeCompare(b, "ru"))
+                  .filter((catLower) => !selectedCategories.some(s => s.toLowerCase() === catLower))
                   .map((catLower) => {
-                    const display = selectedCategories.find(s => s.toLowerCase() === catLower)
-                      || existingTags.find(t => t.toLowerCase() === catLower)
+                    const display = existingTags.find(t => t.toLowerCase() === catLower)
                       || DEFAULT_CATEGORIES.find(d => d.toLowerCase() === catLower)
                       || catLower;
-                    const isActive = selectedCategories.some(s => s.toLowerCase() === catLower);
                     return (
                       <button
                         key={catLower}
                         type="button"
-                        onClick={() => {
-                          if (isActive) {
-                            setSelectedCategories(selectedCategories.filter(s => s.toLowerCase() !== catLower));
-                          } else {
-                            setSelectedCategories([...selectedCategories, display]);
-                          }
-                        }}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                          isActive
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-secondary-foreground"
-                        }`}
+                        onClick={() => setSelectedCategories([...selectedCategories, display])}
+                        className="rounded-full px-3 py-1.5 text-xs font-medium transition-colors bg-secondary text-secondary-foreground"
                       >
                         {display}
                       </button>
