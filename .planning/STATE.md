@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
-status: executing
-stopped_at: Phase 6 verified
-last_updated: "2026-03-19T22:10:00.000Z"
-last_activity: 2026-03-19 -- Phase 06 verified (all 3 offline requirements confirmed working)
+status: completed
+stopped_at: Completed 08-02-PLAN.md
+last_updated: "2026-03-19T22:39:08.606Z"
+last_activity: 2026-03-19 -- Phase 06 verified by user (downloads page, progress bar, offline banner all working)
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 13
+  total_phases: 8
+  completed_phases: 5
+  total_plans: 15
   completed_plans: 13
-  percent: 100
+  percent: 92
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Доступные саммари нон-фикшн книг на русском языке с полным офлайн-доступом
-**Current focus:** Phase 6 complete — ready for Phase 7
+**Current focus:** Phase 8 in progress — PWA Hardening
 
 ## Current Position
 
-Phase: 6 of 7 (Offline Hardening) — VERIFIED
-Plan: 2 of 2 complete
-Status: Phase 6 complete
-Last activity: 2026-03-19 -- Phase 06 verified by user (downloads page, progress bar, offline banner all working)
+Phase: 8 (PWA Hardening)
+Plan: 2 of 2 — 08-02 complete
+Status: Executing Phase 8
+Last activity: 2026-03-19 -- Completed 08-02 (install prompt gating + offline fallback)
 
 Progress: [█████████░] 92%
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 92%
 | Phase 05 P02 | 3min | 2 tasks | 7 files |
 | Phase 05 P03 | 6min | 2 tasks | 8 files |
 | Phase 06 P01 | 4min | 2 tasks | 7 files |
+| Phase 08 P02 | 13min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,7 @@ Recent decisions affecting current work:
 - [Phase 05]: AdminBookList redesigned with search, status/tag filters, sorting
 - [Phase 05]: RLS policies for quiz/flashcard tables use profiles.role (not user_roles)
 - [Phase 06]: Extracted getDownloadDisplayState/roundProgress as pure functions for testability
+- [Phase 08]: Extracted shouldShowInstallPrompt as pure function for unit testing without mocking React hooks
 
 ### Pending Todos
 
@@ -117,6 +119,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T21:59:26.037Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-19T22:39:08.594Z
+Stopped at: Completed 08-02-PLAN.md
 Resume file: None
