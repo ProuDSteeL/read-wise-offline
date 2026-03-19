@@ -22,6 +22,7 @@ import AdminCollections from "./pages/AdminCollections";
 import AdminBookList from "./pages/AdminBookList";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import LearningPage from "./pages/LearningPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const AppRoutes = () => {
       </Route>
       <Route path="/book/:id" element={<BookPage />} />
       <Route path="/book/:id/read" element={<ReaderPage />} />
+      <Route path="/book/:id/learn" element={<LearningPage />} />
       {/* Audio player is now a bottom sheet in AppLayout */}
       <Route path="/offline/read/:id" element={<OfflineReaderPage />} />
       <Route path="/admin/books" element={<AdminBookList />} />
