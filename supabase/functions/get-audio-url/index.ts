@@ -68,12 +68,13 @@ Deno.serve(async (req) => {
       (profile.subscription_expires_at === null ||
         profile.subscription_expires_at > new Date().toISOString());
 
-    if (!isPro) {
-      return new Response(
-        JSON.stringify({ error: "Pro subscription required for audio" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // TODO: restore Pro check after testing
+    // if (!isPro) {
+    //   return new Response(
+    //     JSON.stringify({ error: "Pro subscription required for audio" }),
+    //     { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    //   );
+    // }
 
     // Fetch audio_url path from summaries
     const { data: summary, error: summaryError } = await adminClient

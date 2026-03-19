@@ -30,8 +30,9 @@ export const useAccessControl = () => {
     return freeReadsUsed < FREE_READS_LIMIT;
   };
 
-  const canListenAudio = isPro;
-  const canDownload = isPro;
+  // TODO: restore Pro checks after testing
+  const canListenAudio = true; // isPro;
+  const canDownload = true; // isPro;
 
   const canHighlight = (_currentCount?: number) => true;
 
