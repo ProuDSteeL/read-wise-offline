@@ -75,11 +75,11 @@ Plans:
   3. Homepage shows a "Continue reading" section with the user's unfinished summaries and their progress
   4. User profile displays reading statistics: books read, total reading time, and reading streaks
   5. Admin can create collections with title/description/cover, and collections appear as horizontal scrollable sections on the homepage
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Key ideas Embla carousel on BookPage + verify admin reorder buttons (CONT-01, CONT-02)
+- [ ] 04-02-PLAN.md — Homepage collection book rows + verify continue reading, stats, admin collections (COLL-02, COLL-01, CONT-03, CONT-04)
 
 ### Phase 5: Quizzes & Learning
 **Goal**: Users can test and reinforce their understanding of book summaries through quizzes and flashcards
@@ -134,7 +134,7 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 | 1. Security Hardening | 0/3 | Not started | - |
 | 2. Reader Enhancement | 0/1 | Not started | - |
 | 3. Audio Player Polish | 2/2 | Complete | 2026-03-19 |
-| 4. Content & Collections | 0/? | Not started | - |
+| 4. Content & Collections | 0/2 | Not started | - |
 | 5. Quizzes & Learning | 0/? | Not started | - |
 | 6. Offline Hardening | 0/? | Not started | - |
 | 7. Growth & Discovery | 0/? | Not started | - |
