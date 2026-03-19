@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-19T18:30:28.764Z"
-last_activity: 2026-03-19 -- Completed 03-02-PLAN.md (AudioContext consolidation, global mini player, bottom sheet, manual verification)
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-19T19:06:58.546Z"
+last_activity: 2026-03-19 -- Completed 04-02-PLAN.md (per-collection book rows, verified continue reading/stats/admin)
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Доступные саммари нон-фикшн книг на русском языке с полным офлайн-доступом
-**Current focus:** Phase 2 - Reader Enhancement
+**Current focus:** Phase 4 - Content & Collections
 
 ## Current Position
 
-Phase: 3 of 7 (Audio Player Polish)
+Phase: 4 of 7 (Content & Collections)
 Plan: 2 of 2 in current phase
-Status: Phase 03 complete -- all plans done
-Last activity: 2026-03-19 -- Completed 03-02-PLAN.md (AudioContext consolidation, global mini player, bottom sheet, manual verification)
+Status: Completed 04-02-PLAN.md
+Last activity: 2026-03-19 -- Completed 04-02-PLAN.md (per-collection book rows, verified continue reading/stats/admin)
 
 Progress: [██████████] 100%
 
@@ -56,6 +56,8 @@ Progress: [██████████] 100%
 | Phase 02 P01 | 1min | 2 tasks | 2 files |
 | Phase 03 P01 | 6min | 3 tasks | 8 files |
 | Phase 03 P02 | 45min | 2 tasks | 13 files |
+| Phase 04 P02 | 3min | 3 tasks | 2 files |
+| Phase 04 P01 | 2min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -79,6 +81,10 @@ Recent decisions affecting current work:
 - [Phase 03]: Audio player moved from dedicated page to bottom sheet overlay for seamless navigation
 - [Phase 03]: Mini player made global (App-level) so audio controls persist across all routes
 - [Phase 03]: Added previoustrack/nexttrack Media Session handlers for Android notification widget
+- [Phase 04]: Replaced BannerCarousel with per-collection SectionHeader + horizontal BookCard rows
+- [Phase 04]: Increased homepage bottom padding to pb-24 for MiniAudioPlayer clearance
+- [Phase 04]: Removed manual CSS scroll-snap in favor of shadcn Carousel (Embla) for consistent swipe behavior
+- [Phase 04]: Key ideas section placed below book description, above Why Read per locked decision
 
 ### Pending Todos
 
@@ -91,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T18:30:28.756Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-content-collections/04-CONTEXT.md
+Last session: 2026-03-19T19:06:58.539Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
