@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Trash2, Headphones, List } from "lucide-react";
+import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Bookmark } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ReactMarkdown from "react-markdown";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
@@ -138,6 +139,7 @@ const ReaderPage = () => {
   );
   const [showSettings, setShowSettings] = useState(false);
   const [showToc, setShowToc] = useState(false);
+  const [tocTab, setTocTab] = useState<"toc" | "bookmarks" | "quotes">("toc");
   const [scrollPercent, setScrollPercent] = useState(0);
   const saveProgressTimeout = useRef<ReturnType<typeof setTimeout>>();
   const hasRestoredPosition = useRef(false);
@@ -545,38 +547,6 @@ const ReaderPage = () => {
         )}
       </article>
 
-      {/* Highlights list */}
-      {highlights.length > 0 && (
-        <div className="mx-auto max-w-md border-t px-5 py-6">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Мои выделения · {highlights.length}</h3>
-          <div className="space-y-3">
-            {highlights.map((h) => {
-              const color = getColor(h.color);
-              return (
-                <div
-                  key={h.id}
-                  className="rounded-2xl bg-card p-4 shadow-card"
-                  style={{ borderLeft: `3px solid ${color.hex}` }}
-                >
-                  <div className="flex items-start gap-3">
-                    <p className="flex-1 text-sm leading-relaxed text-foreground">«{h.text}»</p>
-                    <button
-                      onClick={() => deleteHighlight.mutate(h.id)}
-                      className="shrink-0 rounded-lg p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {h.note && (
-                    <p className="mt-2 text-xs text-muted-foreground border-t border-border/40 pt-2">{h.note}</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Selection toolbar */}
       {selection && (
         <SelectionToolbar
@@ -586,29 +556,123 @@ const ReaderPage = () => {
         />
       )}
 
-      {/* TOC Sheet */}
+      {/* TOC / Bookmarks / Quotes Sheet */}
       <Sheet open={showToc} onOpenChange={setShowToc}>
-        <SheetContent side="left" className="w-[280px] p-0">
-          <SheetHeader className="px-4 pt-4 pb-2">
-            <SheetTitle className="text-base font-bold">Оглавление</SheetTitle>
+        <SheetContent side="left" className="w-[320px] p-0 flex flex-col">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Навигация</SheetTitle>
           </SheetHeader>
-          <div className="space-y-0.5 px-2 pb-4 overflow-y-auto max-h-[calc(100vh-80px)]">
-            {toc.map((entry, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  setShowToc(false);
-                  setTimeout(() => {
-                    document.getElementById(entry.id)?.scrollIntoView({ behavior: "smooth" });
-                  }, 300);
-                }}
-                className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary tap-highlight ${
-                  entry.level === 1 ? "font-semibold text-foreground" : entry.level === 2 ? "pl-6 text-foreground" : "pl-10 text-muted-foreground"
-                }`}
-              >
-                {entry.text}
-              </button>
-            ))}
+
+          {/* Tab bar */}
+          <div className="flex border-b border-border/40 shrink-0">
+            {(["toc", "bookmarks", "quotes"] as const).map((tab) => {
+              const label = tab === "toc" ? "ОГЛАВЛЕНИЕ" : tab === "bookmarks" ? "ЗАКЛАДКИ" : "ЦИТАТЫ";
+              const isActive = (tocTab ?? "toc") === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setTocTab(tab)}
+                  className="relative flex-1 py-3 text-center text-[11px] font-bold tracking-wider transition-colors"
+                  style={{ color: isActive ? "var(--primary)" : "var(--muted-foreground)" }}
+                >
+                  {label}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full bg-primary" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* ОГЛАВЛЕНИЕ */}
+            {(tocTab ?? "toc") === "toc" && (
+              <div className="space-y-0.5 px-2 py-3">
+                {toc.length === 0 && (
+                  <p className="px-3 py-8 text-center text-sm text-muted-foreground">Нет заголовков</p>
+                )}
+                {toc.map((entry, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setShowToc(false);
+                      setTimeout(() => {
+                        document.getElementById(entry.id)?.scrollIntoView({ behavior: "smooth" });
+                      }, 300);
+                    }}
+                    className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary tap-highlight ${
+                      entry.level === 1 ? "font-semibold text-foreground" : entry.level === 2 ? "pl-6 text-foreground" : "pl-10 text-muted-foreground"
+                    }`}
+                  >
+                    {entry.text}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ЗАКЛАДКИ */}
+            {(tocTab ?? "toc") === "bookmarks" && (
+              <div className="px-3 py-3">
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  <Bookmark className="mx-auto mb-2 h-5 w-5 text-muted-foreground/50" />
+                  Закладки скоро появятся
+                </p>
+              </div>
+            )}
+
+            {/* ЦИТАТЫ */}
+            {(tocTab ?? "toc") === "quotes" && (
+              <div className="px-3 py-3 space-y-2">
+                {highlights.length === 0 && (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Выделите текст, чтобы сохранить цитату
+                  </p>
+                )}
+                {highlights.map((h) => {
+                  const color = getColor(h.color);
+                  return (
+                    <div
+                      key={h.id}
+                      className="rounded-xl bg-secondary/50 p-3"
+                      style={{ borderLeft: `3px solid ${color.hex}` }}
+                    >
+                      <div className="flex items-start gap-2">
+                        <p className="flex-1 text-sm leading-relaxed text-foreground">«{h.text}»</p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="shrink-0 rounded-lg p-1 text-muted-foreground hover:text-foreground transition-colors">
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-[140px]">
+                            <DropdownMenuItem
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(h.text);
+                                  toast({ title: "Скопировано" });
+                                } catch { /* ignore */ }
+                              }}
+                            >
+                              Копировать
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => deleteHighlight.mutate(h.id)}
+                            >
+                              Удалить
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {h.note && (
+                        <p className="mt-2 text-xs text-muted-foreground border-t border-border/40 pt-2">{h.note}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
