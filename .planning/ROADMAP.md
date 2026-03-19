@@ -47,11 +47,10 @@ Plans:
   3. User can adjust line spacing and the setting persists across sessions
   4. User can open a table of contents and tap a section heading to jump directly to it
   5. User can highlight text, save quotes to a personal collection, copy text to clipboard, and play/pause audio without leaving the reader
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Add copy-to-clipboard and verify all 7 reader requirements
 
 ### Phase 3: Audio Player Polish
 **Goal**: Audio playback works reliably in the background and supports sleep timer for bedtime listening
@@ -132,7 +131,7 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Security Hardening | 0/3 | Not started | - |
-| 2. Reader Enhancement | 0/? | Not started | - |
+| 2. Reader Enhancement | 0/1 | Not started | - |
 | 3. Audio Player Polish | 0/? | Not started | - |
 | 4. Content & Collections | 0/? | Not started | - |
 | 5. Quizzes & Learning | 0/? | Not started | - |
