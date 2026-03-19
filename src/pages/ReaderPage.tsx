@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Bookmark } from "lucide-react";
+import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Bookmark, Copy, Share2, StickyNote, Palette, Languages } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import MiniAudioPlayer from "@/components/MiniAudioPlayer";
 import { useBook } from "@/hooks/useBooks";
@@ -11,13 +11,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import ReactMarkdown from "react-markdown";
 import { useAccessControl } from "@/hooks/useAccessControl";
 import PaywallPrompt from "@/components/PaywallPrompt";
 import { useNativeSelection } from "@/hooks/useNativeSelection";
 import SelectionToolbar from "@/components/reader/SelectionToolbar";
-import { getColor } from "@/lib/highlightColors";
+import { getColor, HIGHLIGHT_COLORS } from "@/lib/highlightColors";
 
 type ReaderTheme = "light" | "dark" | "sepia";
 type ReaderFont = "sans" | "serif";
@@ -349,6 +349,20 @@ const ReaderPage = () => {
     },
   });
 
+  const updateHighlight = useMutation({
+    mutationFn: async ({ highlightId, updates }: { highlightId: string; updates: { color?: string; note?: string } }) => {
+      const { error } = await supabase.from("user_highlights").update(updates).eq("id", highlightId);
+      if (error) throw error;
+      return { highlightId, updates };
+    },
+    onSuccess: ({ highlightId, updates }) => {
+      queryClient.setQueryData<HighlightData[]>(
+        ["highlights", user?.id, id],
+        (old) => old?.map((h) => h.id === highlightId ? { ...h, ...updates } : h) ?? [],
+      );
+    },
+  });
+
   const wrapWithHighlights = (children: ReactNode) =>
     highlightChildren(children, highlights);
 
@@ -645,7 +659,7 @@ const ReaderPage = () => {
                               <MoreVertical className="h-4 w-4" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="min-w-[140px]">
+                          <DropdownMenuContent align="end" className="min-w-[160px]">
                             <DropdownMenuItem
                               onClick={async () => {
                                 try {
@@ -654,12 +668,70 @@ const ReaderPage = () => {
                                 } catch { /* ignore */ }
                               }}
                             >
+                              <Copy className="mr-2 h-4 w-4" />
                               Копировать
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (navigator.share) {
+                                  navigator.share({ text: `«${h.text}»` }).catch(() => {});
+                                } else {
+                                  navigator.clipboard.writeText(`«${h.text}»`).then(
+                                    () => toast({ title: "Скопировано для отправки" }),
+                                  ).catch(() => {});
+                                }
+                              }}
+                            >
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Поделиться
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const note = prompt("Заметка к цитате:", h.note ?? "");
+                                if (note !== null) {
+                                  updateHighlight.mutate({ highlightId: h.id, updates: { note } });
+                                  toast({ title: note ? "Заметка сохранена" : "Заметка удалена" });
+                                }
+                              }}
+                            >
+                              <StickyNote className="mr-2 h-4 w-4" />
+                              {h.note ? "Ред. заметку" : "Добавить заметку"}
+                            </DropdownMenuItem>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <Palette className="mr-2 h-4 w-4" />
+                                Цвет
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="min-w-0 p-2">
+                                <div className="flex gap-1.5">
+                                  {HIGHLIGHT_COLORS.map((c) => (
+                                    <button
+                                      key={c.key}
+                                      onClick={() => {
+                                        updateHighlight.mutate({ highlightId: h.id, updates: { color: c.key } });
+                                      }}
+                                      className="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110"
+                                      style={{
+                                        backgroundColor: c.hex,
+                                        borderColor: h.color === c.key ? "var(--foreground)" : "transparent",
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuItem
+                              onClick={() => toast({ title: "Перевод пока недоступен" })}
+                            >
+                              <Languages className="mr-2 h-4 w-4" />
+                              Перевод
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => deleteHighlight.mutate(h.id)}
                             >
+                              <Trash2 className="mr-2 h-4 w-4" />
                               Удалить
                             </DropdownMenuItem>
                           </DropdownMenuContent>
