@@ -1,7 +1,6 @@
-import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, ChevronRight, Download, X } from "lucide-react";
+import { Sparkles, Download, X } from "lucide-react";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import BookCard from "@/components/BookCard";
 import ContinueCard from "@/components/ContinueCard";
@@ -67,7 +66,7 @@ const Index = () => {
   });
 
   return (
-    <div className="animate-fade-in space-y-6 pb-6">
+    <div className="animate-fade-in space-y-6 pb-24">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-14">
         <h1 className="text-[26px] font-extrabold tracking-tight text-foreground">Главная</h1>
@@ -109,10 +108,10 @@ const Index = () => {
         </section>
       )}
 
-      {/* Featured collection banners — swipeable carousel */}
-      {collections && collections.length > 0 && (
-        <BannerCarousel collections={collections} />
-      )}
+      {/* Featured collection sections — per-collection horizontal book rows */}
+      {collections && collections.length > 0 && collections.map((col) => (
+        <CollectionSection key={col.id} collection={col} />
+      ))}
 
       {/* Category chips */}
       <div className="flex gap-2 overflow-x-auto px-4 scrollbar-hide">
@@ -204,75 +203,27 @@ const Index = () => {
   );
 };
 
-/* Banner carousel — swipeable with CSS scroll-snap */
-type CollectionItem = { id: string; title: string; description: string | null };
-
-const BannerCarousel = ({ collections }: { collections: CollectionItem[] }) => {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const handleScroll = useCallback(() => {
-    if (!scrollRef.current) return;
-    const el = scrollRef.current;
-    const cardWidth = el.firstElementChild?.clientWidth ?? el.clientWidth;
-    const idx = Math.round(el.scrollLeft / cardWidth);
-    setActiveIdx(idx);
-  }, []);
-
-  return (
-    <div className="space-y-2">
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 gap-3"
-      >
-        {collections.map((col) => (
-          <div key={col.id} className="w-full shrink-0 snap-center">
-            <FeaturedBanner collection={col} />
-          </div>
-        ))}
-      </div>
-      {collections.length > 1 && (
-        <div className="flex justify-center gap-1.5">
-          {collections.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1.5 rounded-full transition-all ${
-                i === activeIdx ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/20"
-              }`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-/* Featured banner like SmartReading promo cards */
-const FeaturedBanner = ({ collection }: { collection: CollectionItem }) => {
+/* Per-collection section with horizontal scrollable book rows */
+const CollectionSection = ({ collection }: { collection: { id: string; title: string; description: string | null } }) => {
   const navigate = useNavigate();
   const { data: books } = useCollectionBooks(collection.id);
-  const firstBook = books?.[0];
-
+  if (!books?.length) return null;
   return (
-    <button
-      onClick={() => firstBook ? navigate(`/book/${firstBook.id}`) : undefined}
-      className="flex w-full items-center gap-4 rounded-2xl bg-sage-light p-4 shadow-card tap-highlight text-left"
-    >
-      <div className="flex-1 space-y-1">
-        <p className="text-xs font-medium text-sage">Подборка</p>
-        <p className="text-sm font-bold text-foreground leading-snug">{collection.title}</p>
-        {collection.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{collection.description}</p>
-        )}
-        <div className="mt-2 inline-flex items-center gap-1 rounded-full gradient-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-          К саммари <ChevronRight className="h-3 w-3" />
-        </div>
+    <section className="space-y-3">
+      <SectionHeader title={collection.title} />
+      <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+        {books.map((book) => (
+          <BookCard
+            key={book.id}
+            title={book.title}
+            author={book.author}
+            coverUrl={book.cover_url || "/placeholder.svg"}
+            readTimeMin={book.read_time_minutes ?? undefined}
+            onClick={() => navigate(`/book/${book.id}`)}
+          />
+        ))}
       </div>
-      {firstBook?.cover_url && (
-        <img src={firstBook.cover_url} alt="" className="h-24 w-auto rounded-xl shadow-card object-cover" />
-      )}
-    </button>
+    </section>
   );
 };
 
