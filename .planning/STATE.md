@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-03-18T18:53:45.467Z"
-last_activity: 2026-03-18 -- Completed 01-03-PLAN.md (audio bucket security)
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-19T12:18:14.413Z"
+last_activity: 2026-03-19 -- Completed 02-01-PLAN.md (reader enhancement)
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 14
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 29
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Доступные саммари нон-фикшн книг на русском языке с полным офлайн-доступом
-**Current focus:** Phase 1 - Security Hardening
+**Current focus:** Phase 2 - Reader Enhancement
 
 ## Current Position
 
-Phase: 1 of 7 (Security Hardening)
-Plan: 3 of 3 in current phase
-Status: Phase 1 complete
-Last activity: 2026-03-18 -- Completed 01-03-PLAN.md (audio bucket security)
+Phase: 2 of 7 (Reader Enhancement)
+Plan: 1 of 1 in current phase
+Status: Phase 2 complete
+Last activity: 2026-03-19 -- Completed 02-01-PLAN.md (reader enhancement)
 
-Progress: [██░░░░░░░░] 14%
+Progress: [███░░░░░░░] 29%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [██░░░░░░░░] 14%
 | Phase 01 P01 | 3min | 2 tasks | 3 files |
 | Phase 01 P03 | 2min | 2 tasks | 6 files |
 | Phase 01 P02 | 5min | 2 tasks | 5 files |
+| Phase 02 P01 | 1min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,7 @@ Recent decisions affecting current work:
 - [Phase 01-03]: AudioContext fetches signed URLs internally so callers only pass bookId
 - [Phase 01]: Server-side content gating via Edge Function - client never receives full text for gated content
 - [Phase 01]: truncateSummary duplicated in Edge Function (Deno isolation from src/lib)
+- [Phase 02]: Used navigator.clipboard.writeText directly in click handler for Safari/iOS security compliance
 
 ### Pending Todos
 
@@ -81,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T18:49:44.374Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-03-19T12:18:14.406Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None

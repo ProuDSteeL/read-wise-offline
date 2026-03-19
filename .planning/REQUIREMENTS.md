@@ -18,13 +18,13 @@
 
 ### Reader
 
-- [ ] **READ-04**: User can adjust font size (small/medium/large/XL) with setting persisted
-- [ ] **READ-05**: User can switch reading theme (light/dark/sepia) with setting persisted
-- [ ] **READ-06**: User can adjust line spacing with setting persisted
-- [ ] **READ-07**: Table of contents with clickable section navigation within summary
-- [ ] **READ-08**: User can highlight text and save quotes to personal collection
-- [ ] **READ-09**: Audio player accessible from reader view (inline play/pause button)
-- [ ] **READ-10**: User can copy selected text to clipboard
+- [x] **READ-04**: User can adjust font size (small/medium/large/XL) with setting persisted
+- [x] **READ-05**: User can switch reading theme (light/dark/sepia) with setting persisted
+- [x] **READ-06**: User can adjust line spacing with setting persisted
+- [x] **READ-07**: Table of contents with clickable section navigation within summary
+- [x] **READ-08**: User can highlight text and save quotes to personal collection
+- [x] **READ-09**: Audio player accessible from reader view (inline play/pause button)
+- [x] **READ-10**: User can copy selected text to clipboard
 
 ### Content & Admin
 
@@ -103,13 +103,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-03 | Phase 1 | Complete |
 | AUDIO-03 | Phase 3 | Pending |
 | AUDIO-04 | Phase 3 | Pending |
-| READ-04 | Phase 2 | Pending |
-| READ-05 | Phase 2 | Pending |
-| READ-06 | Phase 2 | Pending |
-| READ-07 | Phase 2 | Pending |
-| READ-08 | Phase 2 | Pending |
-| READ-09 | Phase 2 | Pending |
-| READ-10 | Phase 2 | Pending |
+| READ-04 | Phase 2 | Complete |
+| READ-05 | Phase 2 | Complete |
+| READ-06 | Phase 2 | Complete |
+| READ-07 | Phase 2 | Complete |
+| READ-08 | Phase 2 | Complete |
+| READ-09 | Phase 2 | Complete |
+| READ-10 | Phase 2 | Complete |
 | CONT-01 | Phase 4 | Pending |
 | CONT-02 | Phase 4 | Pending |
 | CONT-03 | Phase 4 | Pending |
