@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const FREE_READS_LIMIT = 10;
 
-function truncateSummary(content: string, targetPercent: number = 0.25): string {
+function truncateSummary(content: string, targetPercent: number = 0.5): string {
   if (!content) return "";
   const paragraphs = content.split(/\n\n+/);
   if (paragraphs.length <= 1) return content;
