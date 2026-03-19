@@ -105,10 +105,11 @@ Plans:
   1. User can view a "My Downloads" page showing all downloaded books with storage size per book and a delete option
   2. Audio downloads show a visible progress bar and handle large files via chunked downloading
   3. When the user is offline, a banner indicator is displayed so they know they are reading without internet
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md — Download progress bar in DownloadDialog + global OfflineBanner component (OFFL-05, OFFL-06)
+- [ ] 06-02-PLAN.md — Human verification of all offline hardening requirements (OFFL-04)
 
 ### Phase 7: Growth & Discovery
 **Goal**: The app is discoverable via search engines and encourages PWA installation
@@ -137,5 +138,5 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 | 3. Audio Player Polish | 2/2 | Complete | 2026-03-19 |
 | 4. Content & Collections | 0/2 | Not started | - |
 | 5. Quizzes & Learning | 0/3 | Not started | - |
-| 6. Offline Hardening | 0/? | Not started | - |
+| 6. Offline Hardening | 0/2 | Not started | - |
 | 7. Growth & Discovery | 0/? | Not started | - |
