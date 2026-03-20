@@ -36,6 +36,7 @@ const BookPage = () => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [activeIdeaIdx, setActiveIdeaIdx] = useState(0);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const [authorExpanded, setAuthorExpanded] = useState(false);
   const viewCounted = useRef(false);
   const prevHadDownload = useRef(false);
@@ -264,7 +265,19 @@ const BookPage = () => {
             </div>
           )}
           {book.description && (
-            <p className="text-sm leading-relaxed text-foreground">{book.description}</p>
+            <>
+              <p className={`text-sm leading-relaxed text-foreground ${!descExpanded ? "line-clamp-3" : ""}`}>
+                {book.description}
+              </p>
+              {book.description.length > 150 && (
+                <button
+                  onClick={() => setDescExpanded(!descExpanded)}
+                  className="mt-1 text-xs font-medium text-sage"
+                >
+                  {descExpanded ? "Свернуть" : "Читать далее"}
+                </button>
+              )}
+            </>
           )}
         </section>
 

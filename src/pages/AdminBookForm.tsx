@@ -64,6 +64,10 @@ const AdminBookForm = () => {
   const [customTag, setCustomTag] = useState("");
   const existingTags = useTags();
 
+  // Track dirty state for unsaved changes warning
+  const isDirty = useRef(false);
+  const hasLoaded = useRef(!isEditMode); // In create mode, mark loaded immediately
+
   // Load existing book data for edit mode
   const { data: existingBook, isLoading: loadingBook } = useQuery({
     queryKey: ["admin-book", editId],
@@ -115,6 +119,25 @@ const AdminBookForm = () => {
     enabled: isEditMode,
   });
 
+  // Mark form as dirty when any field changes (after initial load)
+  useEffect(() => {
+    if (!hasLoaded.current) return;
+    isDirty.current = true;
+  }, [title, author, description, summaryContent, status, selectedCategories, quizQuestions, flashcardInputs, keyIdeas, audioFile, coverFile]);
+
+  // Warn on navigation away with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty.current) {
+        e.preventDefault();
+        // Legacy browser support
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
   // Populate form when edit data loads
   useEffect(() => {
     if (existingBook) {
@@ -138,6 +161,9 @@ const AdminBookForm = () => {
       }
       setCoverPreview(existingBook.cover_url || null);
       setStatus(existingBook.status as "draft" | "published" | "archived");
+      // Mark as loaded so future changes are tracked as dirty
+      hasLoaded.current = true;
+      isDirty.current = false;
     }
   }, [existingBook]);
 
@@ -388,6 +414,7 @@ const AdminBookForm = () => {
       return bookId;
     },
     onSuccess: (bookId) => {
+      isDirty.current = false;
       queryClient.invalidateQueries({ queryKey: ["books"] });
       queryClient.invalidateQueries({ queryKey: ["admin-books"] });
       toast({
