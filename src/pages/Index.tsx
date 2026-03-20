@@ -81,7 +81,7 @@ const Index = () => {
             <p className="text-xs text-muted-foreground">
               {isNativePrompt
                 ? "Быстрый доступ и чтение офлайн"
-                : "Нажмите ⋮ → «Добавить на главный экран»"}
+                : "Откройте в Chrome → ⋮ → «Установить приложение»"}
             </p>
           </div>
           {isNativePrompt && (

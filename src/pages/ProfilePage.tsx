@@ -206,7 +206,7 @@ const ProfilePage = () => {
               <p className="text-[11px] text-muted-foreground">
                 {isNativePrompt
                   ? "Добавьте на главный экран для быстрого доступа"
-                  : "Нажмите ⋮ → «Добавить на главный экран»"}
+                  : "Откройте в Chrome → ⋮ → «Установить приложение»"}
               </p>
             </div>
             {isNativePrompt && (
