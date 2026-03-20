@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,8 @@ const BookCard = ({
   className,
   onClick,
 }: BookCardProps) => {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
   return (
     <button
       onClick={onClick}
@@ -29,11 +32,15 @@ const BookCard = ({
       )}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-muted shadow-card transition-shadow duration-300 group-hover:shadow-elevated">
+        {!imgLoaded && (
+          <div className="absolute inset-0 animate-pulse bg-muted rounded-2xl" />
+        )}
         <img
           src={coverUrl}
           alt={title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03] ${!imgLoaded ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
           loading="lazy"
+          onLoad={() => setImgLoaded(true)}
         />
         {/* Subtle bottom gradient overlay */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/10 to-transparent" />
