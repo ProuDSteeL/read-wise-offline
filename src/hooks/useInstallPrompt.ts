@@ -31,6 +31,11 @@ export function incrementVisitCount(currentCount: number): number {
 
 export const useInstallPrompt = (isLoggedIn: boolean) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showManualBanner, setShowManualBanner] = useState(false);
+
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as any).standalone === true;
 
   // Increment visit count on mount
   useEffect(() => {
@@ -41,6 +46,8 @@ export const useInstallPrompt = (isLoggedIn: boolean) => {
   }, []);
 
   useEffect(() => {
+    if (isStandalone) return;
+
     const handler = (e: Event) => {
       e.preventDefault();
       const dismissedAt = localStorage.getItem(DISMISS_KEY);
@@ -54,8 +61,30 @@ export const useInstallPrompt = (isLoggedIn: boolean) => {
     };
 
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, [isLoggedIn]);
+
+    // Fallback: if beforeinstallprompt doesn't fire after 3s, show manual banner
+    const fallbackTimer = setTimeout(() => {
+      const dismissedAt = localStorage.getItem(DISMISS_KEY);
+      const visitCount = Number(localStorage.getItem(VISIT_COUNT_KEY) || "0");
+      if (shouldShowInstallPrompt(
+        isLoggedIn,
+        visitCount,
+        dismissedAt ? Number(dismissedAt) : null
+      )) {
+        setShowManualBanner(true);
+      }
+    }, 3000);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      clearTimeout(fallbackTimer);
+    };
+  }, [isLoggedIn, isStandalone]);
+
+  // If native prompt captured, hide manual banner
+  useEffect(() => {
+    if (deferredPrompt) setShowManualBanner(false);
+  }, [deferredPrompt]);
 
   const promptInstall = useCallback(async () => {
     if (!deferredPrompt) return;
@@ -70,10 +99,12 @@ export const useInstallPrompt = (isLoggedIn: boolean) => {
   const dismiss = useCallback(() => {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
     setDeferredPrompt(null);
+    setShowManualBanner(false);
   }, []);
 
   return {
-    canInstall: !!deferredPrompt,
+    canInstall: !!deferredPrompt || (showManualBanner && !isStandalone),
+    isNativePrompt: !!deferredPrompt,
     promptInstall,
     dismiss,
   };

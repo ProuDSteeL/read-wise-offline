@@ -53,7 +53,7 @@ const Index = () => {
   const { user } = useAuth();
   const { data: progress } = useUserProgress();
   const { data: recommendations } = useRecommendations();
-  const { canInstall, promptInstall, dismiss: dismissInstall } = useInstallPrompt(!!user);
+  const { canInstall, isNativePrompt, promptInstall, dismiss: dismissInstall } = useInstallPrompt(!!user);
   const continueBooks = progress?.filter(
     (p) => p.progress_percent && p.progress_percent > 0 && p.progress_percent < 100
   );
@@ -78,11 +78,17 @@ const Index = () => {
           <Download className="h-5 w-5 shrink-0 text-sage" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-foreground">Установите приложение</p>
-            <p className="text-xs text-muted-foreground">Быстрый доступ и чтение офлайн</p>
+            <p className="text-xs text-muted-foreground">
+              {isNativePrompt
+                ? "Быстрый доступ и чтение офлайн"
+                : "Нажмите ⋮ → «Добавить на главный экран»"}
+            </p>
           </div>
-          <button onClick={promptInstall} className="shrink-0 rounded-full gradient-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground tap-highlight">
-            Установить
-          </button>
+          {isNativePrompt && (
+            <button onClick={promptInstall} className="shrink-0 rounded-full gradient-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground tap-highlight">
+              Установить
+            </button>
+          )}
           <button onClick={dismissInstall} className="shrink-0 tap-highlight p-1">
             <X className="h-4 w-4 text-muted-foreground" />
           </button>
