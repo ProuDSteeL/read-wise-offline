@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, WifiOff, Play, Pause, SkipBack, SkipForward, Gauge, Moon, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, WifiOff, Play, Pause, SkipBack, SkipForward, Gauge, Moon, ChevronUp, ChevronDown, Info, X } from "lucide-react";
 import { getTextOffline, getBookMeta } from "@/lib/offlineStorage";
 import { useAudio } from "@/contexts/AudioContext";
 import { SLEEP_OPTIONS, SPEEDS } from "@/lib/audioConstants";
@@ -20,6 +20,9 @@ const OfflineReaderPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const audio = useAudio();
+  const [showOfflineNotice, setShowOfflineNotice] = useState(
+    () => localStorage.getItem("offline-notice-dismissed") !== "true"
+  );
   const [content, setContent] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ title: string; author: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,29 @@ const OfflineReaderPage = () => {
         <span className="flex-1 truncate text-sm font-semibold text-foreground">{meta?.title || "Офлайн"}</span>
         <WifiOff className="h-4 w-4 text-muted-foreground" />
       </div>
+
+      {/* Offline feature notice */}
+      {showOfflineNotice && (
+        <div className="mx-auto max-w-md px-5 pt-3">
+          <div className="flex items-start gap-3 rounded-xl bg-secondary/80 p-3">
+            <Info className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Офлайн-режим: доступно чтение и аудио. Выделения и оглавление доступны в онлайн-версии.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setShowOfflineNotice(false);
+                localStorage.setItem("offline-notice-dismissed", "true");
+              }}
+              className="shrink-0 text-muted-foreground/60 tap-highlight"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <article
