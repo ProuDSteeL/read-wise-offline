@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Quizzes & Learning** - Multiple-choice quizzes, flashcards, admin creation, and progress tracking
 - [ ] **Phase 6: Offline Hardening** - Downloads page, chunked audio downloads with progress, and offline indicator
 - [ ] **Phase 7: Growth & Discovery** - SEO meta tags, PWA install prompt, and promotional banners
-- [ ] **Phase 8: PWA Hardening** - Smart caching, install prompt gating, offline UX, manifest and icons
+- [x] **Phase 8: PWA Hardening** - Smart caching, install prompt gating, offline UX, manifest and icons (completed 2026-03-20)
 
 ## Phase Details
 
@@ -157,4 +157,4 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 | 5. Quizzes & Learning | 0/3 | Not started | - |
 | 6. Offline Hardening | 0/2 | Not started | - |
 | 7. Growth & Discovery | 0/? | Not started | - |
-| 8. PWA Hardening | 0/2 | Not started | - |
+| 8. PWA Hardening | 2/2 | Complete   | 2026-03-20 |
