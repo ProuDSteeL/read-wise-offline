@@ -17,7 +17,8 @@ export const useAccessControl = () => {
         .select("book_id")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return data?.length ?? 0;
+      const distinctBooks = new Set(data?.map((d) => d.book_id));
+      return distinctBooks.size;
     },
     enabled: !!user && !isPro,
   });

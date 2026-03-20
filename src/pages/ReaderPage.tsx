@@ -690,7 +690,12 @@ const ReaderPage = () => {
                     onClick={() => {
                       setShowToc(false);
                       setTimeout(() => {
-                        document.getElementById(entry.id)?.scrollIntoView({ behavior: "smooth" });
+                        const el = document.getElementById(entry.id);
+                        if (el) {
+                          const headerOffset = 60;
+                          const elementPosition = el.getBoundingClientRect().top + window.scrollY;
+                          window.scrollTo({ top: elementPosition - headerOffset, behavior: "smooth" });
+                        }
                       }, 300);
                     }}
                     className={`w-full text-left rounded-lg px-3 py-2 text-sm transition-colors hover:bg-secondary tap-highlight ${
