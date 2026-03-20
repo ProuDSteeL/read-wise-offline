@@ -253,7 +253,7 @@ const ReaderPage = () => {
           },
           { onConflict: "user_id,book_id" }
         );
-      }, 1000);
+      }, 500);
     },
     [user, id, isOnline]
   );
