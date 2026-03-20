@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -24,47 +24,39 @@ export function shouldShowInstallPrompt(
 export const useInstallPrompt = (isLoggedIn: boolean) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showManualBanner, setShowManualBanner] = useState(false);
+  const nativeFired = useRef(false);
 
   const isStandalone =
     window.matchMedia("(display-mode: standalone)").matches ||
     (navigator as any).standalone === true;
 
   useEffect(() => {
-    if (isStandalone) return;
+    if (isStandalone || !isLoggedIn) return;
+
+    const dismissedAt = localStorage.getItem(DISMISS_KEY);
+    if (!shouldShowInstallPrompt(isLoggedIn, dismissedAt ? Number(dismissedAt) : null)) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
-      const dismissedAt = localStorage.getItem(DISMISS_KEY);
-      if (!shouldShowInstallPrompt(
-        isLoggedIn,
-        dismissedAt ? Number(dismissedAt) : null
-      )) return;
+      nativeFired.current = true;
+      setShowManualBanner(false);
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Fallback: if beforeinstallprompt doesn't fire after 2s, show manual banner
+    // Fallback: if beforeinstallprompt doesn't fire after 4s, show manual banner
     const fallbackTimer = setTimeout(() => {
-      const dismissedAt = localStorage.getItem(DISMISS_KEY);
-      if (shouldShowInstallPrompt(
-        isLoggedIn,
-        dismissedAt ? Number(dismissedAt) : null
-      )) {
+      if (!nativeFired.current) {
         setShowManualBanner(true);
       }
-    }, 2000);
+    }, 4000);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       clearTimeout(fallbackTimer);
     };
   }, [isLoggedIn, isStandalone]);
-
-  // If native prompt captured, hide manual banner
-  useEffect(() => {
-    if (deferredPrompt) setShowManualBanner(false);
-  }, [deferredPrompt]);
 
   const promptInstall = useCallback(async () => {
     if (!deferredPrompt) return;
