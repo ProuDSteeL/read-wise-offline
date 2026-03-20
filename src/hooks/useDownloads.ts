@@ -161,6 +161,13 @@ export const useDownloads = () => {
           m.set(bookId, { ...progress, status: "error" });
           return m;
         });
+        setTimeout(() => {
+          setActiveDownloads((p) => {
+            const n = new Map(p);
+            n.delete(bookId);
+            return n;
+          });
+        }, 3000);
         toast({ title: "Ошибка загрузки", variant: "destructive" });
         return false;
       }

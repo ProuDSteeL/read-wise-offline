@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAudioOffline } from "@/lib/offlineStorage";
 import { setupMediaSession, updatePositionState, setMediaSessionPlaybackState } from "@/lib/mediaSessionManager";
 import type { SleepTimerState } from "@/lib/sleepTimerManager";
+import { toast } from "@/hooks/use-toast";
 
 interface AudioState {
   bookId: string | null;
@@ -290,6 +291,38 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem("audio-speed", String(newSpeed));
       } catch (err) {
         console.error("[AudioContext] play() failed:", err);
+        // Attempt offline fallback before showing error
+        try {
+          const offlineUrl = await getAudioOffline(opts.bookId);
+          if (offlineUrl) {
+            audio.src = offlineUrl;
+            audio.playbackRate = newSpeed;
+            audio.load();
+            if (offlineUrl.startsWith("blob:")) {
+              blobUrlRef.current = offlineUrl;
+            }
+            setState({
+              bookId: opts.bookId,
+              bookTitle: opts.bookTitle || "",
+              author: opts.author || "",
+              coverUrl: opts.coverUrl ?? null,
+              audioUrl: offlineUrl,
+              playing: true,
+              currentTime: opts.position || 0,
+              duration: 0,
+              speed: newSpeed,
+            });
+            audio.play().catch(() => {});
+            return;
+          }
+        } catch {
+          // offline fallback also failed
+        }
+        toast({
+          title: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0432\u043E\u0441\u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F",
+          description: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0430\u0443\u0434\u0438\u043E",
+          variant: "destructive",
+        });
       } finally {
         if (fetchingRef.current === opts.bookId) {
           fetchingRef.current = null;
@@ -388,6 +421,11 @@ export const AudioProvider = ({ children }: { children: ReactNode }) => {
         });
       } catch (err) {
         console.error("[AudioContext] load() failed:", err);
+        toast({
+          title: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0432\u043E\u0441\u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F",
+          description: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0430\u0443\u0434\u0438\u043E",
+          variant: "destructive",
+        });
       } finally {
         if (fetchingRef.current === opts.bookId) {
           fetchingRef.current = null;

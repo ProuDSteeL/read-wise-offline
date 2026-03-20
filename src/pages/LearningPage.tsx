@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBook } from "@/hooks/useBooks";
@@ -32,12 +33,25 @@ const LearningPage = () => {
   // Save quiz result when completed
   useEffect(() => {
     if (quizState.phase === "completed" && !resultSaved.current && questions) {
-      resultSaved.current = true;
-      saveQuizResult.mutate({
-        bookId: id!,
-        score: quizState.score,
-        totalQuestions: questions.length,
-      });
+      saveQuizResult.mutate(
+        {
+          bookId: id!,
+          score: quizState.score,
+          totalQuestions: questions.length,
+        },
+        {
+          onSuccess: () => {
+            resultSaved.current = true;
+          },
+          onError: () => {
+            toast({
+              title: "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442",
+              description: "\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437",
+              variant: "destructive",
+            });
+          },
+        }
+      );
     }
   }, [quizState, questions, id, saveQuizResult]);
 
