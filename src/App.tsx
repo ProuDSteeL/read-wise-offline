@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AudioProvider } from "@/contexts/AudioContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useRegisterSW } from "virtual:pwa-register/react";
 import AppLayout from "@/components/layout/AppLayout";
 import Index from "./pages/Index";
 import SearchPage from "./pages/SearchPage";
@@ -26,6 +28,7 @@ import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import LearningPage from "./pages/LearningPage";
 import NotFound from "./pages/NotFound";
+import UpdateBanner from "./components/UpdateBanner";
 
 const queryClient = new QueryClient();
 
@@ -57,22 +60,36 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <AudioProvider>
-            <AppRoutes />
-            <GlobalAudioPlayer />
-            <OfflineBanner />
-          </AudioProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const {
+    needRefresh: [needRefresh],
+    updateServiceWorker,
+  } = useRegisterSW();
+  const [dismissed, setDismissed] = useState(false);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AudioProvider>
+              <AppRoutes />
+              <GlobalAudioPlayer />
+              <OfflineBanner />
+              {needRefresh && !dismissed && (
+                <UpdateBanner
+                  onUpdate={() => updateServiceWorker(true)}
+                  onDismiss={() => setDismissed(true)}
+                />
+              )}
+            </AudioProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
