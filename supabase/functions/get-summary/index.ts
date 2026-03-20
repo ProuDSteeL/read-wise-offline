@@ -12,24 +12,13 @@ const FREE_READS_LIMIT = 10;
  * Truncate summary content to approximately targetPercent at paragraph boundaries.
  * Duplicated from src/lib/truncateSummary.ts for Deno Edge Function runtime.
  */
-function truncateSummary(content: string, targetPercent: number = 0.25): string {
+function truncateSummary(content: string): string {
   if (!content) return "";
-  const paragraphs = content.split(/\n\n+/);
-  if (paragraphs.length <= 1) return content;
-
-  const totalLength = content.length;
-  const targetLength = totalLength * targetPercent;
-
-  let accumulated = 0;
-  const kept: string[] = [];
-
-  for (const p of paragraphs) {
-    kept.push(p);
-    accumulated += p.length + 2;
-    if (accumulated >= targetLength) break;
-  }
-
-  return kept.join("\n\n");
+  // Split by headings or double newlines
+  const sections = content.split(/\n\n+/);
+  if (sections.length <= 2) return sections[0] ?? "";
+  // Keep first 2 sections (intro + first paragraph)
+  return sections.slice(0, 2).join("\n\n");
 }
 
 Deno.serve(async (req) => {
