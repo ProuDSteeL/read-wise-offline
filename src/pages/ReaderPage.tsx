@@ -149,6 +149,9 @@ const ReaderPage = () => {
     parseFloat(localStorage.getItem("reader-line-height") || "1.8")
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [showChromeHint, setShowChromeHint] = useState(() =>
+    localStorage.getItem("reader-chrome-hint-dismissed") !== "true"
+  );
   const [showToc, setShowToc] = useState(false);
   const [tocTab, setTocTab] = useState<"toc" | "notes" | "quotes">("toc");
   const [noteEdit, setNoteEdit] = useState<{ id: string; text: string; note: string } | null>(null);
@@ -557,7 +560,7 @@ const ReaderPage = () => {
               <span className="text-base text-muted-foreground">A</span>
             </div>
           </div>
-          <div>
+          <div className="mb-4">
             <p className="mb-2 text-xs font-medium text-muted-foreground">Межстрочный интервал</p>
             <div className="flex gap-2">
               {LINE_HEIGHTS.map((lh) => (
@@ -568,6 +571,43 @@ const ReaderPage = () => {
                 >{lh}</button>
               ))}
             </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Подсказка Chrome «Нажмите, чтобы найти»</p>
+            <button
+              onClick={() => {
+                const next = !showChromeHint;
+                setShowChromeHint(next);
+                localStorage.setItem("reader-chrome-hint-dismissed", next ? "false" : "true");
+              }}
+              className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                showChromeHint ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              {showChromeHint ? "Вкл" : "Выкл"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Chrome Touch-to-Search hint */}
+      {showChromeHint && (
+        <div className="mx-auto max-w-md px-5 pt-3">
+          <div className="flex items-start gap-2.5 rounded-xl bg-secondary/80 p-3">
+            <span className="text-sm mt-0.5">💡</span>
+            <p className="flex-1 text-[11px] text-muted-foreground leading-relaxed">
+              При выделении текста Chrome может показывать панель «Нажмите, чтобы найти».
+              Отключите: <span className="font-medium text-foreground">Chrome → Настройки → Google → Нажмите, чтобы найти → Выкл</span>
+            </p>
+            <button
+              onClick={() => {
+                setShowChromeHint(false);
+                localStorage.setItem("reader-chrome-hint-dismissed", "true");
+              }}
+              className="shrink-0 text-muted-foreground/60 tap-highlight mt-0.5"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       )}
