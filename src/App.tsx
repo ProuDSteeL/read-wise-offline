@@ -33,16 +33,6 @@ const AppRoutes = () => {
   const isOnline = useOnlineStatus();
   useOfflineSync();
 
-  if (!isOnline) {
-    return (
-      <Routes>
-        <Route path="/downloads" element={<DownloadsPage />} />
-        <Route path="/offline/read/:id" element={<OfflineReaderPage />} />
-        <Route path="*" element={<OfflineFallback />} />
-      </Routes>
-    );
-  }
-
   return (
     <Routes>
       <Route element={<AppLayout />}>
@@ -55,7 +45,6 @@ const AppRoutes = () => {
       <Route path="/book/:id" element={<BookPage />} />
       <Route path="/book/:id/read" element={<ReaderPage />} />
       <Route path="/book/:id/learn" element={<LearningPage />} />
-      {/* Audio player is now a bottom sheet in AppLayout */}
       <Route path="/offline/read/:id" element={<OfflineReaderPage />} />
       <Route path="/admin/books" element={<AdminBookList />} />
       <Route path="/admin/book/new" element={<AdminBookForm />} />
@@ -63,7 +52,7 @@ const AppRoutes = () => {
       <Route path="/admin/collections" element={<AdminCollections />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={isOnline ? <NotFound /> : <OfflineFallback />} />
     </Routes>
   );
 };
