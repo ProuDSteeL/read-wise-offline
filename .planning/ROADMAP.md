@@ -20,6 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: Offline Hardening** - Downloads page, chunked audio downloads with progress, and offline indicator
 - [ ] **Phase 7: Growth & Discovery** - SEO meta tags, PWA install prompt, and promotional banners
 - [x] **Phase 8: PWA Hardening** - Smart caching, install prompt gating, offline UX, manifest and icons (completed 2026-03-20)
+- [ ] **Phase 9: Polish & Fixes** - Bug fixes, error handling improvements, and UX polish across the app
 
 ## Phase Details
 
@@ -141,12 +142,36 @@ Plans:
 - [ ] 08-01-PLAN.md — Manifest, icons, and caching config (PWA-01, PWA-04)
 - [ ] 08-02-PLAN.md — Install prompt gating + offline fallback page (PWA-02, PWA-03)
 
+### Phase 9: Polish & Fixes
+**Goal**: Fix bugs, improve error handling, and polish UX across the app
+**Depends on**: Nothing (independent, addresses issues found during audit)
+**Requirements**: FIX-03, FIX-04, FIX-05, FIX-06, FIX-07, FIX-08, FIX-09, FIX-10, FIX-11, FIX-12, FIX-13, FIX-14
+**Success Criteria** (what must be TRUE):
+  1. Audio playback shows error toast on failure and attempts offline fallback
+  2. Download dialog can close after errors (stuck state resolved)
+  3. Quiz results are only saved after mutation succeeds
+  4. Free reads count uses distinct book IDs
+  5. Popular books section sorts by average rating, not creation date
+  6. TOC navigation accounts for fixed header offset
+  7. Admin book form warns on unsaved changes
+  8. Offline reader shows feature parity notice
+  9. Long book descriptions have "read more" toggle
+  10. Quiz supports keyboard navigation (1-4 keys)
+  11. Book catalog has "load more" pagination
+  12. Book cover images show skeleton while loading
+**Plans**: 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Audio error handling, download stuck fix, quiz save race, distinct free reads, TOC offset (FIX-03, FIX-04, FIX-05, FIX-06, FIX-08)
+- [ ] 09-02-PLAN.md — Admin unsaved warning, description toggle, quiz keyboard nav, image optimization (FIX-09, FIX-11, FIX-12, FIX-14)
+- [ ] 09-03-PLAN.md — Popular books sorting, offline reader notice, catalog pagination (FIX-07, FIX-10, FIX-13)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
-Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. Phase 4 depends on Phase 2. Phase 5 depends on Phase 4. Phase 6 depends on Phase 1. Phase 8 depends on Phase 6.
+Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. Phase 4 depends on Phase 2. Phase 5 depends on Phase 4. Phase 6 depends on Phase 1. Phase 8 depends on Phase 6. Phase 9 is independent.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -158,3 +183,4 @@ Note: Phases 1, 2, 3 have no mutual dependencies and could execute in parallel. 
 | 6. Offline Hardening | 0/2 | Not started | - |
 | 7. Growth & Discovery | 0/? | Not started | - |
 | 8. PWA Hardening | 2/2 | Complete   | 2026-03-20 |
+| 9. Polish & Fixes | 0/3 | Not started | - |
