@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell, Crown, Target, Brain } from "lucide-react";
+import { User, LogIn, LogOut, BookOpen, Clock, Flame, Shield, ChevronRight, Pencil, Bell, Crown, Target, Brain, Download, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -22,6 +23,7 @@ const ProfilePage = () => {
   const { data: stats } = useProfileStats();
   const push = usePushNotifications();
   const { isPro, subscriptionType, expiresAt } = useSubscription();
+  const { canInstall, isNativePrompt, isStandalone, promptInstall } = useInstallPrompt(!!user);
   const [showSubDialog, setShowSubDialog] = useState(false);
   const [editField, setEditField] = useState<"name" | "email" | "password" | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -194,6 +196,29 @@ const ProfilePage = () => {
           />
         </div>
       )}
+      {/* Install app */}
+      {!isStandalone && (
+        <div className="rounded-2xl bg-card p-4 shadow-card">
+          <div className="flex items-center gap-3">
+            <Smartphone className="h-5 w-5 text-sage" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Установить приложение</p>
+              <p className="text-[11px] text-muted-foreground">
+                {isNativePrompt
+                  ? "Добавьте на главный экран для быстрого доступа"
+                  : "Нажмите ⋮ → «Добавить на главный экран»"}
+              </p>
+            </div>
+            {isNativePrompt && (
+              <Button size="sm" variant="outline" onClick={promptInstall} className="rounded-full text-xs gap-1">
+                <Download className="h-3.5 w-3.5" />
+                Установить
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {isAdmin && (
         <button
           onClick={() => navigate("/admin/books")}

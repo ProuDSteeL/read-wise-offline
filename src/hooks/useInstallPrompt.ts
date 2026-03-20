@@ -7,26 +7,18 @@ interface BeforeInstallPromptEvent extends Event {
 
 export const DISMISS_KEY = "pwa-install-dismissed-at";
 export const DISMISS_DAYS = 7;
-export const VISIT_COUNT_KEY = "pwa-visit-count";
-export const VISIT_THRESHOLD = 3;
 
 export function shouldShowInstallPrompt(
   isLoggedIn: boolean,
-  visitCount: number,
   dismissedAt: number | null,
   now: number = Date.now()
 ): boolean {
   if (!isLoggedIn) return false;
-  if (visitCount < VISIT_THRESHOLD) return false;
   if (dismissedAt !== null) {
     const daysSince = (now - dismissedAt) / (1000 * 60 * 60 * 24);
     if (daysSince < DISMISS_DAYS) return false;
   }
   return true;
-}
-
-export function incrementVisitCount(currentCount: number): number {
-  return currentCount + 1;
 }
 
 export const useInstallPrompt = (isLoggedIn: boolean) => {
@@ -37,24 +29,14 @@ export const useInstallPrompt = (isLoggedIn: boolean) => {
     window.matchMedia("(display-mode: standalone)").matches ||
     (navigator as any).standalone === true;
 
-  // Increment visit count on mount
-  useEffect(() => {
-    const count = incrementVisitCount(
-      Number(localStorage.getItem(VISIT_COUNT_KEY) || "0")
-    );
-    localStorage.setItem(VISIT_COUNT_KEY, String(count));
-  }, []);
-
   useEffect(() => {
     if (isStandalone) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
       const dismissedAt = localStorage.getItem(DISMISS_KEY);
-      const visitCount = Number(localStorage.getItem(VISIT_COUNT_KEY) || "0");
       if (!shouldShowInstallPrompt(
         isLoggedIn,
-        visitCount,
         dismissedAt ? Number(dismissedAt) : null
       )) return;
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -62,18 +44,16 @@ export const useInstallPrompt = (isLoggedIn: boolean) => {
 
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Fallback: if beforeinstallprompt doesn't fire after 3s, show manual banner
+    // Fallback: if beforeinstallprompt doesn't fire after 2s, show manual banner
     const fallbackTimer = setTimeout(() => {
       const dismissedAt = localStorage.getItem(DISMISS_KEY);
-      const visitCount = Number(localStorage.getItem(VISIT_COUNT_KEY) || "0");
       if (shouldShowInstallPrompt(
         isLoggedIn,
-        visitCount,
         dismissedAt ? Number(dismissedAt) : null
       )) {
         setShowManualBanner(true);
       }
-    }, 3000);
+    }, 2000);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
@@ -105,6 +85,7 @@ export const useInstallPrompt = (isLoggedIn: boolean) => {
   return {
     canInstall: !!deferredPrompt || (showManualBanner && !isStandalone),
     isNativePrompt: !!deferredPrompt,
+    isStandalone,
     promptInstall,
     dismiss,
   };
