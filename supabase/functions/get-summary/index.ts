@@ -14,11 +14,16 @@ const FREE_READS_LIMIT = 10;
  */
 function truncateSummary(content: string): string {
   if (!content) return "";
-  // Split by headings or double newlines
-  const sections = content.split(/\n\n+/);
-  if (sections.length <= 2) return sections[0] ?? "";
-  // Keep first 2 sections (intro + first paragraph)
-  return sections.slice(0, 2).join("\n\n");
+  // Split by markdown headings (## or #)
+  const parts = content.split(/(?=^#{1,3}\s)/m);
+  if (parts.length <= 2) {
+    // No headings or very short — truncate to ~300 chars at word boundary
+    const cut = content.slice(0, 300);
+    const lastSpace = cut.lastIndexOf(" ");
+    return lastSpace > 100 ? cut.slice(0, lastSpace) + "..." : cut + "...";
+  }
+  // Keep title + first section only
+  return parts.slice(0, 2).join("");
 }
 
 Deno.serve(async (req) => {
