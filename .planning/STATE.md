@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: milestone
 status: completed
-stopped_at: Completed 09-03-PLAN.md
-last_updated: "2026-03-20T07:45:45.218Z"
-last_activity: 2026-03-20 -- Phase 08 complete (manifest, icons, install prompt, offline fallback)
+stopped_at: Completed 09-02-PLAN.md
+last_updated: "2026-03-20T07:44:43Z"
+last_activity: 2026-03-20 -- Phase 09 Plan 02 complete (UX polish improvements)
 progress:
   total_phases: 9
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 18
-  completed_plans: 17
-  percent: 93
+  completed_plans: 18
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Доступные саммари нон-фикшн книг на русском языке с полным офлайн-доступом
-**Current focus:** Phase 8 complete — all phases done!
+**Current focus:** Phase 09 Polish & Fixes — Plan 02 complete
 
 ## Current Position
 
-Phase: 8 of 8 (PWA Hardening) — COMPLETE
-Plan: 2 of 2 complete
-Status: All phases complete
-Last activity: 2026-03-20 -- Phase 08 complete (manifest, icons, install prompt, offline fallback)
+Phase: 9 of 9 (Polish & Fixes)
+Plan: 2 of 3 complete
+Status: Executing
+Last activity: 2026-03-20 -- Phase 09 Plan 02 complete (UX polish improvements)
 
-Progress: [█████████░] 93%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [█████████░] 93%
 | Phase 08 P01 | 5min | 2 tasks | 7 files |
 | Phase 09 P01 | 4min | 2 tasks | 5 files |
 | Phase 09 P03 | 4min | 2 tasks | 3 files |
+| Phase 09 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,7 @@ Recent decisions affecting current work:
 - [Phase 06]: Extracted getDownloadDisplayState/roundProgress as pure functions for testability
 - [Phase 08]: Extracted shouldShowInstallPrompt as pure function for unit testing without mocking React hooks
 - [Phase 08]: Used sage green (#87AB98) for theme_color - visible on status bar unlike cream
+- [Phase 09]: useRef for isDirty avoids re-renders; hasLoaded ref prevents edit-mode population from triggering dirty
 - [Phase 09]: Two-step rating query: fetch all ratings, aggregate in JS, fetch books by sorted IDs
 - [Phase 09]: Client-side pagination (slice + load more) to preserve filtering/sorting
 
@@ -125,6 +127,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-20T07:45:45.210Z
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-03-20T07:44:43Z
+Stopped at: Completed 09-02-PLAN.md
 Resume file: None
