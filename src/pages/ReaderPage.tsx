@@ -235,9 +235,11 @@ const ReaderPage = () => {
   }, [savedProgress, isLoading, id]);
 
 
+  const isTruncated = summary?.truncated === true;
+
   const saveProgress = useCallback(
     (percent: number) => {
-      if (!user || !id) return;
+      if (!user || !id || isTruncated) return; // Don't save progress for truncated content
       // Always save scroll position to localStorage for offline recovery
       localStorage.setItem(`reader-scroll-${id}`, String(window.scrollY));
       localStorage.setItem(`reader-progress-${id}`, String(Math.round(percent)));
@@ -255,7 +257,7 @@ const ReaderPage = () => {
         );
       }, 500);
     },
-    [user, id, isOnline]
+    [user, id, isOnline, isTruncated]
   );
 
   useEffect(() => {
@@ -269,7 +271,7 @@ const ReaderPage = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      if (user && id) {
+      if (user && id && !isTruncated) {
         clearTimeout(saveProgressTimeout.current);
         const scrollTop = window.scrollY;
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -285,7 +287,7 @@ const ReaderPage = () => {
         );
       }
     };
-  }, [saveProgress, user, id]);
+  }, [saveProgress, user, id, isTruncated]);
 
   const { data: isFavorite } = useQuery({
     queryKey: ["is_favorite", user?.id, id],
@@ -470,7 +472,6 @@ const ReaderPage = () => {
   }
 
   const fontClass = fontFamily === "serif" ? "font-serif" : "font-sans";
-  const isTruncated = summary?.truncated === true;
 
   return (
     <div className={`relative min-h-screen pb-24 ${themeClasses[theme]} bg-background text-foreground transition-colors duration-300`}>
