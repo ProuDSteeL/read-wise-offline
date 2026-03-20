@@ -575,7 +575,8 @@ const ReaderPage = () => {
       {/* Content */}
       <article
         ref={contentRef}
-        className={`relative mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground`}
+        className={`relative mx-auto max-w-md px-5 py-6 ${fontClass} leading-relaxed text-foreground [&_*]:[-webkit-tap-highlight-color:transparent]`}
+        style={{ WebkitTouchCallout: "none" }}
         style={{
           fontSize: `${fontSize}px`,
           lineHeight,
