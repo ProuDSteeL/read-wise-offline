@@ -122,25 +122,24 @@ Deno.serve(async (req) => {
     }
 
     const freeReadsUsed = progressRows?.length ?? 0;
-    const hasExistingProgress = progressRows?.some((row) => row.book_id === bookId) ?? false;
+    const hasExistingProgress = progressRows?.some((row: any) => row.book_id === bookId) ?? false;
+    const shouldTruncate = freeReadsUsed >= FREE_READS_LIMIT && !hasExistingProgress;
 
-    // User within free reads limit OR already has progress on this book
-    if (freeReadsUsed < FREE_READS_LIMIT || hasExistingProgress) {
+    if (shouldTruncate) {
       return new Response(
-        JSON.stringify({ ...summary, truncated: false, freeReadsUsed, freeReadsLimit: FREE_READS_LIMIT }),
+        JSON.stringify({
+          ...summary,
+          content: truncateSummary(summary.content),
+          truncated: true,
+          freeReadsUsed,
+          freeReadsLimit: FREE_READS_LIMIT,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Non-Pro, exceeded free reads, no existing progress on this book: truncate
     return new Response(
-      JSON.stringify({
-        ...summary,
-        content: truncateSummary(summary.content),
-        truncated: true,
-        freeReadsUsed,
-        freeReadsLimit: FREE_READS_LIMIT,
-      }),
+      JSON.stringify({ ...summary, truncated: false, freeReadsUsed, freeReadsLimit: FREE_READS_LIMIT }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
