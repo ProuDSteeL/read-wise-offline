@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import BookCard from "@/components/BookCard";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchBooks, usePublishedBooks } from "@/hooks/useBooks";
 import { useTags } from "@/hooks/useTags";
@@ -25,7 +26,12 @@ const SearchPage = () => {
 
   const [sortBy, setSortBy] = useState<SortKey>("newest");
   const [showFilters, setShowFilters] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [query, activeCategory, sortBy]);
 
   const { data: results, isLoading } = useSearchBooks(query);
   const { data: allBooks } = usePublishedBooks();
@@ -49,6 +55,8 @@ const SearchPage = () => {
       }
     });
   }
+
+  const paginatedBooks = displayBooks?.slice(0, visibleCount);
 
   const handleCategoryClick = (cat: string) => {
     const next = activeCategory === cat ? null : cat;
@@ -128,13 +136,13 @@ const SearchPage = () => {
             </div>
           ))}
         </div>
-      ) : displayBooks && displayBooks.length > 0 ? (
+      ) : paginatedBooks && paginatedBooks.length > 0 ? (
         <>
           <p className="text-xs text-muted-foreground">
-            {activeCategory ? `${activeCategory} · ` : ""}{displayBooks.length} книг
+            {activeCategory ? `${activeCategory} · ` : ""}{displayBooks!.length} книг
           </p>
           <div className="grid grid-cols-2 gap-4 pb-4">
-            {displayBooks.map((book) => (
+            {paginatedBooks.map((book) => (
               <BookCard
                 key={book.id}
                 title={book.title}
@@ -146,6 +154,17 @@ const SearchPage = () => {
               />
             ))}
           </div>
+          {displayBooks && visibleCount < displayBooks.length && (
+            <div className="flex justify-center pt-4 pb-8">
+              <Button
+                variant="outline"
+                className="rounded-full px-6"
+                onClick={() => setVisibleCount((prev) => prev + 20)}
+              >
+                Показать ещё
+              </Button>
+            </div>
+          )}
         </>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 text-center">
