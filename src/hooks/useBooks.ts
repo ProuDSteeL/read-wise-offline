@@ -94,13 +94,38 @@ export const useBook = (id: string) => {
   return useQuery({
     queryKey: ["book", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("books")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      return data as Book;
+      try {
+        const { data, error } = await supabase
+          .from("books")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (error) throw error;
+        return data as Book;
+      } catch (e) {
+        // Offline fallback: try to get book meta from localforage
+        if (!navigator.onLine) {
+          const { getBookMeta } = await import("@/lib/offlineStorage");
+          const meta = await getBookMeta(id);
+          if (meta) {
+            return {
+              id,
+              title: meta.title,
+              author: meta.author,
+              cover_url: meta.coverUrl,
+              description: null,
+              why_read: null,
+              about_author: null,
+              read_time_minutes: 0,
+              status: "published",
+              tags: null,
+              created_at: meta.downloadedAt,
+              updated_at: meta.downloadedAt,
+            } as unknown as Book;
+          }
+        }
+        throw e;
+      }
     },
     enabled: !!id,
   });

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, ReactNode } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Copy, Share2, StickyNote, Palette, Languages, Target } from "lucide-react";
+import { X, Settings2, Heart, Trash2, Headphones, List, MoreVertical, Copy, Share2, StickyNote, Palette, Languages, Target, WifiOff } from "lucide-react";
 import { useSummary } from "@/hooks/useSummary";
 import { useBook } from "@/hooks/useBooks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAudio } from "@/contexts/AudioContext";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,12 @@ import { useNativeSelection } from "@/hooks/useNativeSelection";
 import SelectionToolbar from "@/components/reader/SelectionToolbar";
 import HighlightEditMenu from "@/components/reader/HighlightEditMenu";
 import { getColor, HIGHLIGHT_COLORS } from "@/lib/highlightColors";
+import localforage from "localforage";
+
+const offlineHighlightsStore = localforage.createInstance({
+  name: "buks-offline",
+  storeName: "highlights",
+});
 
 type ReaderTheme = "light" | "dark" | "sepia";
 type ReaderFont = "sans" | "serif";
@@ -123,6 +130,7 @@ const ReaderPage = () => {
   const locState = location.state as { audioPosition?: number; audioSpeed?: number; autoPlayAudio?: boolean } | null;
   const { user } = useAuth();
   const audioCtx = useAudio();
+  const isOnline = useOnlineStatus();
   const { data: book } = useBook(id!);
   const { data: summary, isLoading } = useSummary(id!);
   const queryClient = useQueryClient();
@@ -157,20 +165,28 @@ const ReaderPage = () => {
   // Native selection
   const { selection, clearSelection } = useNativeSelection(contentRef, !isLoading);
 
-  // Highlights query (must be before useEffects that reference it)
+  // Highlights query — falls back to localforage when offline
   const { data: highlights = [] } = useQuery({
-    queryKey: ["highlights", user?.id, id],
+    queryKey: ["highlights", user?.id, id, isOnline],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("user_highlights")
-        .select("*")
-        .eq("user_id", user!.id)
-        .eq("book_id", id!)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data as HighlightData[];
+      if (isOnline && user) {
+        const { data, error } = await supabase
+          .from("user_highlights")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("book_id", id!)
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        const highlights = data as HighlightData[];
+        // Cache to localforage for offline access
+        await offlineHighlightsStore.setItem(id!, highlights);
+        return highlights;
+      }
+      // Offline: load from localforage
+      const cached = await offlineHighlightsStore.getItem<HighlightData[]>(id!);
+      return cached ?? [];
     },
-    enabled: !!user && !!id,
+    enabled: !!id,
     staleTime: Infinity,
   });
 
@@ -206,16 +222,23 @@ const ReaderPage = () => {
   });
 
   useEffect(() => {
-    if (savedProgress?.scroll_position && !isLoading && !hasRestoredPosition.current) {
+    if (hasRestoredPosition.current || isLoading) return;
+    const scrollPos = savedProgress?.scroll_position
+      ?? (id ? parseFloat(localStorage.getItem(`reader-scroll-${id}`) || "0") : 0);
+    if (scrollPos > 0) {
       hasRestoredPosition.current = true;
-      setTimeout(() => window.scrollTo(0, savedProgress.scroll_position), 150);
+      setTimeout(() => window.scrollTo(0, scrollPos), 150);
     }
-  }, [savedProgress, isLoading]);
+  }, [savedProgress, isLoading, id]);
 
 
   const saveProgress = useCallback(
     (percent: number) => {
       if (!user || !id) return;
+      // Always save scroll position to localStorage for offline recovery
+      localStorage.setItem(`reader-scroll-${id}`, String(window.scrollY));
+      localStorage.setItem(`reader-progress-${id}`, String(Math.round(percent)));
+      if (!isOnline) return; // Skip Supabase when offline
       clearTimeout(saveProgressTimeout.current);
       saveProgressTimeout.current = setTimeout(async () => {
         await supabase.from("user_progress").upsert(
@@ -229,7 +252,7 @@ const ReaderPage = () => {
         );
       }, 3000);
     },
-    [user, id]
+    [user, id, isOnline]
   );
 
   useEffect(() => {
@@ -353,18 +376,31 @@ const ReaderPage = () => {
 
   const createHighlight = useMutation({
     mutationFn: async ({ text, note, color }: { text: string; note?: string; color: string }) => {
-      const { data, error } = await supabase.from("user_highlights").insert({
-        user_id: user!.id, book_id: id!, text, note: note || null, color,
-      }).select().single();
-      if (error) throw error;
-      return data as HighlightData;
+      if (isOnline && user) {
+        const { data, error } = await supabase.from("user_highlights").insert({
+          user_id: user.id, book_id: id!, text, note: note || null, color,
+        }).select().single();
+        if (error) throw error;
+        return data as HighlightData;
+      }
+      // Offline: save to localforage
+      const offlineHighlight: HighlightData = {
+        id: `offline-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        text,
+        note: note || null,
+        color,
+      };
+      const cached = await offlineHighlightsStore.getItem<HighlightData[]>(id!) ?? [];
+      cached.push(offlineHighlight);
+      await offlineHighlightsStore.setItem(id!, cached);
+      return offlineHighlight;
     },
     onSuccess: (data) => {
       queryClient.setQueryData<HighlightData[]>(
-        ["highlights", user?.id, id],
+        ["highlights", user?.id, id, isOnline],
         (old) => [...(old ?? []), data],
       );
-      toast({ title: "Цитата сохранена" });
+      toast({ title: isOnline ? "Цитата сохранена" : "Цитата сохранена офлайн" });
     },
     onError: (err: any) => {
       toast({ title: "Ошибка", description: err.message, variant: "destructive" });
@@ -373,13 +409,18 @@ const ReaderPage = () => {
 
   const deleteHighlight = useMutation({
     mutationFn: async (highlightId: string) => {
-      const { error } = await supabase.from("user_highlights").delete().eq("id", highlightId);
-      if (error) throw error;
+      if (isOnline && !highlightId.startsWith("offline-")) {
+        const { error } = await supabase.from("user_highlights").delete().eq("id", highlightId);
+        if (error) throw error;
+      }
+      // Also remove from localforage
+      const cached = await offlineHighlightsStore.getItem<HighlightData[]>(id!) ?? [];
+      await offlineHighlightsStore.setItem(id!, cached.filter((h) => h.id !== highlightId));
       return highlightId;
     },
     onSuccess: (deletedId) => {
       queryClient.setQueryData<HighlightData[]>(
-        ["highlights", user?.id, id],
+        ["highlights", user?.id, id, isOnline],
         (old) => old?.filter((h) => h.id !== deletedId) ?? [],
       );
       toast({ title: "Цитата удалена" });
@@ -388,13 +429,18 @@ const ReaderPage = () => {
 
   const updateHighlight = useMutation({
     mutationFn: async ({ highlightId, updates }: { highlightId: string; updates: { color?: string; note?: string } }) => {
-      const { error } = await supabase.from("user_highlights").update(updates).eq("id", highlightId);
-      if (error) throw error;
+      if (isOnline && !highlightId.startsWith("offline-")) {
+        const { error } = await supabase.from("user_highlights").update(updates).eq("id", highlightId);
+        if (error) throw error;
+      }
+      // Also update in localforage
+      const cached = await offlineHighlightsStore.getItem<HighlightData[]>(id!) ?? [];
+      await offlineHighlightsStore.setItem(id!, cached.map((h) => h.id === highlightId ? { ...h, ...updates } : h));
       return { highlightId, updates };
     },
     onSuccess: ({ highlightId, updates }) => {
       queryClient.setQueryData<HighlightData[]>(
-        ["highlights", user?.id, id],
+        ["highlights", user?.id, id, isOnline],
         (old) => old?.map((h) => h.id === highlightId ? { ...h, ...updates } : h) ?? [],
       );
     },
